@@ -129,6 +129,7 @@ class VirtualPad:
                 self.pressed_right_trackpad()
             else:
                 self.device.set_button(btn_id, True)
+                
         except KeyError:
             pass
 
@@ -189,11 +190,32 @@ class VirtualPad:
         crossed = self._check_zone_change(left_zone, self.previous_left_zone)
         self.previous_left_zone = left_zone
         if crossed:
-            openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
+            #openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
+            pass
 
-        if (self.trackpadLtouch or self.config.touchpad_always_updates) and self.trackpad_left_enabled:
-            self.device.set_axis(HID_USAGE_RX, int((left_ctr.trackpadX+1)/2 * 0x8000))
-            self.device.set_axis(HID_USAGE_RY, int(((-left_ctr.trackpadY+1)/2) * 0x8000))
+        DEADZONE_DPAD = 0.8
+        """
+        |LX|4,5|
+        |LY|6,7|
+        |RX|13,14|
+        |RY|15,16|
+        """
+        def convert_4way(trackpad, base_hid):
+            if abs(trackpad) <= DEADZONE_DPAD:
+                self.device.set_button(base_hid, False)
+                self.device.set_button(base_hid+1, False)
+            else:
+                offset = 0 if trackpad < 0 else 1
+                self.device.set_button(base_hid-(offset-1), False)
+                self.device.set_button(base_hid+offset, True)
+
+        convert_4way(left_ctr.trackpadX, 4)
+        convert_4way(left_ctr.trackpadY, 6)
+            
+        #if (self.trackpadLtouch or self.config.touchpad_always_updates) and self.trackpad_left_enabled:
+        #self.device.set_axis(HID_USAGE_RX, int((left_ctr.trackpadX+1)/2 * 0x8000))
+        #self.device.set_axis(HID_USAGE_RY, int(((-left_ctr.trackpadY+1)/2) * 0x8000))
+
         self.trackpadRX = right_ctr.trackpadX
         self.trackpadRY = right_ctr.trackpadY
 
@@ -201,11 +223,14 @@ class VirtualPad:
         crossed = self._check_zone_change(right_zone, self.previous_right_zone)
         self.previous_right_zone = right_zone
         if crossed:
-            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
+            #openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
+            pass
 
-        if (self.trackpadRtouch or self.config.touchpad_always_updates) and self.trackpad_right_enabled:
-            self.device.set_axis(HID_USAGE_X, int((right_ctr.trackpadX + 1) / 2 * 0x8000))
-            self.device.set_axis(HID_USAGE_Y, int(((-right_ctr.trackpadY + 1) / 2) * 0x8000))
+        #if (self.trackpadRtouch or self.config.touchpad_always_updates): #and self.trackpad_right_enabled:
+        #self.device.set_axis(0x32, int((right_ctr.trackpadX + 1) / 2 * 0x8000))
+        #self.device.set_axis(HID_USAGE_Y, int(((-right_ctr.trackpadY + 1) / 2) * 0x8000))
+        convert_4way(right_ctr.trackpadX, 13)
+        convert_4way(right_ctr.trackpadY, 15)
 
     def edit_mode(self, left_ctr, right_ctr):
         pass

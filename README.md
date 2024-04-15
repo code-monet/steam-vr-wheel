@@ -1,4 +1,32 @@
 # steam-vr-wheel
+
+### Fork memo
+
+This will likely work only with Quest 2 controllers. And only the wheel mode work properly.
+
+Qyuest 2 vjoy mapping
+|Key|No|
+|-|-|
+|LT|1|
+|L Grip|2|
+|RT|9|
+|R Grip|10|
+|A|18|
+|B|11|
+|X|17|
+|Y|3|
+
+This fork aims to convert each joystick to 4-way button
+|Key|No|
+|-|-|
+|LX|4,5|
+|LY|6,7|
+|RX|13,14|
+|RY|15,16|
+
+Maybe add
+- Triple press of both the grips trigger the layout edit mode
+
 Wheel emulation using steamVR
 =============================
 

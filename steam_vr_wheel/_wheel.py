@@ -380,17 +380,23 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             else:
                 self._snapped = False
 
-    def set_button_press(self, button, hand):
+    def set_button_press(self, button, hand, left_ctr, right_ctr):
         super().set_button_press(button, hand)
         if button == openvr.k_EButton_Grip and hand == 'left':
             if self.config.wheel_grabbed_by_grip_toggle:
                 self._left_controller_grabbed = True
+
+                # Haptic when grabbing wheel
+                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 1000)
             else:
                 self._left_controller_grabbed = not self._left_controller_grabbed
 
         if button == openvr.k_EButton_Grip and hand == 'right':
             if self.config.wheel_grabbed_by_grip_toggle:
                 self._right_controller_grabbed = True
+                
+                # Haptic when grabbing wheel
+                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 1000)
             else:
                 self._right_controller_grabbed = not self._right_controller_grabbed
 
