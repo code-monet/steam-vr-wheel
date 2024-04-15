@@ -97,14 +97,22 @@ class HandsImage:
         self.vroverlay = openvr.IVROverlay()
 
         result, self.l_ovr = self.vroverlay.createOverlay('left_hand'.encode(), 'left_hand'.encode())
+        result, self.l_ovr2 = self.vroverlay.createOverlay('left_hand_closed'.encode(), 'left_hand_closed'.encode()) #!!
         result, self.r_ovr = self.vroverlay.createOverlay('right_hand'.encode(), 'right_hand'.encode())
+        result, self.r_ovr2 = self.vroverlay.createOverlay('right_hand_closed'.encode(), 'right_hand_closed'.encode()) #!!
 
         check_result(self.vroverlay.setOverlayColor(self.l_ovr, 1, 1, 1))
+        check_result(self.vroverlay.setOverlayColor(self.l_ovr2, 1, 1, 1))
         check_result(self.vroverlay.setOverlayColor(self.r_ovr, 1, 1, 1))
+        check_result(self.vroverlay.setOverlayColor(self.r_ovr2, 1, 1, 1))
         check_result(self.vroverlay.setOverlayAlpha(self.l_ovr, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr2, 0)) #!!
         check_result(self.vroverlay.setOverlayAlpha(self.r_ovr, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr2, 0)) #!!
         check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr, hand_size))
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr2, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr2, hand_size))
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -114,12 +122,15 @@ class HandsImage:
         self.r_close_png = os.path.join(this_dir, 'media', 'hand_closed_r.png')
 
         check_result(self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode()))
+        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr2, self.l_close_png.encode())) #!!
         check_result(self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode()))
-
+        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode())) #!!
 
 
         result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
+        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)
         result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr, self.right_ctr.id)
+        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr2, self.right_ctr.id)
 
         transform[0][0] = 1.0
         transform[0][1] = 0.0
@@ -143,39 +154,55 @@ class HandsImage:
 
         fn = self.vroverlay.function_table.setOverlayTransformTrackedDeviceRelative
         result = fn(self.l_ovr, self.left_ctr.id, openvr.byref(self.transform))
+        result = fn(self.l_ovr2, self.left_ctr.id, openvr.byref(self.transform))
         result = fn(self.r_ovr, self.right_ctr.id, openvr.byref(self.transform))
+        result = fn(self.r_ovr2, self.right_ctr.id, openvr.byref(self.transform))
 
         check_result(result)
         check_result(self.vroverlay.showOverlay(self.l_ovr))
+        check_result(self.vroverlay.showOverlay(self.l_ovr2))
         check_result(self.vroverlay.showOverlay(self.r_ovr))
+        check_result(self.vroverlay.showOverlay(self.r_ovr2))
 
     def left_grab(self):
         if not self._handl_closed:
-            self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_close_png.encode())
+            #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_close_png.encode())
+            self.vroverlay.setOverlayAlpha(self.l_ovr, 0)
+            self.vroverlay.setOverlayAlpha(self.l_ovr2, 1)
             self._handl_closed = True
 
     def left_ungrab(self):
         if self._handl_closed:
-            self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode())
+            #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode())
+            self.vroverlay.setOverlayAlpha(self.l_ovr, 1)
+            self.vroverlay.setOverlayAlpha(self.l_ovr2, 0)
             self._handl_closed = False
 
     def right_grab(self):
         if not self._handr_closed:
-            self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_close_png.encode())
+            #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_close_png.encode())
+            self.vroverlay.setOverlayAlpha(self.r_ovr, 0)
+            self.vroverlay.setOverlayAlpha(self.r_ovr2, 1)
             self._handr_closed = True
 
     def right_ungrab(self):
         if self._handr_closed:
-            self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode())
+            #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode())
+            self.vroverlay.setOverlayAlpha(self.r_ovr, 1)
+            self.vroverlay.setOverlayAlpha(self.r_ovr2, 0)
             self._handr_closed = False
 
     def hide(self):
         check_result(self.vroverlay.hideOverlay(self.l_ovr))
+        check_result(self.vroverlay.hideOverlay(self.l_ovr2))
         check_result(self.vroverlay.hideOverlay(self.r_ovr))
+        check_result(self.vroverlay.hideOverlay(self.r_ovr2))
 
     def show(self):
         check_result(self.vroverlay.showOverlay(self.l_ovr))
+        check_result(self.vroverlay.showOverlay(self.l_ovr2))
         check_result(self.vroverlay.showOverlay(self.r_ovr))
+        check_result(self.vroverlay.showOverlay(self.r_ovr2))
 
 
 class SteeringWheelImage:
@@ -387,7 +414,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._left_controller_grabbed = True
 
                 # Haptic when grabbing wheel
-                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 1000)
+                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 250)
             else:
                 self._left_controller_grabbed = not self._left_controller_grabbed
 
@@ -396,7 +423,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._right_controller_grabbed = True
                 
                 # Haptic when grabbing wheel
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 1000)
+                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 250)
             else:
                 self._right_controller_grabbed = not self._right_controller_grabbed
 
