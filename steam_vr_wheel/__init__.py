@@ -15,7 +15,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, 
                       joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False, edit_mode=False,
                       wheel_center=[0, -0.4, -0.35], wheel_size=0.55, wheel_grabbed_by_grip=True,
                       wheel_grabbed_by_grip_toggle=True, wheel_show_wheel=True, wheel_show_hands=True,
-                      wheel_degrees=1440, wheel_centerforce=3)
+                      wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100)
 
 
 class ConfigException(Exception):
@@ -244,6 +244,17 @@ class PadConfig:
     def wheel_centerforce(self, x: int):
         with self.data_lock:
             self._data['wheel_centerforce'] = x
+        self._write()
+
+    @property
+    def wheel_alpha(self):
+        with self.data_lock:
+            return self._data['wheel_alpha']
+
+    @wheel_alpha.setter
+    def wheel_alpha(self, x: int):
+        with self.data_lock:
+            self._data['wheel_alpha'] = x
         self._write()
 
     @property

@@ -27,6 +27,7 @@ class ConfiguratorApp:
         self.wheel_show_hands = wx.CheckBox(self.pnl, label="Show Hands Overlay")
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
+        self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100) #!!
 
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -43,6 +44,7 @@ class ConfiguratorApp:
         self.wheel_show_hands.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_degrees.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_centerforce.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.wheel_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
@@ -58,7 +60,8 @@ class ConfiguratorApp:
                                 wheel_show_wheel=self.wheel_show_wheel,
                                 wheel_show_hands=self.wheel_show_hands,
                                 wheel_degrees=self.wheel_degrees,
-                                wheel_centerforce=self.wheel_centerforce
+                                wheel_centerforce=self.wheel_centerforce,
+                                wheel_alpha=self.wheel_alpha
                                 )
 
         self.vbox.Add(self.trigger_pre_btn_box)
@@ -80,6 +83,9 @@ class ConfiguratorApp:
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Center Force"))
         self.vbox.Add(self.wheel_centerforce)
+        self.vbox.AddSpacer(10)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Alpha"))
+        self.vbox.Add(self.wheel_alpha)
 
         self.pnl.SetSizerAndFit(self.vbox)
         self.read_config()

@@ -24,8 +24,14 @@ This fork aims to convert each joystick to 4-way button
 |RX|13,14|
 |RY|15,16|
 
-Maybe add
-- Triple press of both the grips trigger the layout edit mode
+Added features
+- Edit mode
+  - Triple grip click on right controller toggles wheel edit mode
+  - Single grip click on right exits edit mode
+  - A sets wheel X value to 0
+  - B switches alpha of wheel with a step of 10%
+- L joystick and R joystick to buttons; total 8 buttons
+
 
 Wheel emulation using steamVR
 =============================

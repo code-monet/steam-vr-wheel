@@ -5,6 +5,7 @@ import numpy as np
 import openvr
 import os
 import copy
+import time
 
 from steam_vr_wheel._virtualpad import VirtualPad, RightTrackpadAxisDisablerMixin
 from steam_vr_wheel.pyvjoy import HID_USAGE_X
@@ -249,6 +250,17 @@ class SteeringWheelImage:
         check_result(result)
         check_result(self.vroverlay.showOverlay(self.wheel))
 
+    def set_color(self, cl):
+        check_result(self.vroverlay.setOverlayColor(self.wheel, *cl))
+
+    def set_alpha(self, alpha):
+        check_result(self.vroverlay.setOverlayAlpha(self.wheel, alpha))
+
+    def discard_x(self):
+        self.transform[0][3] = 0
+        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+        fn(self.wheel, openvr.TrackingUniverseSeated, openvr.byref(self.transform))
+
     def move(self, point, size):
         self.transform[0][3] = point.x
         self.transform[1][3] = point.y
@@ -326,6 +338,14 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # for manual grab:
         self._left_controller_grabbed = False
         self._right_controller_grabbed = False
+
+        # for triple grip:
+        self._triple_grip_start = 0.0
+        self._tg_click_count = 0
+
+        # edit mode
+        self._edit_mode_last_press = 0.0
+        self._edit_mode_entry = 0.0
 
     def point_in_holding_bounds(self, point):
         width = 0.10
@@ -409,12 +429,19 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
         super().set_button_press(button, hand)
+
+        triple_click_time = 0.7
+        grab_haptic_magnitude = 250
+        now = time.time()
+
+
         if button == openvr.k_EButton_Grip and hand == 'left':
+
             if self.config.wheel_grabbed_by_grip_toggle:
                 self._left_controller_grabbed = True
 
                 # Haptic when grabbing wheel
-                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 250)
+                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, grab_haptic_magnitude)
             else:
                 self._left_controller_grabbed = not self._left_controller_grabbed
 
@@ -423,7 +450,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._right_controller_grabbed = True
                 
                 # Haptic when grabbing wheel
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 250)
+                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, grab_haptic_magnitude)
             else:
                 self._right_controller_grabbed = not self._right_controller_grabbed
 
@@ -431,6 +458,37 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             pass
         else:
             self._snapped = False
+
+        
+        # Triple grip
+        if button == openvr.k_EButton_Grip:
+
+            # Initial
+            if self._tg_click_count == 0:
+                self._triple_grip_start = now
+                self._tg_click_count += 1
+            else:
+                elapsed = now - self._triple_grip_start
+
+                def reset_tg():
+                    self._tg_click_count = 0
+                    self._triple_grip_start = 0.0
+
+
+                if elapsed > triple_click_time:
+                    self._tg_click_count = 0
+                    self._triple_grip_start = 0.0
+                elif self._tg_click_count == 2 and elapsed <= triple_click_time:
+                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
+                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
+
+                    self.config.edit_mode = True
+                    self._edit_mode_entry = time.time()
+
+                    self._tg_click_count = 0
+                    self._triple_grip_start = 0.0
+                else:
+                    self._tg_click_count += 1
 
     def _wheel_update(self, left_ctr, right_ctr):
         if self.config.wheel_grabbed_by_grip:
@@ -510,12 +568,14 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         else:
             self.wheel_image.rotate([-wheel_angle, np.pi / 2], [2, 0])
 
+        # Switch alpha
+        self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
+
     def limiter(self, left_ctr, right_ctr):
         if abs(self._wheel_angles[-1])/(2*pi)>(self.config.wheel_degrees / 360)/2:
             self._wheel_angles[-1] = self._wheel_angles[-2]
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
-            openvr.VRSystem().triggerHapticPulse(right_ctr
-                                                    .id, 0, 3000)
+            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
 
     def render_hands(self):
@@ -583,11 +643,34 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def edit_mode(self, left_ctr, right_ctr):
         result, state_r = openvr.VRSystem().getControllerState(right_ctr.id)
+        now = time.time()
+
         if self.hands_overlay != None:
             self.hands_overlay.show()
         if self.wheel_image != None:
             self.wheel_image.show()
+
+        self.wheel_image.set_color((0,1,0))
         if state_r.ulButtonPressed:
-            if list(reversed(bin(state_r.ulButtonPressed)[2:])).index('1') == openvr.k_EButton_SteamVR_Trigger:
-                 self.move_wheel(right_ctr, left_ctr)
+            btn_id = list(reversed(bin(state_r.ulButtonPressed)[2:])).index('1')
+            if btn_id == openvr.k_EButton_SteamVR_Trigger:
+                self.move_wheel(right_ctr, left_ctr)
+            elif btn_id == openvr.k_EButton_ApplicationMenu and now - self._edit_mode_last_press > 0.2: #B on right
+                self._edit_mode_last_press = now
+                step = 10
+                if self.config.wheel_alpha + step > 100:
+                    self.config.wheel_alpha = 0
+                else:
+                    self.config.wheel_alpha += step
+
+                print("Switch alpha")
+                # Switch alpha
+                self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
+            elif btn_id == openvr.k_EButton_A: #A on right
+                self.wheel_image.discard_x()
+                print("Set x to 0")
+            elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
+                self.wheel_image.set_color((1,1,1))
+                self.config.edit_mode = False
+        
         super().edit_mode(left_ctr, right_ctr)
