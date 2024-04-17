@@ -4,11 +4,7 @@ import threading
 
 import time
 
-if sys.platform == 'win32':
-    local = os.getenv('LOCALAPPDATA')
-    CONFIG_PATH = os.path.join(local, 'steam-vr-wheel', 'config.json')
-else:
-    CONFIG_PATH = os.path.expanduser(os.path.join('~', '.steam-vr-wheel', 'config.json'))
+CONFIG_PATH = os.path.expanduser(os.path.join('~', '.steam-vr-wheel', 'config.json'))
 
 DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, multibutton_trackpad=True,
                       multibutton_trackpad_center_haptic=True, touchpad_always_updates=True, vertical_wheel=True,
