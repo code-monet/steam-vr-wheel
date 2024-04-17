@@ -6,6 +6,8 @@ import openvr
 import os
 import copy
 import time
+import threading
+import asyncio
 
 from steam_vr_wheel._virtualpad import VirtualPad, RightTrackpadAxisDisablerMixin
 from steam_vr_wheel.pyvjoy import HID_USAGE_X
@@ -246,9 +248,9 @@ class HShifterImage:
         self._button_queue = []
         self._snap_ctr = None
         self._snap_start_pos = False
-        self._snap_start_time = 0
-        self._last_snap_dtap = False
         self._snapped = False
+        self._snap_times = []
+        self._snap_db_timer = None
 
         self._pressed_button = 42 #N
         self._pos_to_button = dict({1: 43, 3:   45, 5: 47,
@@ -274,7 +276,7 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayFromFile(self.knob, knob_img.encode()))
 
         # Visibility
-        check_result(self.vroverlay.setOverlayColor(self.slot, 1, 1, 1)) # white for the time being
+        check_result(self.vroverlay.setOverlayColor(self.slot, 1, 1, 1))
         check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
         
@@ -409,17 +411,41 @@ class HShifterImage:
         self._snap_ctr = ctr
         self._snap_start_pos = [ctr.x, ctr.y, ctr.z]
         self._snapped = True
-        self._snap_toggle2_last_dir = None
 
         # Check double tap
-        last = self._snap_start_time
-        self._snap_start_time = now
-        if now - last < 0.6 and self._last_snap_dtap == False:
-            self._last_snap_dtap = True
-            self.wheel.device.set_button(49, True)
-            self._button_queue.append([49, time.time()])
-        else:
-            self._last_snap_dtap = False
+        self._snap_times.append(now)
+        self._snap_times = self._snap_times[-3:]
+        if len(self._snap_times) == 2 and self._snap_times[-1] - self._snap_times[-2] <= 0.5:
+            def wait_for_third():
+                self._snap_times = []
+
+                self.wheel.device.set_button(49, True)
+                self._button_queue.append([49, time.time()])
+                def haptic():
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                    time.sleep(0.16)
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                t = threading.Thread(target=haptic)
+                t.run()
+            self._snap_db_timer = threading.Timer(0.35, wait_for_third)
+            self._snap_db_timer.start()
+
+        elif len(self._snap_times) == 3 and self._snap_times[-1] - self._snap_times[-3] <= 1.0:
+            self._snap_db_timer.cancel()
+            self._snap_times = []
+
+            self.wheel.device.set_button(50, True)
+            self._button_queue.append([50, time.time()])
+
+            def haptic():
+                for i in range(16):
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                    time.sleep(0.02)
+            t = threading.Thread(target=haptic)
+            t.run()
+
+        elif len(self._snap_times) >= 2:
+            self._snap_times = []
 
 
     def unsnap(self):
@@ -525,16 +551,6 @@ class HShifterImage:
             elif dz_u >= 1:
                 self.set_stick_pos('d', ctr)
 
-            # Toggle 2
-            dy_u = dp[1] / 0.1
-            dy_dir = True if dy_u >= 0 else False # T=1 F=-1
-            if abs(dy_u) > 1 and dy_dir != self._snap_toggle2_last_dir: 
-                self._snap_toggle2_last_dir = dy_dir
-                self._snap_start_pos[1] = p1[1]
-                self.wheel.device.set_button(50, True)
-                self._button_queue.append([50, time.time()])
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
-
         now = time.time()
         c = 0
         for i in range(0, len(self._button_queue)):
@@ -546,14 +562,14 @@ class HShifterImage:
 
 
 class SteeringWheelImage:
-    def __init__(self, x=0, y=-0.4, z=-0.35, size=0.55):
+    def __init__(self, x=0, y=-0.4, z=-0.35, size=0.55, alpha=1):
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
         result, self.wheel = self.vroverlay.createOverlay('keyiiii'.encode(), 'keyiiii'.encode())
         check_result(result)
 
         check_result(self.vroverlay.setOverlayColor(self.wheel, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.wheel, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.wheel, alpha))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.wheel, size))
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
@@ -668,7 +684,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # radians per frame last turn speed when wheel was being held, gradually decreases after wheel is released
         self._turn_speed = 0
 
-        self.wheel_image = SteeringWheelImage(x=x, y=y, z=z, size=size)
+        self.wheel_image = SteeringWheelImage(x=x, y=y, z=z, size=size, alpha=self.config.wheel_alpha)
         self.center = Point(x, y, z)
         self.size = size
         self._grab_started_point = None
@@ -1019,9 +1035,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self._h_shifter_right_snappable = False
         elif last_h_shifter_right_bound == False and self._h_shifter_right_bound == True and self._right_controller_grabbed == False:
             self._h_shifter_right_snappable = True
-            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 600)
 
         if self._h_shifter_right_snappable and self._h_shifter_right_snapped == False:
+            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 300)
             if self._right_controller_grabbed:
                 self._h_shifter_right_snapped = True
                 self.hands_overlay.right_grab()
