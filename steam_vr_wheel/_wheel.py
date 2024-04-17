@@ -241,6 +241,7 @@ class HShifterImage:
         self.z = z
         self.size = size_cm / 100
         self.degree = degree
+        self.pos = 3.5
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -326,12 +327,11 @@ class HShifterImage:
         self.last_pos = 3.5
 
     def get_bounds(self):
-        margin = 0.03
-        o_x = self.size/2 + margin
-        o_z = self.stick_height * sin(self.degree*pi/180) + margin
+        o_x = self.size/2 + 0.03
+        o_z = self.stick_height * sin(self.degree*pi/180) + 0.1
 
-        pmin = (self.x-o_x, self.y-margin, self.z-o_z)
-        pmax = (self.x+o_x, self.y+self.stick_height+margin, self.z+o_z)
+        pmin = (self.x-o_x, self.y, self.z-o_z)
+        pmax = (self.x+o_x, self.y+self.stick_height + 0.1, self.z+o_z)
         return (pmin, pmax)
 
     def check_collision(self, ctr):
@@ -361,26 +361,52 @@ class HShifterImage:
             z = 0
         return y/(2*pi)*360
 
-    def set_stick_pos(self, pos):
+    def set_stick_pos(self, d, ctr):
+        if self.pos % 2 == 1:
+            row = 1
+        elif self.pos % 2 == 0:
+            row = 3
+        else:
+            row = 2
+
+        col = ceil(self.pos/2)
+
+        if d == 'u' and row > 1:
+            self.pos -= 0.5
+        elif d == 'r' and col < 3 and row == 2:
+            self.pos += 2
+        elif d == 'd' and row < 3:
+            self.pos += 0.5
+        elif d == 'l' and col > 1 and row == 2:
+            self.pos -= 2
+        else:
+            return
+
+        self._snap_start_pos = (ctr.x, ctr.y, ctr.z)
+        openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+
+    def snap_ctr(self, ctr):
+        self._snap_start_pos = (ctr.x, ctr.y, ctr.z)
+
+    def render(self):
         """
         |1  |3  |5  |  1 3 5
         |1.5|3.5|5.5|  +-N-+
         |2  |4  |6  |  2 4 6
 
-        odd: towards +z
+        odd: towards -z
         x2 is odd: no rotation
-        even: towards -z
+        even: towards +z
 
         x = (round(pos/2)-1) * ...
         z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
         """
-
-        # Towards HMD
+        pos = self.pos
         yaw = self._get_hmd_yaw()
 
         offset = (self.size/2 - self.stick_width/2)
         x = self.x + (ceil(pos/2)-2) * offset
-        z_fac = ((pos%2 if pos%2 != 0 else 2)-1.5)*2
+        z_fac = ((pos%2 if pos%2 != 0 else 2)-1.5)*-2
         z_sin = sin(self.degree*np.pi/180) * self.stick_height
 
         z_knob = self.z - z_fac * (z_sin + offset)
@@ -409,14 +435,25 @@ class HShifterImage:
         self.stick_tf[2][3] = z_stick + offset_stick[2]
         set_tf_rot(self.stick_tf, rot_stick)
 
-
-        if self.last_pos != pos:
-            self.last_pos = pos 
-            #print(yaw)
-
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
         fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
         fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
+
+    def update(self, ctr):
+        p1 = (ctr.x, ctr.y, ctr.z)
+        dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
+
+        dx_u = dp[0] / (self.size / 2)
+        if dx_u <= -1:
+            self.set_stick_pos('l', ctr)
+        elif dx_u >= 1:
+            self.set_stick_pos('r', ctr)
+
+        dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
+        if dz_u <= -1:
+            self.set_stick_pos('u', ctr)
+        elif dz_u >= 1:
+            self.set_stick_pos('d', ctr)
 
 
 
@@ -563,6 +600,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         # H Shifter
         self.h_shifter_image = HShifterImage()
+        self._h_shifter_right_bound = False
+        self._h_shifter_right_snapped = False
+        self._h_shifter_right_snappable = False
 
     def point_in_holding_bounds(self, point):
         width = 0.10
@@ -709,7 +749,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def _wheel_update(self, left_ctr, right_ctr):
         if self.config.wheel_grabbed_by_grip:
-            left_bound, right_bound = self._left_controller_grabbed, self._right_controller_grabbed
+            left_bound = self._left_controller_grabbed and not self._h_shifter_left_bound
+            right_bound = self._right_controller_grabbed and not self._h_shifter_right_bound
         else: # automatic gripping
             right_bound = self.point_in_holding_bounds(right_ctr)
             left_bound = self.point_in_holding_bounds(left_ctr)
@@ -849,11 +890,37 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self.hands_overlay.hide()
 
         # H shifter
-        if self.h_shifter_image.check_collision(right_ctr):
-            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 500)
+        self.h_shifter_image.render()
+        last_h_shifter_right_bound = self._h_shifter_right_bound
+        self._h_shifter_right_bound = self.h_shifter_image.check_collision(right_ctr)
+
+        if self._h_shifter_right_bound == False:
+            self._h_shifter_right_snappable = False
+        elif last_h_shifter_right_bound == False and self._h_shifter_right_bound == True and self._right_controller_grabbed == False:
+            self._h_shifter_right_snappable = True
+
+        if self._h_shifter_right_snappable and self._h_shifter_right_snapped == False:
+            if self._right_controller_grabbed:
+                self._h_shifter_right_snapped = True
+                self.hands_overlay.right_grab()
+                self.h_shifter_image.snap_ctr(right_ctr)
+
+        if self._h_shifter_right_snapped:
+            if not self._right_controller_grabbed:
+                self._h_shifter_right_snappable = self._h_shifter_right_bound
+                self._h_shifter_right_snapped = False
+                self.hands_overlay.right_ungrab()
+            else:
+                #openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 500)
+                self.h_shifter_image.update(right_ctr)
+
+        #if self._h_shifter_left_bound:
+            
+
 
         now = time.time()
-        self.h_shifter_image.set_stick_pos([1,1.5,2,3,3.5,4,5,5.5,6][round((int(now*1000)%2000)/2000*8)])
+        
+        #self.h_shifter_image.set_stick_pos([1,1.5,2,3,3.5,4,5,5.5,6][round((int(now*1000)%2000)/2000*8)])
 
     def move_wheel(self, right_ctr, left_ctr):
         self.center = Point(right_ctr.x, right_ctr.y, right_ctr.z)
