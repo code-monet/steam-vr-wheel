@@ -70,7 +70,6 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
             if event.eventType == openvr.VREvent_ButtonPress:
                 if DEBUG:
                     print(hand, "HAND EVENT: BUTTON PRESS, BUTTON ID", event.data.controller.button)
-
                 button = event.data.controller.button
                 wheel.set_button_press(button, hand, left_controller, right_controller)
             if event.eventType == openvr.VREvent_ButtonUnpress:
