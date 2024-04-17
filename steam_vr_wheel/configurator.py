@@ -3,7 +3,6 @@ import wx
 
 from steam_vr_wheel import PadConfig, ConfigException
 
-
 class ConfiguratorApp:
     def __init__(self):
 
@@ -33,6 +32,19 @@ class ConfiguratorApp:
         self.shifter_degree = wx.SpinCtrl(self.pnl, name = "Shifter Degree, 15deg", min=0, max=90)
         self.shifter_alpha = wx.SpinCtrl(self.pnl, name = "Shifter Alpha (%), 100%", min=0, max=100)
         self.shifter_size = wx.SpinCtrl(self.pnl, name = "Shifter Size (cm), 7cm", min=1, max=100)
+
+        # Joystick button or axis
+        self.pnl_joystick = wx.Panel(self.window)
+        self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
+        self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
+        self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
+        self.j_l_up_button = wx.CheckBox(self.pnl_joystick, label='L ▲')
+        self.j_l_down_button = wx.CheckBox(self.pnl_joystick, label='L ▼')
+        self.j_r_left_button = wx.CheckBox(self.pnl_joystick, label='R ◀')
+        self.j_r_right_button = wx.CheckBox(self.pnl_joystick, label='R ▶')
+        self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
+        self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
+
 
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -110,6 +122,20 @@ class ConfiguratorApp:
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Size"))
         self.vbox.Add(self.shifter_size)
+
+        self.vbox.AddSpacer(10)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
+        self.vbox.Add(wx.StaticText(self.pnl, label = "- Checked joystick acts as button"))
+        self.hbox_joystick.Add(self.j_l_left_button)
+        self.hbox_joystick.Add(self.j_l_right_button)
+        self.hbox_joystick.Add(self.j_l_up_button)
+        self.hbox_joystick.Add(self.j_l_down_button)
+        self.hbox_joystick.Add(self.j_r_left_button)
+        self.hbox_joystick.Add(self.j_r_right_button)
+        self.hbox_joystick.Add(self.j_r_up_button)
+        self.hbox_joystick.Add(self.j_r_down_button)
+        self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
+        self.vbox.Add(self.pnl_joystick)
 
         self.pnl.SetSizerAndFit(self.vbox)
         self.read_config()
