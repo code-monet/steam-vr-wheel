@@ -332,3 +332,92 @@ class PadConfig:
         with self.data_lock:
             self._data['shifter_size'] = x
         self._write()
+
+    # Joystick as button
+    @property
+    def j_l_left_button(self):
+        with self.data_lock:
+            return self._data['j_l_left_button']
+
+    @j_l_left_button.setter
+    def j_l_left_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_l_left_button'] = x
+        self._write()
+
+    @property
+    def j_l_right_button(self):
+        with self.data_lock:
+            return self._data['j_l_right_button']
+
+    @j_l_right_button.setter
+    def j_l_right_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_l_right_button'] = x
+        self._write()
+
+    @property
+    def j_l_up_button(self):
+        with self.data_lock:
+            return self._data['j_l_up_button']
+
+    @j_l_up_button.setter
+    def j_l_up_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_l_up_button'] = x
+        self._write()
+
+    @property
+    def j_l_down_button(self):
+        with self.data_lock:
+            return self._data['j_l_down_button']
+
+    @j_l_down_button.setter
+    def j_l_down_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_l_down_button'] = x
+        self._write()
+
+    @property
+    def j_r_left_button(self):
+        with self.data_lock:
+            return self._data['j_r_left_button']
+
+    @j_r_left_button.setter
+    def j_r_left_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_r_left_button'] = x
+        self._write()
+
+    @property
+    def j_r_right_button(self):
+        with self.data_lock:
+            return self._data['j_r_right_button']
+
+    @j_r_right_button.setter
+    def j_r_right_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_r_right_button'] = x
+        self._write()
+
+    @property
+    def j_r_up_button(self):
+        with self.data_lock:
+            return self._data['j_r_up_button']
+
+    @j_r_up_button.setter
+    def j_r_up_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_r_up_button'] = x
+        self._write()
+
+    @property
+    def j_r_down_button(self):
+        with self.data_lock:
+            return self._data['j_r_down_button']
+
+    @j_r_down_button.setter
+    def j_r_down_button(self, x: bool):
+        with self.data_lock:
+            self._data['j_r_down_button'] = x
+        self._write()

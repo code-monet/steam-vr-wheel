@@ -195,22 +195,44 @@ class VirtualPad:
 
         DEADZONE_DPAD = 0.8
         """
-        |LX|4,5|
-        |LY|6,7|
-        |RX|13,14|
-        |RY|15,16|
+        |LX|34,35|
+        |LY|36,37|
+        |RX|38,39| 
+        |RY|40,41|
         """
-        def convert_4way(trackpad, base_hid):
-            if abs(trackpad) <= DEADZONE_DPAD:
-                self.device.set_button(base_hid, False)
-                self.device.set_button(base_hid+1, False)
+        def convert_axis(trackpad, axis_hid, base_hid, minus_is_btn, plus_is_btn):
+            if minus_is_btn == False and plus_is_btn == False:
+                amount = trackpad+1 / 2
+                zero = 0.5
             else:
-                offset = 0 if trackpad < 0 else 1
-                self.device.set_button(base_hid-(offset-1), False)
-                self.device.set_button(base_hid+offset, True)
+                amount = abs(trackpad)
+                zero = 0
 
-        convert_4way(left_ctr.trackpadX, 4)
-        convert_4way(left_ctr.trackpadY, 6)
+            plus_dead = 0.8 if plus_is_btn else 0.1
+            minus_dead = -0.8 if minus_is_btn else -0.1
+
+            if trackpad <= minus_dead:
+                if minus_is_btn:
+                    self.device.set_button(base_hid, True)
+                else:
+                    self.device.set_axis(axis_hid, int(amount * 0x8000))
+            elif trackpad >= plus_dead:
+                if plus_is_btn:
+                    self.device.set_button(base_hid+1, True)
+                else:
+                    self.device.set_axis(axis_hid, int(amount * 0x8000))
+            else:
+                if minus_is_btn:
+                    self.device.set_button(base_hid, False)
+                else:
+                    self.device.set_axis(axis_hid, int(zero * 0x8000))
+                if plus_is_btn:
+                    self.device.set_button(base_hid+1, False)
+                else:
+                    self.device.set_axis(axis_hid, int(zero * 0x8000))
+
+        convert_axis(left_ctr.trackpadX, 0x32, 34, self.config.j_l_left_button, self.config.j_l_right_button)
+        convert_axis(left_ctr.trackpadY, HID_USAGE_Y, 36, self.config.j_l_down_button, self.config.j_l_up_button)
             
         #if (self.trackpadLtouch or self.config.touchpad_always_updates) and self.trackpad_left_enabled:
         #self.device.set_axis(HID_USAGE_RX, int((left_ctr.trackpadX+1)/2 * 0x8000))
@@ -229,8 +251,8 @@ class VirtualPad:
         #if (self.trackpadRtouch or self.config.touchpad_always_updates): #and self.trackpad_right_enabled:
         #self.device.set_axis(0x32, int((right_ctr.trackpadX + 1) / 2 * 0x8000))
         #self.device.set_axis(HID_USAGE_Y, int(((-right_ctr.trackpadY + 1) / 2) * 0x8000))
-        convert_4way(right_ctr.trackpadX, 13)
-        convert_4way(right_ctr.trackpadY, 15)
+        convert_axis(right_ctr.trackpadX, HID_USAGE_RX, 38, self.config.j_r_left_button, self.config.j_r_right_button)
+        convert_axis(right_ctr.trackpadY, HID_USAGE_RY, 40, self.config.j_r_down_button, self.config.j_r_up_button)
 
     def edit_mode(self, left_ctr, right_ctr):
         pass

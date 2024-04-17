@@ -749,7 +749,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def _wheel_update(self, left_ctr, right_ctr):
         if self.config.wheel_grabbed_by_grip:
-            left_bound = self._left_controller_grabbed and not self._h_shifter_left_bound
+            left_bound = self._left_controller_grabbed# and not self._h_shifter_left_bound
             right_bound = self._right_controller_grabbed and not self._h_shifter_right_bound
         else: # automatic gripping
             right_bound = self.point_in_holding_bounds(right_ctr)

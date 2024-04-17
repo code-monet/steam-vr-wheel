@@ -34,7 +34,7 @@ class ConfiguratorApp:
         self.shifter_size = wx.SpinCtrl(self.pnl, name = "Shifter Size (cm), 7cm", min=1, max=100)
 
         # Joystick button or axis
-        self.pnl_joystick = wx.Panel(self.window)
+        self.pnl_joystick = wx.Panel(self.pnl)
         self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
         self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
         self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
@@ -69,14 +69,14 @@ class ConfiguratorApp:
         self.shifter_size.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         # Joystick button or axis
-        self.j_l_left_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_l_right_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_l_up_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_l_down_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_r_left_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_r_right_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_r_up_button.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.j_r_down_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
 
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
