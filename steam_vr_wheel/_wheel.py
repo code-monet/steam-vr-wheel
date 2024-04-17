@@ -381,9 +381,11 @@ class HShifterImage:
 
     def get_bounds(self):
         margin = 0.03
-        o = self.size/2 + margin
-        pmin = (self.x-o, self.y-margin, self.z-o)
-        pmax = (self.x+o, self.y+self.stick_height+margin, self.z+o)
+        o_x = self.size/2 + margin
+        o_z = self.stick_height * sin(self.degree*pi/180) + margin
+
+        pmin = (self.x-o_x, self.y-margin, self.z-o_z)
+        pmax = (self.x+o_x, self.y+self.stick_height+margin, self.z+o_z)
         return (pmin, pmax)
 
     def check_collision(self, ctr):
