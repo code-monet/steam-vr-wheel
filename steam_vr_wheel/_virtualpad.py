@@ -10,10 +10,12 @@ from . import PadConfig, ConfigException
 import multiprocessing
 
 BUTTONS = {}
-BUTTONS['left'] = {openvr.k_EButton_ApplicationMenu: 3, openvr.k_EButton_Grip: 2, openvr.k_EButton_SteamVR_Touchpad: -1, # 4 5 6 7 8
+BUTTONS['left'] = {openvr.k_EButton_ApplicationMenu: 3, #openvr.k_EButton_Grip: 2,
+                     openvr.k_EButton_SteamVR_Touchpad: -1, # 4 5 6 7 8
                    openvr.k_EButton_SteamVR_Trigger: 1, openvr.k_EButton_A: 17,
                    }
-BUTTONS['right'] = {openvr.k_EButton_ApplicationMenu: 11, openvr.k_EButton_Grip: 10, openvr.k_EButton_SteamVR_Touchpad: -2, # 12 13 14 15 16
+BUTTONS['right'] = {openvr.k_EButton_ApplicationMenu: 11, #openvr.k_EButton_Grip: 10,
+                     openvr.k_EButton_SteamVR_Touchpad: -2, # 12 13 14 15 16
                     openvr.k_EButton_SteamVR_Trigger: 9, openvr.k_EButton_A: 18
                     }
 
@@ -147,16 +149,28 @@ class VirtualPad:
 
     def set_trigger_touch_left(self):
         if self.config.trigger_pre_press_button:
+            return
+
+            
             self.device.set_button(31, True)
 
     def set_trigger_touch_right(self):
         if self.config.trigger_pre_press_button:
+            return
+
+
             self.device.set_button(32, True)
 
     def set_trigger_untouch_left(self):
+        return
+
+
         self.device.set_button(31, False)
 
     def set_trigger_untouch_right(self):
+        return
+
+
         self.device.set_button(32, False)
 
     def set_trackpad_touch_left(self):
