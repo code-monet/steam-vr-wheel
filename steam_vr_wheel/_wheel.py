@@ -1,5 +1,5 @@
 from collections import deque
-from math import pi, atan2, sin, cos
+from math import pi, atan2, sin, cos, ceil, sqrt
 
 import numpy as np
 import openvr
@@ -25,6 +25,84 @@ def print_matrix(matrix):
         l.append(ll)
     print(l)
 
+def rotation_matrix_around_vec(theta, vec):
+    theta = theta * np.pi / 180
+    m = sqrt(vec[0]**2 + vec[1]**2 + vec[2]**2)
+    ux = vec[0]/m
+    uy = vec[1]/m
+    uz = vec[2]/m
+    s, c = sin(theta), cos(theta)
+
+    return np.array([[c+ux**2*(1-c), ux*uy*(1-c)-uz*s, ux*uz*(1-c)+uy*s],
+                    [uy*ux*(1-c)+uz*s, c+uy**2*(1-c), uy*uz*(1-c)-ux*s],
+                    [uz*ux*(1-c)-uy*s, uz*uy*(1-c)+ux*s, c+uz**2*(1-c)]])
+
+def rotation_matrix(theta1, theta2, theta3, order='xyz'):
+    #https://programming-surgeon.com/en/euler-angle-python-en/
+    """
+    input
+        theta1, theta2, theta3 = rotation angles in rotation order (degrees)
+        oreder = rotation order of x,y,z　e.g. XZY rotation -- 'xzy'
+    output
+        3x3 rotation matrix (numpy array)
+    """
+    c1 = np.cos(theta1 * np.pi / 180)
+    s1 = np.sin(theta1 * np.pi / 180)
+    c2 = np.cos(theta2 * np.pi / 180)
+    s2 = np.sin(theta2 * np.pi / 180)
+    c3 = np.cos(theta3 * np.pi / 180)
+    s3 = np.sin(theta3 * np.pi / 180)
+
+    if order == 'xzx':
+        matrix=np.array([[c2, -c3*s2, s2*s3],
+                         [c1*s2, c1*c2*c3-s1*s3, -c3*s1-c1*c2*s3],
+                         [s1*s2, c1*s3+c2*c3*s1, c1*c3-c2*s1*s3]])
+    elif order=='xyx':
+        matrix=np.array([[c2, s2*s3, c3*s2],
+                         [s1*s2, c1*c3-c2*s1*s3, -c1*s3-c2*c3*s1],
+                         [-c1*s2, c3*s1+c1*c2*s3, c1*c2*c3-s1*s3]])
+    elif order=='yxy':
+        matrix=np.array([[c1*c3-c2*s1*s3, s1*s2, c1*s3+c2*c3*s1],
+                         [s2*s3, c2, -c3*s2],
+                         [-c3*s1-c1*c2*s3, c1*s2, c1*c2*c3-s1*s3]])
+    elif order=='yzy':
+        matrix=np.array([[c1*c2*c3-s1*s3, -c1*s2, c3*s1+c1*c2*s3],
+                         [c3*s2, c2, s2*s3],
+                         [-c1*s3-c2*c3*s1, s1*s2, c1*c3-c2*s1*s3]])
+    elif order=='zyz':
+        matrix=np.array([[c1*c2*c3-s1*s3, -c3*s1-c1*c2*s3, c1*s2],
+                         [c1*s3+c2*c3*s1, c1*c3-c2*s1*s3, s1*s2],
+                         [-c3*s2, s2*s3, c2]])
+    elif order=='zxz':
+        matrix=np.array([[c1*c3-c2*s1*s3, -c1*s3-c2*c3*s1, s1*s2],
+                         [c3*s1+c1*c2*s3, c1*c2*c3-s1*s3, -c1*s2],
+                         [s2*s3, c3*s2, c2]])
+    elif order=='xyz':
+        matrix=np.array([[c2*c3, -c2*s3, s2],
+                         [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
+                         [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
+    elif order=='xzy':
+        matrix=np.array([[c2*c3, -s2, c2*s3],
+                         [s1*s3+c1*c3*s2, c1*c2, c1*s2*s3-c3*s1],
+                         [c3*s1*s2-c1*s3, c2*s1, c1*c3+s1*s2*s3]])
+    elif order=='yxz':
+        matrix=np.array([[c1*c3+s1*s2*s3, c3*s1*s2-c1*s3, c2*s1],
+                         [c2*s3, c2*c3, -s2],
+                         [c1*s2*s3-c3*s1, c1*c3*s2+s1*s3, c1*c2]])
+    elif order=='yzx':
+        matrix=np.array([[c1*c2, s1*s3-c1*c3*s2, c3*s1+c1*s2*s3],
+                         [s2, c2*c3, -c2*s3],
+                         [-c2*s1, c1*s3+c3*s1*s2, c1*c3-s1*s2*s3]])
+    elif order=='zyx':
+        matrix=np.array([[c1*c2, c1*s2*s3-c3*s1, s1*s3+c1*c3*s2],
+                         [c2*s1, c1*c3+s1*s2*s3, c3*s1*s2-c1*s3],
+                         [-s2, c2*s3, c2*c3]])
+    elif order=='zxy':
+        matrix=np.array([[c1*c3-s1*s2*s3, -c2*s1, c1*s3+c3*s1*s2],
+                         [c3*s1+c1*s2*s3, c1*c2, s1*s3-c1*c3*s2],
+                         [-c2*s3, s2, c2*c3]])
+
+    return matrix
 
 def initRotationMatrix(axis, angle, matrix=None):
     # angle in radians
@@ -84,6 +162,7 @@ def matMul33(a, b, result=None):
     result[1][3] = b[1][3]
     result[2][3] = b[2][3]
     return result
+
 
 
 class HandsImage:
@@ -204,6 +283,193 @@ class HandsImage:
         check_result(self.vroverlay.showOverlay(self.l_ovr2))
         check_result(self.vroverlay.showOverlay(self.r_ovr))
         check_result(self.vroverlay.showOverlay(self.r_ovr2))
+
+
+class HShifterImage:
+    def __init__(self, x=0.25, y=-0.57, z=-0.15, size=0.07):
+        self.vrsys = openvr.VRSystem()
+        self.vroverlay = openvr.IVROverlay()
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.size = size
+        self.degree = 15
+
+        # Create
+        result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
+        check_result(result)
+        result, self.stick = self.vroverlay.createOverlay('hshifter_stick'.encode(), 'hshifter_stick'.encode())
+        check_result(result)
+        result, self.knob = self.vroverlay.createOverlay('hshifter_knob'.encode(), 'hshifter_knob'.encode())
+        check_result(result)
+
+        # Images
+        this_dir = os.path.abspath(os.path.dirname(__file__))
+        slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot.png')
+        stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick.png')
+        knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
+
+        check_result(self.vroverlay.setOverlayFromFile(self.slot, slot_img.encode()))
+        check_result(self.vroverlay.setOverlayFromFile(self.stick, stick_img.encode()))
+        check_result(self.vroverlay.setOverlayFromFile(self.knob, knob_img.encode()))
+
+        # Visibility
+        check_result(self.vroverlay.setOverlayColor(self.slot, 1, 1, 1)) # white for the time being
+        check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, size)) # default 7cm
+        
+        stick_width = 0.02
+        self.stick_width = stick_width
+        check_result(self.vroverlay.setOverlayColor(self.stick, 1, 1, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.stick, 0)) # Hide while loading texture
+        check_result(self.vroverlay.showOverlay(self.stick)) # Preload texture for dimension checking
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.stick, stick_width))
+
+        check_result(self.vroverlay.setOverlayColor(self.knob, 1, 1, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.knob, 1))
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.knob, 0.08))
+
+        def set_transform(tf, mat):
+            for i in range(0, 3):
+                for j in range(0, 4):
+                    tf[i][j] = mat[i][j]
+
+        # Position
+        result, self.slot_tf = self.vroverlay.setOverlayTransformAbsolute(self.slot, openvr.TrackingUniverseSeated)
+        check_result(result)
+        set_transform(self.slot_tf, [[1.0, 0.0, 0.0, x],
+                                    [0.0, 0.0, 1.0, y],
+                                    [0.0, -1.0, 0.0, z]]) # 90deg at X
+
+        result, self.stick_tf = self.vroverlay.setOverlayTransformAbsolute(self.stick, openvr.TrackingUniverseSeated)
+        check_result(result)
+
+        #result, txw, txh = self.vroverlay.getOverlayImageData(self.stick, None, 0)
+        txw, txh = 40, 633
+        stick_height = txh / (txw / stick_width)
+        set_transform(self.stick_tf, [[1.0, 0.0, 0.0, x],
+                                    [0.0, 1.0, 0.0, y+stick_height/2],
+                                    [0.0, 0.0, 1.0, z]])
+        self.stick_height = stick_height
+
+        result, self.knob_tf = self.vroverlay.setOverlayTransformAbsolute(self.knob, openvr.TrackingUniverseSeated)
+        check_result(result)
+        set_transform(self.knob_tf, [[1.0, 0.0, 0.0, x],
+                                    [0.0, 1.0, 0.0, y+stick_height],
+                                    [0.0, 0.0, 1.0, z]])
+
+        # Final
+        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+        result = fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
+        result = fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
+        result = fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
+        check_result(self.vroverlay.showOverlay(self.slot))
+        check_result(self.vroverlay.setOverlayAlpha(self.stick, 1)) # Stick
+        check_result(self.vroverlay.showOverlay(self.knob))
+
+        # Get HMD id for yaw
+        vrsys = openvr.VRSystem()
+        for i in range(openvr.k_unMaxTrackedDeviceCount):
+            device_class = vrsys.getTrackedDeviceClass(i)
+            if device_class == openvr.TrackedDeviceClass_HMD:
+                self._hmd_id = i
+        poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
+        self._poses = poses_t()
+
+        self.last_pos = 3.5
+
+    def get_bounds(self):
+        margin = 0.03
+        o = self.size/2 + margin
+        pmin = (self.x-o, self.y-margin, self.z-o)
+        pmax = (self.x+o, self.y+self.stick_height+margin, self.z+o)
+        return (pmin, pmax)
+
+    def check_collision(self, ctr):
+        x, y, z = ctr.x, ctr.y, ctr.z
+        pm, pM = self.get_bounds()
+        x0, y0, z0 = pm
+        x2, y2, z2 = pM
+        
+        return x0<=x<=x2 and y0<=y<=y2 and z0<=z<=z2
+
+    def _get_hmd_yaw(self):
+        openvr.VRSystem().getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(self._poses), self._poses)
+        m = self._poses[self._hmd_id].mDeviceToAbsoluteTracking
+        R = np.array([[m[0][0], m[1][0], m[2][0]],[m[0][1], m[1][1], m[2][1]],[m[0][2], m[1][2], m[2][2]]])
+        #https://learnopencv.com/rotation-matrix-to-euler-angles/
+        sy = sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+     
+        singular = sy < 1e-6
+     
+        if not singular :
+            x = atan2(R[2,1] , R[2,2])
+            y = atan2(-R[2,0], sy)
+            z = atan2(R[1,0], R[0,0])
+        else :
+            x = atan2(-R[1,2], R[1,1])
+            y = atan2(-R[2,0], sy)
+            z = 0
+        return y/(2*pi)*360
+
+    def set_stick_pos(self, pos):
+        """
+        |1  |3  |5  |  1 3 5
+        |1.5|3.5|5.5|  +-N-+
+        |2  |4  |6  |  2 4 6
+
+        odd: towards +z
+        x2 is odd: no rotation
+        even: towards -z
+
+        x = (round(pos/2)-1) * ...
+        z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
+        """
+
+        # Towards HMD
+        yaw = self._get_hmd_yaw()
+
+        offset = (self.size/2 - self.stick_width/2)
+        x = self.x + (ceil(pos/2)-2) * offset
+        z_fac = ((pos%2 if pos%2 != 0 else 2)-1.5)*2
+        z_sin = sin(self.degree*np.pi/180) * self.stick_height
+
+        z_knob = self.z - z_fac * (z_sin + offset)
+        z_stick = self.z - z_fac * offset
+        rot_knob = rotation_matrix(0, yaw, 0)
+        rot_stick = rotation_matrix_around_vec(z_fac * -self.degree,
+                            (cos((180-yaw)*pi/180), 0, sin((180-yaw)*pi/180)))
+        rot_stick = np.dot(rot_stick, rotation_matrix(0, yaw, 0))
+        rot_stick_x = rotation_matrix(z_fac * self.degree, 0, 0) #
+
+        y_knob = self.y + self.stick_height - (abs(z_fac)*((1-cos(self.degree*np.pi/180))*self.stick_height))
+
+        def set_tf_rot(tf, mat):
+            for i in range(0, 3):
+                for j in range(0, 3):
+                    tf[j][i] = mat[i][j]
+
+        self.knob_tf[0][3] = x
+        self.knob_tf[1][3] = y_knob
+        self.knob_tf[2][3] = z_knob
+        set_tf_rot(self.knob_tf, rot_knob)
+
+        offset_stick = -np.dot(rot_stick_x, (0, self.stick_height/2, 0))
+        self.stick_tf[0][3] = x + offset_stick[0]
+        self.stick_tf[1][3] = self.y - offset_stick[1]
+        self.stick_tf[2][3] = z_stick + offset_stick[2]
+        set_tf_rot(self.stick_tf, rot_stick)
+
+
+        if self.last_pos != pos:
+            self.last_pos = pos 
+            #print(yaw)
+
+        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+        fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
+        fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
+
 
 
 class SteeringWheelImage:
@@ -346,6 +612,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # edit mode
         self._edit_mode_last_press = 0.0
         self._edit_mode_entry = 0.0
+
+        # H Shifter
+        self.h_shifter_image = HShifterImage()
 
     def point_in_holding_bounds(self, point):
         width = 0.10
@@ -631,6 +900,13 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         else:
             self.hands_overlay.hide()
 
+        # H shifter
+        if self.h_shifter_image.check_collision(right_ctr):
+            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 500)
+
+        now = time.time()
+        self.h_shifter_image.set_stick_pos([1,1.5,2,3,3.5,4,5,5.5,6][round((int(now*1000)%2000)/2000*8)])
+
     def move_wheel(self, right_ctr, left_ctr):
         self.center = Point(right_ctr.x, right_ctr.y, right_ctr.z)
         self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
@@ -650,6 +926,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self.wheel_image != None:
             self.wheel_image.show()
 
+        # Todo: switch alpha, shows the alpha-applied wheel for a second and after that set alpha to 1
         self.wheel_image.set_color((0,1,0))
         if state_r.ulButtonPressed:
             btn_id = list(reversed(bin(state_r.ulButtonPressed)[2:])).index('1')
