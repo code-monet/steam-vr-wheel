@@ -68,6 +68,16 @@ class ConfiguratorApp:
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_size.Bind(wx.EVT_SPINCTRL, self.config_change)
 
+        # Joystick button or axis
+        self.j_l_left_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_l_right_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_l_up_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_l_down_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_r_left_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_r_right_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_r_up_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.j_r_down_button.Bind(wx.EVT_SPINCTRL, self.config_change)
+
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
                                 multibutton_trackpad=self.multibutton_trackpad_box,
@@ -88,6 +98,15 @@ class ConfiguratorApp:
                                 shifter_degree=self.shifter_degree,
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_size=self.shifter_size,
+
+                                j_l_left_button=self.j_l_left_button,
+                                j_l_right_button=self.j_l_right_button,
+                                j_l_up_button=self.j_l_up_button,
+                                j_l_down_button=self.j_l_down_button,
+                                j_r_left_button=self.j_r_left_button,
+                                j_r_right_button=self.j_r_right_button,
+                                j_r_up_button=self.j_r_up_button,
+                                j_r_down_button=self.j_r_down_button,
                                 )
 
         self.vbox.Add(self.trigger_pre_btn_box)

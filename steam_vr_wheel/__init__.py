@@ -14,7 +14,17 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, 
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
 
                     # Shifter
-                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100, shifter_size=7)
+                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100, shifter_size=7,
+
+                    # Joystick as button
+                    j_l_left_button=False,
+                    j_l_right_button=False,
+                    j_l_up_button=False,
+                    j_l_down_button=False,
+                    j_r_left_button=False,
+                    j_r_right_button=False,
+                    j_r_up_button=False,
+                    j_r_down_button=False,)
 
 
 class ConfigException(Exception):
