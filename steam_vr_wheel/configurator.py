@@ -27,7 +27,12 @@ class ConfiguratorApp:
         self.wheel_show_hands = wx.CheckBox(self.pnl, label="Show Hands Overlay")
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
-        self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100) #!!
+        self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
+
+        # Shifter
+        self.shifter_degree = wx.SpinCtrl(self.pnl, name = "Shifter Degree, 15deg", min=0, max=90)
+        self.shifter_alpha = wx.SpinCtrl(self.pnl, name = "Shifter Alpha (%), 100%", min=0, max=100)
+        self.shifter_size = wx.SpinCtrl(self.pnl, name = "Shifter Size (cm), 7cm", min=1, max=100)
 
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -46,6 +51,11 @@ class ConfiguratorApp:
         self.wheel_centerforce.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
 
+        # Shifter
+        self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_size.Bind(wx.EVT_SPINCTRL, self.config_change)
+
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
                                 multibutton_trackpad=self.multibutton_trackpad_box,
@@ -61,7 +71,11 @@ class ConfiguratorApp:
                                 wheel_show_hands=self.wheel_show_hands,
                                 wheel_degrees=self.wheel_degrees,
                                 wheel_centerforce=self.wheel_centerforce,
-                                wheel_alpha=self.wheel_alpha
+                                wheel_alpha=self.wheel_alpha,
+
+                                shifter_degree=self.shifter_degree,
+                                shifter_alpha=self.shifter_alpha,
+                                shifter_size=self.shifter_size,
                                 )
 
         self.vbox.Add(self.trigger_pre_btn_box)
@@ -78,14 +92,24 @@ class ConfiguratorApp:
         self.vbox.Add(self.wheel_show_wheel)
         self.vbox.Add(self.wheel_show_hands)
         self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Degrees"))
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Degrees"))
         self.vbox.Add(self.wheel_degrees)
-        self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Center Force"))
+        self.vbox.AddSpacer(4)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Center Force"))
         self.vbox.Add(self.wheel_centerforce)
-        self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Alpha"))
+        self.vbox.AddSpacer(4)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Alpha"))
         self.vbox.Add(self.wheel_alpha)
+
+        self.vbox.AddSpacer(10)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Alpha"))
+        self.vbox.Add(self.shifter_alpha)
+        self.vbox.AddSpacer(4)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Degree"))
+        self.vbox.Add(self.shifter_degree)
+        self.vbox.AddSpacer(4)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Size"))
+        self.vbox.Add(self.shifter_size)
 
         self.pnl.SetSizerAndFit(self.vbox)
         self.read_config()

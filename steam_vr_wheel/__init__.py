@@ -11,7 +11,10 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, 
                       joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False, edit_mode=False,
                       wheel_center=[0, -0.4, -0.35], wheel_size=0.55, wheel_grabbed_by_grip=True,
                       wheel_grabbed_by_grip_toggle=True, wheel_show_wheel=True, wheel_show_hands=True,
-                      wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100)
+                      wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
+
+                    # Shifter
+                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100, shifter_size=7)
 
 
 class ConfigException(Exception):
@@ -273,4 +276,49 @@ class PadConfig:
     def wheel_show_hands(self, x: bool):
         with self.data_lock:
             self._data['wheel_show_hands'] = x
+        self._write()
+
+    # Shifter
+    @property
+    def shifter_center(self):
+        with self.data_lock:
+            return self._data['shifter_center']
+
+    @shifter_center.setter
+    def shifter_center(self, x: bool):
+        with self.data_lock:
+            self._data['shifter_center'] = x
+        self._write()
+
+    @property
+    def shifter_degree(self):
+        with self.data_lock:
+            return self._data['shifter_degree']
+
+    @shifter_degree.setter
+    def shifter_degree(self, x: int):
+        with self.data_lock:
+            self._data['shifter_degree'] = x
+        self._write()
+
+    @property
+    def shifter_alpha(self):
+        with self.data_lock:
+            return self._data['shifter_alpha']
+
+    @shifter_alpha.setter
+    def shifter_alpha(self, x: int):
+        with self.data_lock:
+            self._data['shifter_alpha'] = x
+        self._write()
+
+    @property
+    def shifter_size(self):
+        with self.data_lock:
+            return self._data['shifter_size']
+
+    @shifter_size.setter
+    def shifter_size(self, x: int):
+        with self.data_lock:
+            self._data['shifter_size'] = x
         self._write()

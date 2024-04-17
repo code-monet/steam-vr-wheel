@@ -232,15 +232,15 @@ class HandsImage:
 
 
 class HShifterImage:
-    def __init__(self, x=0.25, y=-0.57, z=-0.15, size=0.07):
+    def __init__(self, x=0.25, y=-0.57, z=-0.15, size_cm=7, degree=15):
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
 
         self.x = x
         self.y = y
         self.z = z
-        self.size = size
-        self.degree = 15
+        self.size = size_cm / 100
+        self.degree = degree
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -263,7 +263,7 @@ class HShifterImage:
         # Visibility
         check_result(self.vroverlay.setOverlayColor(self.slot, 1, 1, 1)) # white for the time being
         check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, size)) # default 7cm
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
         
         stick_width = 0.02
         self.stick_width = stick_width
