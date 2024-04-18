@@ -256,9 +256,6 @@ class HShifterImage:
         self._pos_to_button = dict({1: 43, 3:   45, 5: 47,
                                            3.5: 42,
                                     2: 44, 4:   46, 6: 48})
-        self._pos_to_haptic = dict({1: 1200, 3: 1200, 5: 1200,
-                                    1.5: 3000, 3.5: 3000, 5.5: 3000,
-                                    2: 1200, 4: 1200, 6: 1200})
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -279,7 +276,7 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayFromFile(self.knob, knob_img.encode()))
 
         # Visibility
-        check_result(self.vroverlay.setOverlayColor(self.slot, 1, 1, 1))
+        check_result(self.vroverlay.setOverlayColor(self.slot, 0.5, 0.5, 0.5)) # default gray outline
         check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
         
@@ -379,7 +376,7 @@ class HShifterImage:
         |1.5|3.5|5.5|     42
         |2  |4  |6  |  44 46 48
 
-        slide 49   double tap 50
+        double tap 49  triple tap 50
         """
 
         if self.pos % 2 == 1:
@@ -402,15 +399,25 @@ class HShifterImage:
         else:
             return
 
+        is_button = self.pos in self._pos_to_button
+
         if ctr is not None:
             self._snap_start_pos[0] = ctr.x
             self._snap_start_pos[2] = ctr.z
-            if self.pos in self._pos_to_haptic:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, self._pos_to_haptic[self.pos])
+            if is_button == False:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
 
-        if self.pos in self._pos_to_button:
+        # Position that has button mapping
+        if is_button:
             btn_id = self._pos_to_button[self.pos]
             self._pressed_button = btn_id
+
+            def haptic():
+                for i in range(8):
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 2000 - i*200)
+                    time.sleep(0.02)
+            t = threading.Thread(target=haptic)
+            t.run()
 
     def snap_ctr(self, ctr):
         now = time.time()
@@ -544,12 +551,14 @@ class HShifterImage:
             dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
 
             dx_u = dp[0] / (self.size / 2)
-            if dx_u <= -1:
-                self.set_stick_pos('l', ctr)
-            elif dx_u >= 1:
-                self.set_stick_pos('r', ctr)
-
             dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
+
+            if abs(dp[2]) < (self.size / 4) # Middle row movement requires low value of delta z
+                if dx_u <= -1:
+                    self.set_stick_pos('l', ctr)
+                elif dx_u >= 1:
+                    self.set_stick_pos('r', ctr)
+
             if dz_u <= -1:
                 self.set_stick_pos('u', ctr)
             elif dz_u >= 1:
