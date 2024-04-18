@@ -1,110 +1,86 @@
 # steam-vr-wheel
 
-### Fork memo
+This fork is a version I modified for personal use only. So it is highly likely that it won't work on other platforms than Quest 2 or alike. If you're, by any chance, inclined to try, download from the releases, since the current commit could be unfunctional.
 
-This will likely work only with Quest 2 controllers. And only the wheel mode work properly.
+## Memo
 
 Qyuest 2 vjoy mapping
-|Key|No|
+
+|Key|Button ID|Note|
+|-|-|-|
+|LT|1||
+|L Grip|2|Disabled|
+|RT|9||
+|R Grip|10|Disabled|
+|A|18||
+|B|11||
+|X|17||
+|Y|3||
+|Left Touch|31|Disabled|
+|Right Touch|32|Disabled|
+
+### Todo
+
+- Make 49 and 50 as toggle
+- Make splitter and range state visible on knob
+- Make controlling of shifter more intuitive
+
+## This fork
+
+### Comaptibility
+
+- Compatibility of devices other than Quest 2 is not tested.
+- Only the wheel mode(wheel.bat) is tested.
+- Manual grabbing(wheel configuration) is recommended.
+
+### Edit Mode
+
+Triple grip clicks of both the left and right controllers trigger the edit mode.
+
+Move your RIGHT controller to the center of the wheel and press the trigger on RIGHT controller; while holding down:
+- Resize: Move RIGHT joystick up and down to resize the wheel.
+- Transparency: Press B button to cycle through the transparency mode.
+- Align Center: Press A button to align the wheel to center.
+
+Move your RIGHT controller to the knob of the shifter to adjust its position.
+
+Pressing the grip on RIGHT exits the edit mode.
+
+### Quest 2's Joystick to Buttons
+
+You can convert all direcitons of the joysticks to buttons or leave it as axis.
+
+Example 1, if you choose to convert the Left Joy Down to button, Left Joy Left and Left Joy Right will remain as the same axis; the Left Joy Up will be solely adjust the axis while the Left Joy Down acts as a button.
+
+Example 2, you can make all 8 directions to buttons; so that you can use them like dpads.
+
+|Joystick|Axis|Button ID|
+|-|-|-|
+|L Left|Z Axis|34|
+|L Right|Z Axis|35|
+|L Down|Y|36|
+|L Up|Y|37|
+|R Left|RX|38|
+|R Right|RX|39|
+|R Down|RY|40|
+|R Up|RY|41|
+
+### Virtual H Shifter
+
+It is a h-shifter with 6 positions, a splitter(double knob tap), and a range selector(triple knob tap).
+
+```text
+1 3 5
+2 4 6
+```
+|Key|Button ID|
 |-|-|
-|LT|1|
-|L Grip|2|
-|RT|9|
-|R Grip|10|
-|A|18|
-|B|11|
-|X|17|
-|Y|3|
-
-This fork aims to convert each joystick to 4-way button
-|Key|No|
-|-|-|
-|LX|4,5|
-|LY|6,7|
-|RX|13,14|
-|RY|15,16|
-
-Added features
-- Edit mode
-  - Triple grip click on right controller toggles wheel edit mode
-  - Single grip click on right exits edit mode
-  - A sets wheel X value to 0
-  - B switches alpha of wheel with a step of 10%
-- L joystick and R joystick to buttons; total 8 buttons
-
-
-Wheel emulation using steamVR
-=============================
-
-
-
-News
-=============================
-I've got a wheel and hotas recently, and haven't had much time to work on this anyway. It will continue to work thanks to SteamVR good backward compatability, but don't expect any further updates. If anyone wants to fork and keep developing maintaining this app, they are free to do so under MIT licence.
-
-
-If you just want to use this go to:
-===================================
-https://github.com/mdovgialo/steam-vr-wheel/releases
-
-
-For developers:
-================
-
-Requires pyopenvr, wxpython (codename phoenix), and vjoy ( http://vjoystick.sourceforge.net/site/ Public domain )
-
-Uses pyvjoy binding from https://github.com/tidzo/pyvjoy
-
-Demos:
-======
-
-Wheel mode:
-https://www.youtube.com/watch?v=lb0zGBVwN4Y
-
-Joystick mode:
-https://www.youtube.com/watch?v=jjb92HQ0M74
-
-
-
-
-
-
-Instalation from sources (for developers):
-========================================
-install python 3.5+
-
-install vjoy
-
-with admin level cmd go to folder where is steam_vr_wheel
-
-write:
-
-pip install .
-
-
-
-
-To run:
-=======
-open cmd, write:
-
-vrwheel
-
-or 
-
-vrjoystick
-
-or 
-
-vrpad
-
-For configurator - write
-
-vrpadconfig
-
-press ctrl+c to stop
-
-To uninstall:
-
-pip uninstall steam_vr_wheel
-
+|Position 1|43|
+|Position 2|44|
+|Position 3|45|
+|Position 4|46|
+|Position 5|47|
+|Position 6|48|
+|Neutral|42|
+|Splitter|49|
+|Range Selector|50|

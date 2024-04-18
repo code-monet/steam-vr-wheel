@@ -276,7 +276,7 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayFromFile(self.knob, knob_img.encode()))
 
         # Visibility
-        check_result(self.vroverlay.setOverlayColor(self.slot, 0.5, 0.5, 0.5)) # default gray outline
+        check_result(self.vroverlay.setOverlayColor(self.slot, 0.2, 0.2, 0.2)) # default gray outline
         check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
         
@@ -404,20 +404,15 @@ class HShifterImage:
         if ctr is not None:
             self._snap_start_pos[0] = ctr.x
             self._snap_start_pos[2] = ctr.z
-            if is_button == False:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+            if is_button and self.pos != 3.5:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1300)
+            else:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3500)
 
         # Position that has button mapping
         if is_button:
             btn_id = self._pos_to_button[self.pos]
             self._pressed_button = btn_id
-
-            def haptic():
-                for i in range(8):
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 2000 - i*200)
-                    time.sleep(0.02)
-            t = threading.Thread(target=haptic)
-            t.run()
 
     def snap_ctr(self, ctr):
         now = time.time()
@@ -553,7 +548,7 @@ class HShifterImage:
             dx_u = dp[0] / (self.size / 2)
             dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
 
-            if abs(dp[2]) < (self.size / 4) # Middle row movement requires low value of delta z
+            if abs(dp[2]) < (self.size / 1.5): # Middle row movement requires low value of delta z
                 if dx_u <= -1:
                     self.set_stick_pos('l', ctr)
                 elif dx_u >= 1:
@@ -1075,12 +1070,25 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.size = size
         self.wheel_image.move(self.center, size)
 
+    def move_delta(self, d):
+        self.center = Point(self.center.x + d[0], self.center.y + d[1], self.center.z + d[2])
+        self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
+        self.wheel_image.move(self.center, self.size)
+
+    def resize_delta(self, d):
+        if self.size + d < 0.22:
+            return
+        self.size += d
+        self.config.wheel_size = self.size
+        self.wheel_image.move(self.center, self.size)
+
     def discard_x(self):
         self.center = Point(0, self.center.y, self.center.z)
         self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
         self.wheel_image.move(self.center, self.size)
 
     def edit_mode(self, left_ctr, right_ctr):
+
         result, state_r = openvr.VRSystem().getControllerState(right_ctr.id)
         now = time.time()
 
@@ -1102,7 +1110,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         r_d = [right_ctr.x-self._edit_last_r_pos[0], right_ctr.y-self._edit_last_r_pos[1], right_ctr.z-self._edit_last_r_pos[2]]
 
         if self._edit_move_wheel:
-            self.move_wheel(right_ctr, left_ctr)
+            #self.move_wheel(right_ctr, left_ctr)
+            self.move_delta(r_d)
             self.wheel_image.set_color((1,0,0))
         else:
             self.wheel_image.set_color((0,1,0))
@@ -1117,7 +1126,17 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             return sqrt((p0.x-right_ctr.x)**2 + (p0.y-right_ctr.y)**2 + (p0.z-right_ctr.z)**2)
 
         # Todo: switch alpha, shows the alpha-applied wheel for a second and after that set alpha to 1
-        
+
+        # EVRControllerAxisType
+       # k_eControllerAxis_None = 0, 
+       # k_eControllerAxis_TrackPad = 1,
+       # k_eControllerAxis_Joystick = 2,
+       # k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
+        # rAxis
+        if state_r.rAxis:
+            y = state_r.rAxis[0].y # quest 2 joystick
+            if self._edit_move_wheel:
+                self.resize_delta(y / 30)
 
         if state_r.ulButtonPressed:
             btns = list(reversed(bin(state_r.ulButtonPressed)[2:]))
