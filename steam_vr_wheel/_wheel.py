@@ -585,11 +585,6 @@ class HShifterImage:
         self.slot_tf[1][3] = self.y
         self.slot_tf[2][3] = self.z
 
-        dis = sqrt((xz[0]-self._last_haptic_xz[0])**2+(xz[1]-self._last_haptic_xz[1])**2)
-        if dis >= 0.2 and self._snap_ctr is not None:
-            self._last_haptic_xz = xz
-            openvr.VRSystem().triggerHapticPulse(self._snap_ctr.id, 0, 133)
-
         # Bounds
         self.bounds = [[x, self.y, z_knob], [x, self.y+self.stick_height, z_knob]]
         self.bounds[0][0] -= 0.08
@@ -624,15 +619,23 @@ class HShifterImage:
         self.wheel.device.set_button(49, self._splitter_toggled)
         self.wheel.device.set_button(50, self._range_toggled)
 
+
         if self._snapped:
             ctr = self._snap_ctr
             p1 = (ctr.x, ctr.y, ctr.z)
             dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
 
-            dx_u = dp[0] / (self.size / 2)
+            dx_u = dp[0] / (self.size / 1.6)
             dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
 
+            xz = self._xz
             xz_pos = self._xz_pos()
+            dis_to_last = sqrt((xz[0]-self._last_haptic_xz[0])**2+(xz[1]-self._last_haptic_xz[1])**2)
+            dis_to_start = sqrt((xz[0]-xz_pos[0])**2+(xz[1]-xz_pos[1])**2)
+            if dis_to_last >= 0.2 and self._snap_ctr is not None:
+                self._last_haptic_xz = xz
+                openvr.VRSystem().triggerHapticPulse(self._snap_ctr.id, 0, 
+                    3000 if dis_to_start <= 0.2 else 66)
 
             if abs(dp[2]) < (self.size / 1.5): # Middle row movement requires low value of delta z
                 if dx_u <= -1:
