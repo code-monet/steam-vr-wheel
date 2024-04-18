@@ -4,7 +4,7 @@ This fork is a version I modified for personal use only. So it is highly likely 
 
 ## Memo
 
-Qyuest 2 vjoy mapping
+Qyuest 2 vJoy mapping
 
 |Key|Button ID|Note|
 |-|-|-|
@@ -21,8 +21,6 @@ Qyuest 2 vjoy mapping
 
 ### Todo
 
-- Make 49 and 50 as toggle
-- Make splitter and range state visible on knob
 - Make controlling of shifter more intuitive
 
 ## This fork
@@ -50,7 +48,7 @@ Pressing the grip on RIGHT exits the edit mode.
 
 You can convert all direcitons of the joysticks to buttons or leave it as axis.
 
-Example 1, if you choose to convert the Left Joy Down to button, Left Joy Left and Left Joy Right will remain as the same axis; the Left Joy Up will be solely adjust the axis while the Left Joy Down acts as a button.
+Example 1, if you choose to convert the Left Joy Down to button, Left Joy Left and Left Joy Right will remain as the same axis; the Left Joy Up will be solely adjusting the axis while the Left Joy Down acts as a button.
 
 Example 2, you can make all 8 directions to buttons; so that you can use them like dpads.
 
@@ -66,6 +64,10 @@ Example 2, you can make all 8 directions to buttons; so that you can use them li
 |R Up|RY|41|
 
 ### Virtual H Shifter
+
+```text
+<Video Demo>
+```
 
 It is a h-shifter with 6 positions, a splitter(double knob tap), and a range selector(triple knob tap).
 

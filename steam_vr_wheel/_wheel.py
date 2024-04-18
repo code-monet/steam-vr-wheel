@@ -245,17 +245,22 @@ class HShifterImage:
         self.pos = 3.5
         self.wheel = wheel
 
-        self._button_queue = []
+        #self._button_queue = []
         self._snap_ctr = None
         self._snap_start_pos = False
         self._snapped = False
         self._snap_times = []
         self._snap_db_timer = None
 
-        self._pressed_button = 42 #N
+        self._splitter_toggled = False
+        self._range_toggled = False
+
         self._pos_to_button = dict({1: 43, 3:   45, 5: 47,
                                            3.5: 42,
                                     2: 44, 4:   46, 6: 48})
+        self._pressed_button = 42 #N
+        self._xz = [0,0]
+        self._last_haptic_xz = [0,0]
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -268,12 +273,14 @@ class HShifterImage:
         # Images
         this_dir = os.path.abspath(os.path.dirname(__file__))
         slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot.png')
-        stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick.png')
-        knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
+        self._stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick_low.png')
+        self._stick_img_2 = os.path.join(this_dir, 'media', 'h_shifter_stick_high.png')
+        self._knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
+        self._knob_img_2 = os.path.join(this_dir, 'media', 'h_shifter_knob_over.png')
 
         check_result(self.vroverlay.setOverlayFromFile(self.slot, slot_img.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.stick, stick_img.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.knob, knob_img.encode()))
+        check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img.encode()))
+        check_result(self.vroverlay.setOverlayFromFile(self.knob, self._knob_img.encode()))
 
         # Visibility
         check_result(self.vroverlay.setOverlayColor(self.slot, 0.2, 0.2, 0.2)) # default gray outline
@@ -429,8 +436,11 @@ class HShifterImage:
             self._snap_db_timer.cancel()
             self._snap_times = []
 
-            self.wheel.device.set_button(50, True)
-            self._button_queue.append([50, time.time()])
+            #self.wheel.device.set_button(50, True)
+            #self._button_queue.append([50, time.time()])
+            self._range_toggled = not self._range_toggled
+            check_result(self.vroverlay.setOverlayFromFile(self.stick,
+                self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
 
             def haptic():
                 for i in range(16):
@@ -443,8 +453,11 @@ class HShifterImage:
             def wait_for_third():
                 self._snap_times = []
 
-                self.wheel.device.set_button(49, True)
-                self._button_queue.append([49, time.time()])
+                #self.wheel.device.set_button(49, True)
+                #self._button_queue.append([49, time.time()])
+                self._splitter_toggled = not self._splitter_toggled
+                check_result(self.vroverlay.setOverlayFromFile(self.knob, 
+                    self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
                 def haptic():
                     openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
                     time.sleep(0.16)
@@ -459,7 +472,9 @@ class HShifterImage:
         if self.pos == 1.5 or self.pos == 5.5:
             self.set_stick_pos('r' if self.pos == 1.5 else 'l')
 
-    def render(self):
+        self._move_stick(self._xz_pos())
+
+    def ___render(self):
         """
         |1  |3  |5  |  1 3 5
         |1.5|3.5|5.5|  +-N-+
@@ -523,6 +538,71 @@ class HShifterImage:
         fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
         fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
 
+    def _xz_pos(self):
+        return [(ceil(self.pos/2)-2), ((self.pos%2 if self.pos%2 != 0 else 2)-1.5)*2]
+
+    def _move_stick(self, xz):
+        self._xz = xz
+
+    def render(self):
+        # xz = relative and normalized
+        xz = self._xz
+        pitch, yaw, roll = self._get_hmd_rot()
+
+        unit = (self.size/2 - self.stick_width/2)
+        deg = self.degree * abs(xz[1])
+
+        x = self.x + unit*xz[0]
+        z_sin = sin(deg*np.pi/180) * self.stick_height
+
+        z_knob = self.z + xz[1] * (z_sin + unit)
+        z_stick = self.z + xz[1] * unit
+        rot_knob = rotation_matrix(0, yaw, 0)
+        rot_stick = rotation_matrix_around_vec(xz[1] * deg,
+                            (cos((180-yaw)*pi/180), 0, sin((180-yaw)*pi/180)))
+        rot_stick = np.dot(rot_stick, rotation_matrix(0, yaw, 0))
+        rot_stick_x = rotation_matrix(xz[1] * -deg, 0, 0) #
+
+        y_knob = self.y + self.stick_height - (abs(xz[1])*((1-cos(deg*np.pi/180))*self.stick_height))
+
+        def set_tf_rot(tf, mat):
+            for i in range(0, 3):
+                for j in range(0, 3):
+                    tf[j][i] = mat[i][j]
+
+        self.knob_tf[0][3] = x
+        self.knob_tf[1][3] = y_knob
+        self.knob_tf[2][3] = z_knob
+        set_tf_rot(self.knob_tf, rot_knob)
+
+        offset_stick = -np.dot(rot_stick_x, (0, self.stick_height/2, 0))
+        self.stick_tf[0][3] = x + offset_stick[0]
+        self.stick_tf[1][3] = self.y - offset_stick[1]
+        self.stick_tf[2][3] = z_stick + offset_stick[2]
+        set_tf_rot(self.stick_tf, rot_stick)
+
+        self.slot_tf[0][3] = self.x
+        self.slot_tf[1][3] = self.y
+        self.slot_tf[2][3] = self.z
+
+        dis = sqrt((xz[0]-self._last_haptic_xz[0])**2+(xz[1]-self._last_haptic_xz[1])**2)
+        if dis >= 0.2 and self._snap_ctr is not None:
+            self._last_haptic_xz = xz
+            openvr.VRSystem().triggerHapticPulse(self._snap_ctr.id, 0, 133)
+
+        # Bounds
+        self.bounds = [[x, self.y, z_knob], [x, self.y+self.stick_height, z_knob]]
+        self.bounds[0][0] -= 0.08
+        self.bounds[1][0] += 0.08
+        self.bounds[1][1] += 0.08
+        self.bounds[0][2] -= 0.08
+        self.bounds[1][2] += 0.08
+
+        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+        fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
+        fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
+        fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
+
     def set_color(self, cl):
         check_result(self.vroverlay.setOverlayColor(self.knob, *cl))
         check_result(self.vroverlay.setOverlayColor(self.stick, *cl))
@@ -540,6 +620,10 @@ class HShifterImage:
                 self.wheel.device.set_button(v, False)
         self.wheel.device.set_button(self._pressed_button, True)
 
+        # Toggles
+        self.wheel.device.set_button(49, self._splitter_toggled)
+        self.wheel.device.set_button(50, self._range_toggled)
+
         if self._snapped:
             ctr = self._snap_ctr
             p1 = (ctr.x, ctr.y, ctr.z)
@@ -548,26 +632,27 @@ class HShifterImage:
             dx_u = dp[0] / (self.size / 2)
             dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
 
+            xz_pos = self._xz_pos()
+
             if abs(dp[2]) < (self.size / 1.5): # Middle row movement requires low value of delta z
                 if dx_u <= -1:
                     self.set_stick_pos('l', ctr)
+                    return
                 elif dx_u >= 1:
                     self.set_stick_pos('r', ctr)
+                    return
+                elif abs(dx_u) > abs(dz_u):
+                    if self.pos % 2 == 1.5:
+                        self._move_stick([max(min(xz_pos[0]+dx_u, 1.0), -1.0), xz_pos[1]])
 
             if dz_u <= -1:
                 self.set_stick_pos('u', ctr)
+                return
             elif dz_u >= 1:
                 self.set_stick_pos('d', ctr)
-
-        now = time.time()
-        c = 0
-        for i in range(0, len(self._button_queue)):
-            if now - self._button_queue[i][1] > 0.7:
-                self.wheel.device.set_button(self._button_queue[i][0], False)
-                c += 1
-        if c > 0:
-            self._button_queue = self._button_queue[c:len(self._button_queue)]
-
+                return
+            elif abs(dz_u) > abs(dx_u):
+                self._move_stick([xz_pos[0], max(min(xz_pos[1]+dz_u, 1.0), -1.0)])
 
 class SteeringWheelImage:
     def __init__(self, x=0, y=-0.4, z=-0.35, size=0.55, alpha=1):
