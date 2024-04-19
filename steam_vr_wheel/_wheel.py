@@ -550,48 +550,59 @@ class HShifterImage:
         pitch, yaw, roll = self._get_hmd_rot()
 
         unit = (self.size/2 - self.stick_width/2)
-        deg = self.degree * abs(xz[1])
 
-        x = self.x + unit*xz[0]
-        z_sin = sin(deg*np.pi/180) * self.stick_height
-
+        x_deg = self.degree * abs(xz[0])
+        z_deg = self.degree * abs(xz[1])
+        x_sin = sin(x_deg*pi/180) * self.stick_height
+        z_sin = sin(z_deg*pi/180) * self.stick_height
+        x_knob = self.x + xz[0] * (x_sin + unit)
         z_knob = self.z + xz[1] * (z_sin + unit)
+        x_stick = self.x + xz[0] * unit
         z_stick = self.z + xz[1] * unit
-        rot_knob = rotation_matrix(0, yaw, 0)
-        rot_stick = rotation_matrix_around_vec(xz[1] * deg,
-                            (cos((180-yaw)*pi/180), 0, sin((180-yaw)*pi/180)))
-        rot_stick = np.dot(rot_stick, rotation_matrix(0, yaw, 0))
-        rot_stick_x = rotation_matrix(xz[1] * -deg, 0, 0) #
+        rot_knob = rotation_matrix(0, -yaw, 0)
+        rot_stick = rotation_matrix(xz[1] * z_deg, 0, xz[0] * -x_deg)
 
-        y_knob = self.y + self.stick_height - (abs(xz[1])*((1-cos(deg*np.pi/180))*self.stick_height))
+        y_knob = (self.y + self.stick_height - 
+            (abs(xz[1])*((1-cos((z_deg)*pi/180))*self.stick_height)) -
+            (abs(xz[0])*((1-cos((x_deg)*pi/180))*self.stick_height))
+            )
 
-        def set_tf_rot(tf, mat):
-            for i in range(0, 3):
-                for j in range(0, 3):
-                    tf[j][i] = mat[i][j]
+        def rot_dot_tf(rot, hmd34, local_rot=None):
+            tf = np.eye(4)
+            for i in range(3):
+                tf[i][3] = hmd34[i][3] # discard original rot
 
-        self.knob_tf[0][3] = x
+            r = np.eye(4)
+            r[0:3, 0:3] = rot
+            d = np.dot(tf, r)
+
+            if local_rot is not None:
+                r[0:3, 0:3] = local_rot
+                d = np.dot(d, r)
+
+            for i in range(3):
+                for j in range(4):
+                    hmd34[i][j] = d[i,j]
+
+        self.knob_tf[0][3] = x_knob
         self.knob_tf[1][3] = y_knob
         self.knob_tf[2][3] = z_knob
-        set_tf_rot(self.knob_tf, rot_knob)
+        rot_dot_tf(rot_knob, self.knob_tf)
 
-        offset_stick = -np.dot(rot_stick_x, (0, self.stick_height/2, 0))
-        self.stick_tf[0][3] = x + offset_stick[0]
-        self.stick_tf[1][3] = self.y - offset_stick[1]
+        offset_stick = np.dot(rot_stick, (0, self.stick_height/2, 0))
+        self.stick_tf[0][3] = x_stick + offset_stick[0]
+        self.stick_tf[1][3] = self.y + offset_stick[1]
         self.stick_tf[2][3] = z_stick + offset_stick[2]
-        set_tf_rot(self.stick_tf, rot_stick)
+        rot_dot_tf(rot_stick, self.stick_tf, rot_knob)
 
         self.slot_tf[0][3] = self.x
         self.slot_tf[1][3] = self.y
         self.slot_tf[2][3] = self.z
 
         # Bounds
-        self.bounds = [[x, self.y, z_knob], [x, self.y+self.stick_height, z_knob]]
-        self.bounds[0][0] -= 0.08
-        self.bounds[1][0] += 0.08
-        self.bounds[1][1] += 0.08
-        self.bounds[0][2] -= 0.08
-        self.bounds[1][2] += 0.08
+        self.bounds = [
+            [x_knob-0.04, self.y+self.stick_height-0.16, z_knob-0.04], 
+            [x_knob+0.04, self.y+self.stick_height+0.08, z_knob+0.04]]
 
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
         fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
@@ -625,8 +636,9 @@ class HShifterImage:
             p1 = (ctr.x, ctr.y, ctr.z)
             dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
 
-            dx_u = dp[0] / (self.size / 1.6)
-            dz_u = dp[2] / (self.stick_height * sin(self.degree*pi/180))
+            dsin = (self.stick_height * sin(self.degree*pi/180))
+            dx_u = dp[0] / dsin
+            dz_u = dp[2] / dsin
 
             xz = self._xz
             xz_pos = self._xz_pos()
@@ -637,16 +649,15 @@ class HShifterImage:
                 openvr.VRSystem().triggerHapticPulse(self._snap_ctr.id, 0, 
                     3000 if dis_to_start <= 0.2 else 66)
 
-            if abs(dp[2]) < (self.size / 1.5): # Middle row movement requires low value of delta z
-                if dx_u <= -1:
-                    self.set_stick_pos('l', ctr)
-                    return
-                elif dx_u >= 1:
-                    self.set_stick_pos('r', ctr)
-                    return
-                elif abs(dx_u) > abs(dz_u):
-                    if self.pos % 2 == 1.5:
-                        self._move_stick([max(min(xz_pos[0]+dx_u, 1.0), -1.0), xz_pos[1]])
+            if dx_u <= -1:
+                self.set_stick_pos('l', ctr)
+                return
+            elif dx_u >= 1:
+                self.set_stick_pos('r', ctr)
+                return
+            elif abs(dx_u) > abs(dz_u):
+                if self.pos % 2 == 1.5:
+                    self._move_stick([max(min(xz_pos[0]+dx_u, 1.0), -1.0), xz_pos[1]])
 
             if dz_u <= -1:
                 self.set_stick_pos('u', ctr)
