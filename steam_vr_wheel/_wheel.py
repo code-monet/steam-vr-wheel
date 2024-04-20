@@ -389,14 +389,6 @@ class HShifterImage:
 
         is_button = self.pos in self._pos_to_button
 
-        if ctr is not None:
-            self._snap_start_pos[0] = ctr.x
-            self._snap_start_pos[2] = ctr.z
-            if is_button and self.pos != 3.5:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1300)
-            else:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3500)
-
         # Position that has button mapping
         if is_button:
             btn_id = self._pos_to_button[self.pos]
@@ -531,8 +523,8 @@ class HShifterImage:
 
         # Bounds
         self.bounds = [
-            [x_knob-0.04, self.y+self.stick_height-0.16, z_knob-0.04], 
-            [x_knob+0.04, self.y+self.stick_height+0.08, z_knob+0.04]]
+            [x_knob-0.04, self.y+self.stick_height-0.16, z_knob-0.08], 
+            [x_knob+0.04, self.y+self.stick_height+0.08, z_knob+0.08]]
 
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
         fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
@@ -560,94 +552,33 @@ class HShifterImage:
         self.wheel.device.set_button(49, self._splitter_toggled)
         self.wheel.device.set_button(50, self._range_toggled)
 
-
         if self._snapped:
             ctr = self._snap_ctr
             p1 = (ctr.x, ctr.y, ctr.z)
             u_sin = (self.stick_height * sin(self.degree*pi/180))
 
-            #
-
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
-            xz_to_grid_size = 2 # Separate [0,1] into 5 [-1,1] totaling 10
-            snaps = [-xz_to_grid_size, 0, xz_to_grid_size]
             xz_ctr = np.array([
                 max(min(dp_unsafe[0] / u_sin, 1.0), -1.0),
                 max(min(dp_unsafe[2] / u_sin, 1.0), -1.0)])
-            xz_grid = np.round(xz_ctr * xz_to_grid_size)
-            xz_grid_new = np.copy(self._last_xz_grid)
             xz_round = np.round(xz_ctr)
-            xz_new = self._last_xz_grid / xz_to_grid_size
-            xz_pos_new = self._xz_pos()
+            xz_pos_0 = self._xz_pos()
+            xz_pos_1 = xz_pos_0.copy()
+            xz_1 = self._xz
 
-            # return if
-            if not (xz_grid[0] in snaps) and xz_grid[1] != 0:
-                return
+            if abs(xz_ctr[1]) < 0.2:
+                xz_pos_1[0] = xz_round[0]
+                if xz_pos_1[0] != xz_pos_0[0]:
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
 
-            if self._last_xz_grid[1] != 0 and not (xz_grid[0] in snaps):
-                return
+                xz_1 = [xz_ctr[0], 0]
+            else:
+                xz_1 = [xz_pos_1[0], xz_ctr[1]]
 
-            if self._last_xz_grid[1] == 0:
-                xz_new[0] = xz_ctr[0]
-                xz_grid_new[0] = xz_grid[0]
+            xz_pos_1[1] = xz_round[1]
+            self._move_stick(xz_1)
+            self.set_stick_xz_pos(xz_pos_1)
 
-            if self._last_xz_grid[0] in snaps:
-                xz_new[1] = xz_ctr[1]
-                xz_grid_new[1] = xz_grid[1]
-
-            self._move_stick(xz_new)
-
-            if not np.array_equal(self._last_xz_grid, xz_grid_new):
-                self._last_xz_grid = xz_grid_new
-                h = 66
-                if xz_grid_new[0] in snaps:
-                    xz_pos_new[0] = xz_round[0]
-                    if xz_grid_new[1] == 0:
-                        xz_pos_new[1] = 0
-                        h = 3000
-                    elif xz_grid_new[1] in snaps:
-                        xz_pos_new[1] = xz_round[1]
-                        h = 1200
-                self.set_stick_xz_pos(xz_pos_new, ctr)
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, h)
-
-
-
-            return
-
-            dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
-
-            dsin = (self.stick_height * sin(self.degree*pi/180))
-            dx_u = dp[0] / dsin
-            dz_u = dp[2] / dsin
-
-            xz = self._xz
-            xz_pos = self._xz_pos()
-            dis_to_last = sqrt((xz[0]-self._last_haptic_xz[0])**2+(xz[1]-self._last_haptic_xz[1])**2)
-            dis_to_start = sqrt((xz[0]-xz_pos[0])**2+(xz[1]-xz_pos[1])**2)
-            if dis_to_last >= 0.2 and self._snap_ctr is not None:
-                self._last_haptic_xz = xz
-                openvr.VRSystem().triggerHapticPulse(self._snap_ctr.id, 0, 
-                    3000 if dis_to_start <= 0.2 else 66)
-
-            if dx_u <= -1:
-                self.set_stick_pos('l', ctr)
-                return
-            elif dx_u >= 1:
-                self.set_stick_pos('r', ctr)
-                return
-            elif abs(dx_u) > abs(dz_u):
-                if self.pos % 2 == 1.5:
-                    self._move_stick([max(min(xz_pos[0]+dx_u, 1.0), -1.0), xz_pos[1]])
-
-            if dz_u <= -1:
-                self.set_stick_pos('u', ctr)
-                return
-            elif dz_u >= 1:
-                self.set_stick_pos('d', ctr)
-                return
-            elif abs(dz_u) > abs(dx_u):
-                self._move_stick([xz_pos[0], max(min(xz_pos[1]+dz_u, 1.0), -1.0)])
 
 class SteeringWheelImage:
     def __init__(self, x=0, y=-0.4, z=-0.35, size=0.55, alpha=1):
