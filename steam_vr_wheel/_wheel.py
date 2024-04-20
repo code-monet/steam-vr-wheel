@@ -260,7 +260,7 @@ class HShifterImage:
                                     2: 44, 4:   46, 6: 48})
         self._pressed_button = 42 #N
         self._xz = [0,0]
-        self._last_haptic_xz = [0,0]
+        self._last_xz_grid = np.array([0,0])
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -376,7 +376,7 @@ class HShifterImage:
             z = 0
         return [x/pi*180, y/pi*180, z/pi*180]
 
-    def set_stick_pos(self, d, ctr=None):
+    def set_stick_xz_pos(self, xz_pos, ctr=None):
         
         """
         |1  |3  |5  |  43 45 47
@@ -385,26 +385,7 @@ class HShifterImage:
 
         double tap 49  triple tap 50
         """
-
-        if self.pos % 2 == 1:
-            row = 1
-        elif self.pos % 2 == 0:
-            row = 3
-        else:
-            row = 2
-
-        col = ceil(self.pos/2)
-
-        if d == 'u' and row > 1:
-            self.pos -= 0.5
-        elif d == 'r' and col < 3 and row == 2:
-            self.pos += 2
-        elif d == 'd' and row < 3:
-            self.pos += 0.5
-        elif d == 'l' and col > 1 and row == 2:
-            self.pos -= 2
-        else:
-            return
+        self.pos = xz_pos[0]*2+3 + (xz_pos[1]+1)/2
 
         is_button = self.pos in self._pos_to_button
 
@@ -470,11 +451,10 @@ class HShifterImage:
     def unsnap(self):
         self._snapped = False
         if self.pos == 1.5 or self.pos == 5.5:
-            self.set_stick_pos('r' if self.pos == 1.5 else 'l')
+            self.set_stick_xz_pos([0,0])
 
         self._move_stick(self._xz_pos())
 
-    def ___render(self):
         """
         |1  |3  |5  |  1 3 5
         |1.5|3.5|5.5|  +-N-+
@@ -487,56 +467,6 @@ class HShifterImage:
         x = (round(pos/2)-1) * ...
         z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
         """
-        pos = self.pos
-        pitch, yaw, roll = self._get_hmd_rot()
-
-        offset = (self.size/2 - self.stick_width/2)
-        x = self.x + (ceil(pos/2)-2) * offset
-        z_fac = ((pos%2 if pos%2 != 0 else 2)-1.5)*-2
-        z_sin = sin(self.degree*np.pi/180) * self.stick_height
-
-        z_knob = self.z - z_fac * (z_sin + offset)
-        z_stick = self.z - z_fac * offset
-        rot_knob = rotation_matrix(0, yaw, 0)
-        rot_stick = rotation_matrix_around_vec(z_fac * -self.degree,
-                            (cos((180-yaw)*pi/180), 0, sin((180-yaw)*pi/180)))
-        rot_stick = np.dot(rot_stick, rotation_matrix(0, yaw, 0))
-        rot_stick_x = rotation_matrix(z_fac * self.degree, 0, 0) #
-
-        y_knob = self.y + self.stick_height - (abs(z_fac)*((1-cos(self.degree*np.pi/180))*self.stick_height))
-
-        def set_tf_rot(tf, mat):
-            for i in range(0, 3):
-                for j in range(0, 3):
-                    tf[j][i] = mat[i][j]
-
-        self.knob_tf[0][3] = x
-        self.knob_tf[1][3] = y_knob
-        self.knob_tf[2][3] = z_knob
-        set_tf_rot(self.knob_tf, rot_knob)
-
-        offset_stick = -np.dot(rot_stick_x, (0, self.stick_height/2, 0))
-        self.stick_tf[0][3] = x + offset_stick[0]
-        self.stick_tf[1][3] = self.y - offset_stick[1]
-        self.stick_tf[2][3] = z_stick + offset_stick[2]
-        set_tf_rot(self.stick_tf, rot_stick)
-
-        self.slot_tf[0][3] = self.x
-        self.slot_tf[1][3] = self.y
-        self.slot_tf[2][3] = self.z
-
-        # Bounds
-        self.bounds = [[x, self.y, np.min([z_stick, z_knob])], [x, self.y+self.stick_height, np.max([z_stick, z_knob])]]
-        self.bounds[0][0] -= 0.08
-        self.bounds[1][0] += 0.08
-        self.bounds[1][1] += 0.08
-        self.bounds[0][2] -= 0.08
-        self.bounds[1][2] += 0.08
-
-        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
-        fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
-        fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
-        fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
 
     def _xz_pos(self):
         return [(ceil(self.pos/2)-2), ((self.pos%2 if self.pos%2 != 0 else 2)-1.5)*2]
@@ -634,6 +564,57 @@ class HShifterImage:
         if self._snapped:
             ctr = self._snap_ctr
             p1 = (ctr.x, ctr.y, ctr.z)
+            u_sin = (self.stick_height * sin(self.degree*pi/180))
+
+            #
+
+            dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
+            xz_to_grid_size = 2 # Separate [0,1] into 5 [-1,1] totaling 10
+            snaps = [-xz_to_grid_size, 0, xz_to_grid_size]
+            xz_ctr = np.array([
+                max(min(dp_unsafe[0] / u_sin, 1.0), -1.0),
+                max(min(dp_unsafe[2] / u_sin, 1.0), -1.0)])
+            xz_grid = np.round(xz_ctr * xz_to_grid_size)
+            xz_grid_new = np.copy(self._last_xz_grid)
+            xz_round = np.round(xz_ctr)
+            xz_new = self._last_xz_grid / xz_to_grid_size
+            xz_pos_new = self._xz_pos()
+
+            # return if
+            if not (xz_grid[0] in snaps) and xz_grid[1] != 0:
+                return
+
+            if self._last_xz_grid[1] != 0 and not (xz_grid[0] in snaps):
+                return
+
+            if self._last_xz_grid[1] == 0:
+                xz_new[0] = xz_ctr[0]
+                xz_grid_new[0] = xz_grid[0]
+
+            if self._last_xz_grid[0] in snaps:
+                xz_new[1] = xz_ctr[1]
+                xz_grid_new[1] = xz_grid[1]
+
+            self._move_stick(xz_new)
+
+            if not np.array_equal(self._last_xz_grid, xz_grid_new):
+                self._last_xz_grid = xz_grid_new
+                h = 66
+                if xz_grid_new[0] in snaps:
+                    xz_pos_new[0] = xz_round[0]
+                    if xz_grid_new[1] == 0:
+                        xz_pos_new[1] = 0
+                        h = 3000
+                    elif xz_grid_new[1] in snaps:
+                        xz_pos_new[1] = xz_round[1]
+                        h = 1200
+                self.set_stick_xz_pos(xz_pos_new, ctr)
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, h)
+
+
+
+            return
+
             dp = (p1[0]-self._snap_start_pos[0], p1[1]-self._snap_start_pos[1], p1[2]-self._snap_start_pos[2])
 
             dsin = (self.stick_height * sin(self.degree*pi/180))
