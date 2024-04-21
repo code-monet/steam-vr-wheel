@@ -10,8 +10,10 @@ Qyuest 2 vJoy mapping
 |-|-|-|
 |LT|1||
 |L Grip|2|Disabled|
+|LS|4||
 |RT|9||
 |R Grip|10|Disabled|
+|RS|12||
 |A|18||
 |B|11||
 |X|17||
@@ -24,6 +26,7 @@ Qyuest 2 vJoy mapping
 - Make controlling of shifter more intuitive
 - Left handed shifter
 - Fast split and range select mode: A button to split and trigger to range select
+- Clean up unused configs
 - Code cleanup
 
 ## This fork
@@ -72,20 +75,20 @@ Example 2, you can make all 8 directions to buttons; so that you can use them li
 <Video Demo>
 ```
 
-It is a h-shifter with 6 positions, a splitter(double knob tap), and a range selector(triple knob tap).
+It is a h-shifter with 6 positions, a splitter(A while grabbing knob), and a range selector(Trigger while grabbing knob).
 
 ```text
 1 3 5
 2 4 6
 ```
-|Key|Button ID|
-|-|-|
-|Position 1|43|
-|Position 2|44|
-|Position 3|45|
-|Position 4|46|
-|Position 5|47|
-|Position 6|48|
-|Neutral|42|
-|Splitter|49|
-|Range Selector|50|
+|Key|Button ID|Note|
+|-|-|-|
+|Position 1|43||
+|Position 2|44||
+|Position 3|45||
+|Position 4|46||
+|Position 5|47||
+|Position 6|48||
+|Neutral|42||
+|Splitter|49|Grab knob and A|
+|Range Selector|50|Grab knob and Trigger|

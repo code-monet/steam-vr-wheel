@@ -417,11 +417,38 @@ class HShifterImage:
             btn_id = self._pos_to_button[self.pos]
             self._pressed_button = btn_id
 
+    def toggle_splitter(self, ctr):
+        self._splitter_toggled = not self._splitter_toggled
+        check_result(self.vroverlay.setOverlayFromFile(self.knob, 
+            self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
+
+        def haptic():
+            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+            time.sleep(0.16)
+            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+        t = threading.Thread(target=haptic)
+        t.run()
+
+    def toggle_range(self, ctr):
+        self._range_toggled = not self._range_toggled
+        check_result(self.vroverlay.setOverlayFromFile(self.stick,
+            self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
+
+        def haptic():
+            for i in range(16):
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                time.sleep(0.02)
+        t = threading.Thread(target=haptic)
+        t.run()
+
     def snap_ctr(self, ctr):
         now = time.time()
         self._snap_ctr = ctr
         self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
+
+
+        return
 
         # Check double tap
         self._snap_times.append(now)
@@ -777,8 +804,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # for manual grab:
         self._grip_queue = queue.Queue()
         self._hand_snaps = dict({'left': '', 'right': ''})
-        self._left_controller_grabbed = False
-        self._right_controller_grabbed = False
 
         # for triple grip:
         self._grip_times = dict({'left': [], 'right': []})
@@ -862,32 +887,31 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         super().set_button_unpress(button, hand)
         if self.config.wheel_grabbed_by_grip_toggle:
             if button == openvr.k_EButton_Grip and hand == 'left':
-                self._left_controller_grabbed = False
                 self._grip_queue.put(['left', False])
 
             if button == openvr.k_EButton_Grip and hand == 'right':
-                self._right_controller_grabbed = False
                 self._grip_queue.put(['right', False])
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
-        # Todo: if shifter snapped, don't send to super
+        ctr = left_ctr if hand == 'left' else right_ctr
 
-        super().set_button_press(button, hand)
+        # Todo: if shifter snapped, don't send to super
+        if self._hand_snaps[hand] == 'shifter':
+            if button == openvr.k_EButton_SteamVR_Trigger:
+                self.h_shifter_image.toggle_range(ctr)
+            elif button == openvr.k_EButton_A:
+                self.h_shifter_image.toggle_splitter(ctr)
+        else:
+            super().set_button_press(button, hand)
 
         if button == openvr.k_EButton_Grip and hand == 'left':
-
-            if self.config.wheel_grabbed_by_grip_toggle:
-                self._left_controller_grabbed = True
-                self._grip_queue.put(['left', True])
-            else:
-                self._left_controller_grabbed = not self._left_controller_grabbed
+            #if self.config.wheel_grabbed_by_grip_toggle:
+            self._grip_queue.put(['left', True])
 
         if button == openvr.k_EButton_Grip and hand == 'right':
-            if self.config.wheel_grabbed_by_grip_toggle:
-                self._right_controller_grabbed = True
-                self._grip_queue.put(['right', True])
-            else:
-                self._right_controller_grabbed = not self._right_controller_grabbed
+            #if self.config.wheel_grabbed_by_grip_toggle:
+            self._grip_queue.put(['right', True])
+
 
     def _wheel_update(self, left_ctr, right_ctr):
         if self.config.wheel_grabbed_by_grip:
@@ -976,16 +1000,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self._wheel_angles[-1] = self._wheel_angles[-2]
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
-
-    def render_hands(self, left_ctr, right_ctr):
-        if self._right_controller_grabbed:
-            self.hands_overlay.right_grab()
-        else:
-            self.hands_overlay.right_ungrab()
-        if self._left_controller_grabbed:
-            self.hands_overlay.left_grab()
-        else:
-            self.hands_overlay.left_ungrab()
 
     def _wheel_update_common(self, angle, left_ctr, right_ctr):
         if angle:
@@ -1103,7 +1117,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._wheel_update_common(angle, left_ctr, right_ctr)
 
         self.render()
-        self.render_hands(left_ctr, right_ctr)
         self.h_shifter_image.render()
         self.h_shifter_image.update()
 
