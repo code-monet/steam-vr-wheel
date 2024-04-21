@@ -207,7 +207,7 @@ class VirtualPad:
             #openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
             pass
 
-        DEADZONE_DPAD = 0.8
+        DEADZONE_DPAD = 0.9
         """
         |LX|34,35|
         |LY|36,37|
@@ -222,8 +222,8 @@ class VirtualPad:
                 amount = abs(trackpad)
                 zero = 0
 
-            plus_dead = 0.8 if plus_is_btn else 0.1
-            minus_dead = -0.8 if minus_is_btn else -0.1
+            plus_dead = DEADZONE_DPAD if plus_is_btn else 0.1
+            minus_dead = -DEADZONE_DPAD if minus_is_btn else -0.1
 
             if trackpad <= minus_dead:
                 if minus_is_btn:

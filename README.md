@@ -22,8 +22,8 @@ Qyuest 2 vJoy mapping
 ### Todo
 
 - Make controlling of shifter more intuitive
-- Wheel doesn't move when grabbing shifter knob
-- Option to trigger click to toggle splitter and double tap grip to toggle range selector
+- Left handed shifter
+- Fast split and range select mode: A button to split and trigger to range select
 	- Needs VirtualPad code changes
 - Code cleanup
 

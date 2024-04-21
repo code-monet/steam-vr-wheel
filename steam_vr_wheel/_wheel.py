@@ -294,7 +294,7 @@ class HShifterImage:
         self.stick_width = stick_width
         txw, txh = 40, 633
         stick_height = txh / (txw / stick_width)
-        stick_scale = 0.5
+        stick_scale = 0.5 # 1.0 => 31.65cm
         stick_height *= stick_scale
         check_result(self.vroverlay.setOverlayColor(self.stick, 1, 1, 1))
         check_result(self.vroverlay.setOverlayAlpha(self.stick, 1))
@@ -580,11 +580,12 @@ class HShifterImage:
                 max(min(dp_unsafe[0] / (u_sin + unit), 1.0), -1.0),
                 max(min(dp_unsafe[2] / (u_sin + unit), 1.0), -1.0)])
 
-            x_wise_margin = 0.25
-            middle_margin = 0.45
+            x_mid_margin = 0.55
+            z_end_margin = 0.8
+            z_mid_margin = 0.7
 
-            in_middle = abs(xz_ctr[1]) <= middle_margin
-            if x_wise_margin < abs(xz_ctr[0]) < 1 and not in_middle:
+            in_middle = abs(xz_ctr[1]) <= z_mid_margin
+            if x_mid_margin < abs(xz_ctr[0]) < 1 and not in_middle:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             xz_pos_0 = self._xz_pos()
@@ -600,7 +601,7 @@ class HShifterImage:
                 elif xz_ctr[0] == 1:
                     xz_1[0] = 1
                     xz_pos_1[0] = 1
-                elif abs(xz_ctr[0]) <= x_wise_margin:
+                elif abs(xz_ctr[0]) <= x_mid_margin:
                     xz_1[0] = 0
                     xz_pos_1[0] = 0
                 else:
@@ -608,9 +609,9 @@ class HShifterImage:
             else:
                 xz_1[0] = xz_pos_0[0]
                 xz_1[1] = xz_ctr[1]
-                if xz_ctr[1] == -1:
+                if xz_ctr[1] < -z_end_margin:
                     xz_pos_1[1] = -1
-                elif xz_ctr[1] == 1:
+                elif xz_ctr[1] > z_end_margin:
                     xz_pos_1[1] = 1
                 else:
                     xz_pos_1[1] = 0
@@ -932,7 +933,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
     def _wheel_update(self, left_ctr, right_ctr):
         if self.config.wheel_grabbed_by_grip:
             left_bound = self._left_controller_grabbed# and not self._h_shifter_left_bound
-            right_bound = self._right_controller_grabbed and not self._h_shifter_right_bound and not self._h_shifter_right_snapped
+            right_bound = self._right_controller_grabbed and not self._h_shifter_right_snapped
         else: # automatic gripping
             right_bound = self.point_in_holding_bounds(right_ctr)
             left_bound = self.point_in_holding_bounds(left_ctr)
@@ -1056,7 +1057,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.unwrap_wheel_angles()
 
         self.inertia()
-        if (not self._left_controller_grabbed) and (not self._right_controller_grabbed):
+        if (not self._left_controller_grabbed) and (not self._right_controller_grabbed or self._h_shifter_right_snapped):
             self.center_force()
         self.limiter(left_ctr, right_ctr)
         self.send_to_vjoy()
