@@ -251,6 +251,9 @@ class HShifterImage:
         self._snapped = False
         self._snap_times = []
         self._snap_db_timer = None
+        self._snap_ctr_offset = []
+
+        self._knob_pos = [0,0,0]
 
         self._splitter_toggled = False
         self._range_toggled = False
@@ -401,7 +404,7 @@ class HShifterImage:
     def snap_ctr(self, ctr):
         now = time.time()
         self._snap_ctr = ctr
-        self._snap_start_pos = [ctr.x, ctr.y, ctr.z]
+        self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
 
         # Check double tap
@@ -510,6 +513,9 @@ class HShifterImage:
                 for j in range(4):
                     hmd34[i][j] = d[i,j]
 
+        self._knob_pos[0] = x_knob
+        self._knob_pos[1] = y_knob
+        self._knob_pos[2] = z_knob
         self.knob_tf[0][3] = x_knob
         self.knob_tf[1][3] = y_knob
         self.knob_tf[2][3] = z_knob
@@ -560,36 +566,56 @@ class HShifterImage:
         self.wheel.device.set_button(50, self._range_toggled)
 
         if self._snapped:
-            ctr = self._snap_ctr
-            p1 = (ctr.x, ctr.y, ctr.z)
             u_sin = (self.stick_height * sin(self.degree*pi/180))
             unit = (self.size/2 - self.stick_width/2)
+
+            ctr = self._snap_ctr
+            p1 = [ctr.x, ctr.y, ctr.z]
+            p1[0] -= self._snap_ctr_offset[0]
+            #p1[1] -= self._snap_ctr_offset[1]
+            p1[2] -= self._snap_ctr_offset[2]
 
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
             xz_ctr = np.array([
                 max(min(dp_unsafe[0] / (u_sin + unit), 1.0), -1.0),
                 max(min(dp_unsafe[2] / (u_sin + unit), 1.0), -1.0)])
-            xz_round = np.round(xz_ctr)
+
+            x_wise_margin = 0.25
+            middle_margin = 0.45
+
+            in_middle = abs(xz_ctr[1]) <= middle_margin
+            if x_wise_margin < abs(xz_ctr[0]) < 1 and not in_middle:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
+
             xz_pos_0 = self._xz_pos()
             xz_pos_1 = xz_pos_0.copy()
             xz_0 = self._xz
             xz_1 = xz_0.copy()
-
-            # knob - snap start
-
-            xz_z_mid = 0.2
-            if abs(xz_ctr[1]) <= xz_z_mid:
-                xz_pos_1[0] = xz_round[0]
-                if xz_pos_1[0] != xz_pos_0[0]:
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-
-                xz_1 = [xz_ctr[0], 0]
+            if in_middle:
+                xz_1[0] = xz_ctr[0]
+                xz_1[1] = xz_ctr[1]
+                if xz_ctr[0] == -1:
+                    xz_1[0] = -1
+                    xz_pos_1[0] = -1
+                elif xz_ctr[0] == 1:
+                    xz_1[0] = 1
+                    xz_pos_1[0] = 1
+                elif abs(xz_ctr[0]) <= x_wise_margin:
+                    xz_1[0] = 0
+                    xz_pos_1[0] = 0
+                else:
+                    xz_1[1] = 0
             else:
-                xz_1 = [xz_pos_1[0], xz_ctr[1]]
+                xz_1[0] = xz_pos_0[0]
+                xz_1[1] = xz_ctr[1]
+                if xz_ctr[1] == -1:
+                    xz_pos_1[1] = -1
+                elif xz_ctr[1] == 1:
+                    xz_pos_1[1] = 1
+                else:
+                    xz_pos_1[1] = 0
 
-            xz_pos_1[1] = xz_round[1]
-
-            if xz_1[1] <= xz_z_mid and xz_0[1] > xz_z_mid:
+            if xz_pos_0 != xz_pos_1 and xz_pos_1[1] != 0:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
 
             self._move_stick(xz_1)
