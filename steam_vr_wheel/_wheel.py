@@ -289,9 +289,12 @@ class HShifterImage:
         
         stick_width = 0.02
         self.stick_width = stick_width
+        txw, txh = 40, 633
+        stick_height = txh / (txw / stick_width)
+        stick_scale = 0.5
+        stick_height *= stick_scale
         check_result(self.vroverlay.setOverlayColor(self.stick, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.stick, 0)) # Hide while loading texture
-        check_result(self.vroverlay.showOverlay(self.stick)) # Preload texture for dimension checking
+        check_result(self.vroverlay.setOverlayAlpha(self.stick, 1))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.stick, stick_width))
 
         check_result(self.vroverlay.setOverlayColor(self.knob, 1, 1, 1))
@@ -312,14 +315,15 @@ class HShifterImage:
 
         result, self.stick_tf = self.vroverlay.setOverlayTransformAbsolute(self.stick, openvr.TrackingUniverseSeated)
         check_result(result)
-
-        #result, txw, txh = self.vroverlay.getOverlayImageData(self.stick, None, 0)
-        txw, txh = 40, 633
-        stick_height = txh / (txw / stick_width)
+        result, self.stick_uv = self.vroverlay.getOverlayTextureBounds(self.stick)
+        check_result(result)
         set_transform(self.stick_tf, [[1.0, 0.0, 0.0, x],
-                                    [0.0, 1.0, 0.0, y+stick_height/2],
+                                    [0.0, stick_scale, 0.0, y+stick_height/2],
                                     [0.0, 0.0, 1.0, z]])
+        self.stick_uv.vMax = stick_scale
         self.stick_height = stick_height
+        self.stick_scale = stick_scale
+        check_result(self.vroverlay.function_table.setOverlayTextureBounds(self.stick, openvr.byref(self.stick_uv)))
 
         result, self.knob_tf = self.vroverlay.setOverlayTransformAbsolute(self.knob, openvr.TrackingUniverseSeated)
         check_result(result)
@@ -333,7 +337,7 @@ class HShifterImage:
         result = fn(self.stick, openvr.TrackingUniverseSeated, openvr.byref(self.stick_tf))
         result = fn(self.knob, openvr.TrackingUniverseSeated, openvr.byref(self.knob_tf))
         check_result(self.vroverlay.showOverlay(self.slot))
-        check_result(self.vroverlay.setOverlayAlpha(self.stick, 1)) # Stick
+        check_result(self.vroverlay.showOverlay(self.stick))
         check_result(self.vroverlay.showOverlay(self.knob))
 
         # Get HMD id for yaw
@@ -489,7 +493,7 @@ class HShifterImage:
             (abs(xz[0])*((1-cos((x_deg)*pi/180))*self.stick_height))
             )
 
-        def rot_dot_tf(rot, hmd34, local_rot=None):
+        def rot_dot_tf(rot, hmd34, local=None):
             tf = np.eye(4)
             for i in range(3):
                 tf[i][3] = hmd34[i][3] # discard original rot
@@ -498,8 +502,8 @@ class HShifterImage:
             r[0:3, 0:3] = rot
             d = np.dot(tf, r)
 
-            if local_rot is not None:
-                r[0:3, 0:3] = local_rot
+            if local is not None:
+                r[0:3, 0:3] = local
                 d = np.dot(d, r)
 
             for i in range(3):
@@ -515,7 +519,10 @@ class HShifterImage:
         self.stick_tf[0][3] = x_stick + offset_stick[0]
         self.stick_tf[1][3] = self.y + offset_stick[1]
         self.stick_tf[2][3] = z_stick + offset_stick[2]
-        rot_dot_tf(rot_stick, self.stick_tf, rot_knob)
+        scale_stick = np.eye(3)
+        scale_stick[2,2] = self.stick_scale
+        local_stick = np.dot(scale_stick, rot_knob) 
+        rot_dot_tf(rot_stick, self.stick_tf, local_stick)
 
         self.slot_tf[0][3] = self.x
         self.slot_tf[1][3] = self.y
@@ -523,8 +530,8 @@ class HShifterImage:
 
         # Bounds
         self.bounds = [
-            [x_knob-0.04, self.y+self.stick_height-0.16, z_knob-0.08], 
-            [x_knob+0.04, self.y+self.stick_height+0.08, z_knob+0.08]]
+            [x_knob-0.08, self.y+self.stick_height-0.16, z_knob-0.08], 
+            [x_knob+0.08, self.y+self.stick_height+0.08, z_knob+0.08]]
 
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
         fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
@@ -556,17 +563,22 @@ class HShifterImage:
             ctr = self._snap_ctr
             p1 = (ctr.x, ctr.y, ctr.z)
             u_sin = (self.stick_height * sin(self.degree*pi/180))
+            unit = (self.size/2 - self.stick_width/2)
 
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
             xz_ctr = np.array([
-                max(min(dp_unsafe[0] / u_sin, 1.0), -1.0),
-                max(min(dp_unsafe[2] / u_sin, 1.0), -1.0)])
+                max(min(dp_unsafe[0] / (u_sin + unit), 1.0), -1.0),
+                max(min(dp_unsafe[2] / (u_sin + unit), 1.0), -1.0)])
             xz_round = np.round(xz_ctr)
             xz_pos_0 = self._xz_pos()
             xz_pos_1 = xz_pos_0.copy()
-            xz_1 = self._xz
+            xz_0 = self._xz
+            xz_1 = xz_0.copy()
 
-            if abs(xz_ctr[1]) < 0.2:
+            # knob - snap start
+
+            xz_z_mid = 0.2
+            if abs(xz_ctr[1]) <= xz_z_mid:
                 xz_pos_1[0] = xz_round[0]
                 if xz_pos_1[0] != xz_pos_0[0]:
                     openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
@@ -576,6 +588,10 @@ class HShifterImage:
                 xz_1 = [xz_pos_1[0], xz_ctr[1]]
 
             xz_pos_1[1] = xz_round[1]
+
+            if xz_1[1] <= xz_z_mid and xz_0[1] > xz_z_mid:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+
             self._move_stick(xz_1)
             self.set_stick_xz_pos(xz_pos_1)
 
