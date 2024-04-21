@@ -24,7 +24,6 @@ Qyuest 2 vJoy mapping
 - Make controlling of shifter more intuitive
 - Left handed shifter
 - Fast split and range select mode: A button to split and trigger to range select
-	- Needs VirtualPad code changes
 - Code cleanup
 
 ## This fork

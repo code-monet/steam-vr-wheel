@@ -118,7 +118,7 @@ class HandsImage:
         self._handr_closed = False
         self.left_ctr = left_ctr
         self.right_ctr = right_ctr
-        hand_size = 0.15
+        hand_size = 0.14
 
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
@@ -140,6 +140,10 @@ class HandsImage:
         check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr2, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr2, hand_size))
+        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 1))
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -154,42 +158,53 @@ class HandsImage:
         check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode())) #!!
 
 
-        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
-        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)
-        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr, self.right_ctr.id)
-        result, transform = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr2, self.right_ctr.id)
+        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
+        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)
+        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr, self.right_ctr.id)
+        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr2, self.right_ctr.id)
 
-        transform[0][0] = 1.0
-        transform[0][1] = 0.0
-        transform[0][2] = 0.0
-        transform[0][3] = 0
+        ctr_tf[0][0] = 1.0
+        ctr_tf[0][1] = 0.0
+        ctr_tf[0][2] = 0.0
+        ctr_tf[0][3] = 0
 
-        transform[1][0] = 0.0
-        transform[1][1] = 1.0
-        transform[1][2] = 0.0
-        transform[1][3] = 0
+        ctr_tf[1][0] = 0.0
+        ctr_tf[1][1] = 0.0
+        ctr_tf[1][2] = 1.0
+        ctr_tf[1][3] = 0
 
-        transform[2][0] = 0.0
-        transform[2][1] = 0.0
-        transform[2][2] = 1.0
-        transform[2][3] = 0
+        ctr_tf[2][0] = 0.0
+        ctr_tf[2][1] = -1.0
+        ctr_tf[2][2] = 0.0
+        ctr_tf[2][3] = 0
 
-        self.transform = transform
-
-        rotate = initRotationMatrix(0, -pi / 2)
-        self.transform = matMul33(rotate, self.transform)
-
-        fn = self.vroverlay.function_table.setOverlayTransformTrackedDeviceRelative
-        result = fn(self.l_ovr, self.left_ctr.id, openvr.byref(self.transform))
-        result = fn(self.l_ovr2, self.left_ctr.id, openvr.byref(self.transform))
-        result = fn(self.r_ovr, self.right_ctr.id, openvr.byref(self.transform))
-        result = fn(self.r_ovr2, self.right_ctr.id, openvr.byref(self.transform))
+        self.ctr_tf = ctr_tf
+        self.attach_to_ctr('left')
+        self.attach_to_ctr('right')
 
         check_result(result)
         check_result(self.vroverlay.showOverlay(self.l_ovr))
         check_result(self.vroverlay.showOverlay(self.l_ovr2))
         check_result(self.vroverlay.showOverlay(self.r_ovr))
         check_result(self.vroverlay.showOverlay(self.r_ovr2))
+
+    def move(self, hand, tf):
+        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+        if hand == 'left':
+            check_result(fn(self.l_ovr, openvr.TrackingUniverseSeated, openvr.byref(tf)))
+            check_result(fn(self.l_ovr2, openvr.TrackingUniverseSeated, openvr.byref(tf)))
+        elif hand == 'right':
+            check_result(fn(self.r_ovr, openvr.TrackingUniverseSeated, openvr.byref(tf)))
+            check_result(fn(self.r_ovr2, openvr.TrackingUniverseSeated, openvr.byref(tf)))
+
+    def attach_to_ctr(self, hand):
+        fn = self.vroverlay.function_table.setOverlayTransformTrackedDeviceRelative
+        if hand == 'left':
+            check_result(fn(self.l_ovr, self.left_ctr.id, openvr.byref(self.ctr_tf)))
+            check_result(fn(self.l_ovr2, self.left_ctr.id, openvr.byref(self.ctr_tf)))
+        elif hand == 'right':
+            check_result(fn(self.r_ovr, self.right_ctr.id, openvr.byref(self.ctr_tf)))
+            check_result(fn(self.r_ovr2, self.right_ctr.id, openvr.byref(self.ctr_tf)))
 
     def left_grab(self):
         if not self._handl_closed:
@@ -247,6 +262,7 @@ class HShifterImage:
 
         #self._button_queue = []
         self._snap_ctr = None
+        self._snap_hand = ''
         self._snap_start_pos = False
         self._snapped = False
         self._snap_times = []
@@ -401,9 +417,10 @@ class HShifterImage:
             btn_id = self._pos_to_button[self.pos]
             self._pressed_button = btn_id
 
-    def snap_ctr(self, ctr):
+    def snap_ctr(self, ctr, hand):
         now = time.time()
         self._snap_ctr = ctr
+        self._snap_hand = hand
         self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
 
@@ -538,6 +555,16 @@ class HShifterImage:
         self.bounds = [
             [x_knob-0.08, self.y+self.stick_height-0.16, z_knob-0.08], 
             [x_knob+0.08, self.y+self.stick_height+0.08, z_knob+0.08]]
+
+        # Attach hand to knob
+        if self._snapped:
+            ctr = self._snap_ctr
+            tf = openvr.HmdMatrix34_t()
+            tf[0][3] = x_knob
+            tf[1][3] = y_knob
+            tf[2][3] = z_knob
+            rot_dot_tf(rot_knob, tf)
+            self.wheel.hands_overlay.move(self._snap_hand, tf)
 
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
         fn(self.slot, openvr.TrackingUniverseSeated, openvr.byref(self.slot_tf))
@@ -841,9 +868,11 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self.config.wheel_grabbed_by_grip_toggle:
             if button == openvr.k_EButton_Grip and hand == 'left':
                 self._left_controller_grabbed = False
+                self.hands_overlay.attach_to_ctr(hand)
 
             if button == openvr.k_EButton_Grip and hand == 'right':
                 self._right_controller_grabbed = False
+                self.hands_overlay.attach_to_ctr(hand)
 
             if self._right_controller_grabbed and self._left_controller_grabbed:
                 pass
@@ -851,6 +880,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._snapped = False
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
+        # Todo: if shifter snapped, don't send to super
+
         super().set_button_press(button, hand)
 
         triple_click_time = 1
@@ -940,18 +971,44 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self.ready_to_unsnap(left_ctr, right_ctr):
                 self._snapped = False
 
+        def attach_to_wheel(hand):
+            ctr = left_ctr if hand == 'left' else right_ctr
+            offset = [ctr.x - self.center.x, ctr.y - self.center.y]
+            a = sqrt(offset[0]**2 + offset[1]**2)/(self.size/2)
+            offset[0] /= a
+            offset[1] /= a
+            tf = openvr.HmdMatrix34_t()
+            tf[0][0] = 1.0
+            tf[0][1] = 0.0
+            tf[0][2] = 0.0
+            tf[1][0] = 0.0
+            tf[1][1] = 1.0
+            tf[1][2] = 0.0
+            tf[2][0] = 0.0
+            tf[2][1] = 0.0
+            tf[2][2] = 1.0
+
+            tf[0][3] = self.center.x + offset[0]
+            tf[1][3] = self.center.y + offset[1]
+            tf[2][3] = self.center.z + 0.02
+            self.hands_overlay.move(hand, tf)
+
         if right_bound and left_bound and not self._snapped:
             self.is_held([left_ctr, right_ctr])
 
         if self._snapped:
+            attach_to_wheel('left')
+            attach_to_wheel('right')
             angle = self.wheel_double_raw_angle(left_ctr, right_ctr) + self._wheel_grab_offset
             return angle
 
         if right_bound:
             controller = right_ctr
+            attach_to_wheel('right')
             self.is_held(controller)
         elif left_bound:
             controller = left_ctr
+            attach_to_wheel('left')
             self.is_held(controller)
         else:
             self.is_not_held()
@@ -1019,7 +1076,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
 
-    def render_hands(self):
+    def render_hands(self, left_ctr, right_ctr):
         if self._right_controller_grabbed:
             self.hands_overlay.right_grab()
         else:
@@ -1028,12 +1085,16 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self.hands_overlay.left_grab()
         else:
             self.hands_overlay.left_ungrab()
-        return
 
+
+        return
+        
 
         if self._snapped:
             self.hands_overlay.left_grab()
+            attach_to_wheel('left')
             self.hands_overlay.right_grab()
+            attach_to_wheel('right')
             return
         if self._grab_started_point is None:
             self.hands_overlay.left_ungrab()
@@ -1042,10 +1103,12 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         grab_hand_role = self.vrsys.getControllerRoleForTrackedDeviceIndex(self._grab_started_point.id)
         if  grab_hand_role == openvr.TrackedControllerRole_RightHand:
             self.hands_overlay.right_grab()
+            attach_to_wheel('right')
             self.hands_overlay.left_ungrab()
             return
         if grab_hand_role == openvr.TrackedControllerRole_LeftHand:
             self.hands_overlay.left_grab()
+            attach_to_wheel('left')
             self.hands_overlay.right_ungrab()
             return
 
@@ -1079,7 +1142,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         if self.config.wheel_show_hands:
             self.hands_overlay.show()
-            self.render_hands()
+            self.render_hands(left_ctr, right_ctr)
         else:
             self.hands_overlay.hide()
 
@@ -1098,7 +1161,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self._right_controller_grabbed:
                 self._h_shifter_right_snapped = True
                 self.hands_overlay.right_grab()
-                self.h_shifter_image.snap_ctr(right_ctr)
+                self.h_shifter_image.snap_ctr(right_ctr, 'right')
 
         if self._h_shifter_right_snapped:
             if not self._right_controller_grabbed:
