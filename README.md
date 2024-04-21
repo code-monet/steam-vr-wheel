@@ -10,10 +10,10 @@ Qyuest 2 vJoy mapping
 |-|-|-|
 |LT|1||
 |L Grip|2|Disabled|
-|LS|4||
+|LS|4,5,6,7,8||
 |RT|9||
 |R Grip|10|Disabled|
-|RS|12||
+|RS|12,13,14,15,16||
 |A|18||
 |B|11||
 |X|17||
@@ -28,6 +28,26 @@ Qyuest 2 vJoy mapping
 - Fast split and range select mode: A button to split and trigger to range select
 - Clean up unused configs
 - Code cleanup
+
+### Config memo
+
+Memos for \*original\* config behaviors. Some configs' behaviors are changed as I don't have Vive controllers to test the behavior
+
+|Config|Module|Behavior|
+|-|-|-|
+|Triggers pre press button|`VirtualPad`|Touching trigger registers|
+|Triggers press button|`VirtualPad`|Trigger press registers|
+|5 Button touchpad|`VirtualPad`|On Quest 2 controller, the axis values determine button id|
+|Haptic feedback for trackpad button zones|`VirtualPad`|Haptic when 5-button button id changed|
+|Touchpad mapping to axis while untouched (axis move to center when released)|`VirtualPad`||
+|Steering wheel is vertical|`Wheel`||
+|Joystick moves only when grabbed (by right grip)|`Joystick`||
+|Joystick grab is a switch|`Joystick`||
+|Layout edit mode|`Wheel`||
+|Manual wheel grabbing|`Wheel`||
+|Continuous (index, checked) or toggle (vive) wheel gripping|`Wheel`||
+|Show Wheel Overlay|`Wheel`||
+|Show Hands Overlay|`Wheel`||
 
 ## This fork
 

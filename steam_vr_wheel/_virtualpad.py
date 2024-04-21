@@ -149,6 +149,7 @@ class VirtualPad:
 
     def set_trigger_touch_left(self):
         if self.config.trigger_pre_press_button:
+            print("A")
             return
 
             

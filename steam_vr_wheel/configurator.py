@@ -31,7 +31,7 @@ class ConfiguratorApp:
         # Shifter
         self.shifter_degree = wx.SpinCtrl(self.pnl, name = "Shifter Degree, 15deg", min=0, max=90)
         self.shifter_alpha = wx.SpinCtrl(self.pnl, name = "Shifter Alpha (%), 100%", min=0, max=100)
-        self.shifter_size = wx.SpinCtrl(self.pnl, name = "Shifter Size (cm), 7cm", min=1, max=100)
+        self.shifter_scale = wx.SpinCtrl(self.pnl, name = "Shifter Height Scale (%), 100%", min=10, max=100)
 
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
@@ -66,7 +66,7 @@ class ConfiguratorApp:
         # Shifter
         self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.shifter_size.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         # Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -97,7 +97,7 @@ class ConfiguratorApp:
 
                                 shifter_degree=self.shifter_degree,
                                 shifter_alpha=self.shifter_alpha,
-                                shifter_size=self.shifter_size,
+                                shifter_scale=self.shifter_scale,
 
                                 j_l_left_button=self.j_l_left_button,
                                 j_l_right_button=self.j_l_right_button,
@@ -139,8 +139,8 @@ class ConfiguratorApp:
         self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Degree"))
         self.vbox.Add(self.shifter_degree)
         self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Size"))
-        self.vbox.Add(self.shifter_size)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Height Scale"))
+        self.vbox.Add(self.shifter_scale)
 
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))

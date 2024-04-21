@@ -248,14 +248,14 @@ class HandsImage:
 
 
 class HShifterImage:
-    def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, size_cm=7, degree=15):
+    def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, degree=15, scale=100, alpha=100):
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
 
         self.x = x
         self.y = y
         self.z = z
-        self.size = size_cm / 100
+        self.size = 7 / 100
         self.degree = degree
         self.pos = 3.5
         self.wheel = wheel
@@ -303,21 +303,21 @@ class HShifterImage:
 
         # Visibility
         check_result(self.vroverlay.setOverlayColor(self.slot, 0.2, 0.2, 0.2)) # default gray outline
-        check_result(self.vroverlay.setOverlayAlpha(self.slot, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.slot, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
         
         stick_width = 0.02
         self.stick_width = stick_width
         txw, txh = 40, 633
         stick_height = txh / (txw / stick_width)
-        stick_scale = 0.5 # 1.0 => 31.65cm
+        stick_scale = scale / 100 # 1.0 => 31.65cm
         stick_height *= stick_scale
         check_result(self.vroverlay.setOverlayColor(self.stick, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.stick, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.stick, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.stick, stick_width))
 
         check_result(self.vroverlay.setOverlayColor(self.knob, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.knob, 1))
+        check_result(self.vroverlay.setOverlayAlpha(self.knob, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.knob, 0.05))
 
         def set_transform(tf, mat):
@@ -815,7 +815,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # H Shifter
         s_c = self.config.shifter_center
         self.h_shifter_image = HShifterImage(self, x=s_c[0], y=s_c[1], z=s_c[2],
-                            size_cm=self.config.shifter_size, degree=self.config.shifter_degree)
+                            alpha=self.config.shifter_alpha,
+                            scale=self.config.shifter_scale,
+                            degree=self.config.shifter_degree)
 
     def point_in_holding_bounds(self, point):
         width = 0.10
