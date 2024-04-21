@@ -427,7 +427,7 @@ class HShifterImage:
             time.sleep(0.16)
             openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
         t = threading.Thread(target=haptic)
-        t.run()
+        t.start()
 
     def toggle_range(self, ctr):
         self._range_toggled = not self._range_toggled
@@ -439,7 +439,7 @@ class HShifterImage:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
                 time.sleep(0.02)
         t = threading.Thread(target=haptic)
-        t.run()
+        t.start()
 
     def snap_ctr(self, ctr):
         now = time.time()
