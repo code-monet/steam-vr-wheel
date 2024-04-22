@@ -579,8 +579,13 @@ class HShifterImage:
 
         # Bounds
         self.bounds = [
+            [self.x - x_sin-unit-0.05, self.y+self.stick_height-0.16, self.z -x_sin-unit-0.05], 
+            [self.x + x_sin+unit+0.05, self.y+self.stick_height+0.08, self.z +x_sin+unit+0.05]]
+        """
+        self.bounds = [
             [x_knob-0.08, self.y+self.stick_height-0.16, z_knob-0.08], 
             [x_knob+0.08, self.y+self.stick_height+0.08, z_knob+0.08]]
+        """
 
         # Set snap transform
         ctr = self._snap_ctr
@@ -1049,15 +1054,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         offset[0] /= a
         offset[1] /= a
         tf = openvr.HmdMatrix34_t()
-        tf[0][0] = 1.0
-        tf[0][1] = 0.0
-        tf[0][2] = 0.0
-        tf[1][0] = 0.0
-        tf[1][1] = 1.0
-        tf[1][2] = 0.0
-        tf[2][0] = 0.0
-        tf[2][1] = 0.0
-        tf[2][2] = 1.0
+        for i in range(3):
+            for j in range(3):
+                tf[i][j] = self._rot[i][j]
 
         tf[0][3] = self.center.x + offset[0]
         tf[1][3] = self.center.y + offset[1]

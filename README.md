@@ -9,11 +9,11 @@ Qyuest 2 vJoy mapping
 |Key|Button ID|Note|
 |-|-|-|
 |LT|1||
-|LT Touch|31|Disabled|
+|LT Touch|31||
 |L Grip|2|Disabled|
 |LS|4,5,6,7,8||
 |RT|9||
-|RT Touch|32|Disabled|
+|RT Touch|32||
 |R Grip|10|Disabled|
 |RS|12,13,14,15,16||
 |A|18||
