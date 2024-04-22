@@ -15,7 +15,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
                       wheel_grabbed_by_grip_toggle=True,
                       wheel_show_wheel=True, wheel_show_hands=True,
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
-                      wheel_pitch=0.0,
+                      wheel_pitch=0,
 
                     # Shifter
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100,
@@ -283,7 +283,7 @@ class PadConfig:
             return self._data['wheel_pitch']
 
     @wheel_pitch.setter
-    def wheel_pitch(self, x: float):
+    def wheel_pitch(self, x: int):
         with self.data_lock:
             self._data['wheel_pitch'] = x
         self._write()

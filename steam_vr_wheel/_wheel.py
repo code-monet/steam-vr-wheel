@@ -877,25 +877,18 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def wheel_raw_angle(self, point):
         point = self.to_wheel_space(point)
-        if self.config.vertical_wheel:
-            a = float(point.y) - self.center.y
-            b = float(point.x) - self.center.x
-        else:
-            a = float(point.x) - self.center.x
-            b = float(point.z) - self.center.z
+        a = float(point.y) - self.center.y
+        b = float(point.x) - self.center.x
+
         angle = atan2(a, b)
         return angle
 
     def wheel_double_raw_angle(self, left_ctr, right_ctr):
         left_ctr = self.to_wheel_space(left_ctr)
         right_ctr = self.to_wheel_space(right_ctr)
+        a = left_ctr.y - right_ctr.y
+        b = left_ctr.x - right_ctr.x
 
-        if self.config.vertical_wheel:
-            a = left_ctr.y - right_ctr.y
-            b = left_ctr.x - right_ctr.x
-        else:
-            a = left_ctr.x - right_ctr.x
-            b = left_ctr.z - right_ctr.z
         return atan2(a, b)
 
     def ready_to_unsnap(self, l, r):
@@ -984,8 +977,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             return
 
         if self._grab_started_point is None or self._grab_started_point.id != controller.id:
-            ctr_point = self.to_wheel_space(controller)
-            self._grab_started_point = GrabControllerPoint(ctr_point.x, ctr_point.y, ctr_point.z, controller.id)
+            self._grab_started_point = GrabControllerPoint(controller.x, controller.y, controller.z, controller.id)
             self.calculate_grab_offset()
 
     def is_not_held(self):
@@ -1310,6 +1302,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
                 self.wheel_image.set_color((1,1,1))
                 self.h_shifter_image.set_color((1,1,1))
+                self.config.wheel_pitch = int(self.config.wheel_pitch)
                 self.is_edit_mode = False
                 self.__dict__.pop("_edit_check", None)
         else:
