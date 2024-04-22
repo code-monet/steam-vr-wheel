@@ -947,8 +947,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
 
     def _wheel_update(self, left_ctr, right_ctr):
-        left_bound = self._hand_snaps['left'] == 'wheel'
-        right_bound = self._hand_snaps['right'] == 'wheel'
+        left_bound = self._hand_snaps['left'][:5] == 'wheel'
+        right_bound = self._hand_snaps['right'][:5] == 'wheel'
 
         if right_bound and left_bound and not self._snapped:
             self.is_held([left_ctr, right_ctr])
@@ -1036,7 +1036,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.unwrap_wheel_angles()
 
         self.inertia()
-        if (not self._hand_snaps['left'] == 'wheel') and (not self._hand_snaps['right'] == 'wheel'):
+        if (not self._hand_snaps['left'][:5] == 'wheel') and (not self._hand_snaps['right'][:5] == 'wheel'):
             self.center_force()
         self.limiter(left_ctr, right_ctr)
         self.send_to_vjoy()
@@ -1117,7 +1117,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 return
 
         if grip_info[1] == False:
-            if self._hand_snaps[hand] == 'wheel':
+            if self._hand_snaps[hand][:5] == 'wheel':
                 self._snapped = False
             elif self._hand_snaps[hand] == 'shifter':
                 self.h_shifter_image.unsnap()
@@ -1126,6 +1126,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             ungrabber()
             self._hand_snaps[hand] = ''
         else:
+            if self._hand_snaps[hand] == 'wheel_auto':
+                self._hand_snaps[hand] = 'wheel'
+                return
             if self._hand_snaps[hand] != '':
                 return
 
@@ -1135,7 +1138,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self.h_shifter_image.snap_ctr(ctr)
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
-                self._hand_snaps[hand] = 'wheel'
+                self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
 
     def update(self, left_ctr, right_ctr):
         if self.hands_overlay is None:
@@ -1156,13 +1159,13 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self._last_left_in_holding != lh:
                 if lh:
                     self._grip_queue.put(['left', True, self.GRIP_FLAG_AUTO_GRAB])
-                elif self._hand_snaps['left'] == 'wheel':
+                elif self._hand_snaps['left'] == 'wheel_auto':
                     self._grip_queue.put(['left', False])
 
             if self._last_right_in_holding != rh:
                 if rh:
                     self._grip_queue.put(['right', True, self.GRIP_FLAG_AUTO_GRAB])
-                elif self._hand_snaps['right'] == 'wheel':
+                elif self._hand_snaps['right'] == 'wheel_auto':
                     self._grip_queue.put(['right', False])
 
             if self.ready_to_unsnap(left_ctr, right_ctr):
@@ -1210,7 +1213,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def pitch_delta(self, d):
         self.config.wheel_pitch += d
-        self.config.wheel_pitch %= 360.0
+        self.config.wheel_pitch %= 360
         self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
         self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
 
