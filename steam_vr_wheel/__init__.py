@@ -8,13 +8,14 @@ CONFIG_PATH = os.path.expanduser(os.path.join('~', '.steam-vr-wheel', 'config.js
 
 DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
                       multibutton_trackpad=False,
-                      multibutton_trackpad_center_haptic=False, 
+                      multibutton_trackpad_center_haptic=False,
                       
                       wheel_center=[0, -0.4, -0.35], wheel_size=0.55,
                       wheel_grabbed_by_grip=True,
                       wheel_grabbed_by_grip_toggle=True,
                       wheel_show_wheel=True, wheel_show_hands=True,
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
+                      wheel_pitch=0.0,
 
                     # Shifter
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100,
@@ -274,6 +275,17 @@ class PadConfig:
     def wheel_alpha(self, x: int):
         with self.data_lock:
             self._data['wheel_alpha'] = x
+        self._write()
+
+    @property
+    def wheel_pitch(self):
+        with self.data_lock:
+            return self._data['wheel_pitch']
+
+    @wheel_pitch.setter
+    def wheel_pitch(self, x: float):
+        with self.data_lock:
+            self._data['wheel_pitch'] = x
         self._write()
 
     @property

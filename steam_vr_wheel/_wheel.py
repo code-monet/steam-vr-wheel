@@ -793,6 +793,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._wheel_angles.append(0)
         self._snapped = False
 
+        self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
+        self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
+
         # radians per frame last turn speed when wheel was being held, gradually decreases after wheel is released
         self._turn_speed = 0
 
@@ -825,6 +828,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                             degree=self.config.shifter_degree)
 
     def point_in_holding_bounds(self, point):
+        point = self.to_wheel_space(point)
+
         a = self.size/2 + 0.06
         b = self.size/2 - 0.10
         if self.config.vertical_wheel:
@@ -845,6 +850,21 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         else:
             return False
 
+    def _subtract_and_rotate(self, point, mat):
+        diff = np.array([point.x-self.center.x,
+                        point.y-self.center.y,
+                        point.z-self.center.z])
+        l = np.dot(mat, diff)
+        l[0] += self.center.x
+        l[1] += self.center.y
+        l[2] += self.center.z
+        return Point(l[0], l[1], l[2])
+
+    def to_wheel_space(self, point):
+        return self._subtract_and_rotate(point, self._rot_inv)
+
+    def to_absolute_space(self, point):
+        return self._subtract_and_rotate(point, self._rot)
 
     def unwrap_wheel_angles(self):
         period = 2 * pi
@@ -856,6 +876,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._wheel_angles[-1] = angle[-1]
 
     def wheel_raw_angle(self, point):
+        point = self.to_wheel_space(point)
         if self.config.vertical_wheel:
             a = float(point.y) - self.center.y
             b = float(point.x) - self.center.x
@@ -866,6 +887,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         return angle
 
     def wheel_double_raw_angle(self, left_ctr, right_ctr):
+        left_ctr = self.to_wheel_space(left_ctr)
+        right_ctr = self.to_wheel_space(right_ctr)
+
         if self.config.vertical_wheel:
             a = left_ctr.y - right_ctr.y
             b = left_ctr.x - right_ctr.x
@@ -875,6 +899,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         return atan2(a, b)
 
     def ready_to_unsnap(self, l, r):
+        l = self.to_wheel_space(l)
+        r = self.to_wheel_space(r)
+
         d = (l.x - r.x)**2 + (l.y - r.y)**2 + (l.z - r.z)**2
 
         if d > self.size**2:
@@ -957,7 +984,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             return
 
         if self._grab_started_point is None or self._grab_started_point.id != controller.id:
-            self._grab_started_point = GrabControllerPoint(controller.x, controller.y, controller.z, controller.id)
+            ctr_point = self.to_wheel_space(controller)
+            self._grab_started_point = GrabControllerPoint(ctr_point.x, ctr_point.y, ctr_point.z, controller.id)
             self.calculate_grab_offset()
 
     def is_not_held(self):
@@ -988,7 +1016,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
     def render(self):
         wheel_angle = self._wheel_angles[-1]
         if self.config.vertical_wheel:
-            self.wheel_image.rotate(-wheel_angle)
+            self.wheel_image.rotate([-wheel_angle, self.config.wheel_pitch*pi/180], [2, 0])
         else:
             self.wheel_image.rotate([-wheel_angle, np.pi / 2], [2, 0])
 
@@ -1014,6 +1042,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.send_to_vjoy()
 
     def attach_hand(self, hand, left_ctr, right_ctr):
+        left_ctr = self.to_wheel_space(left_ctr)
+        right_ctr = self.to_wheel_space(right_ctr)
+
         ctr = left_ctr if hand == 'left' else right_ctr
         offset = [ctr.x - self.center.x, ctr.y - self.center.y]
         a = sqrt(offset[0]**2 + offset[1]**2)/(self.size/2)
@@ -1033,6 +1064,13 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         tf[0][3] = self.center.x + offset[0]
         tf[1][3] = self.center.y + offset[1]
         tf[2][3] = self.center.z + 0.02
+
+        ab = self.to_absolute_space(Point(tf[0][3], tf[1][3], tf[2][3]))
+
+        tf[0][3] = ab.x
+        tf[1][3] = ab.y
+        tf[2][3] = ab.z
+
         self.hands_overlay.move(hand, tf)
 
     def _reset_hands(self):
@@ -1164,11 +1202,17 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.wheel_image.move(self.center, self.size)
 
     def resize_delta(self, d):
-        if self.size + d < 0.22:
+        if self.size + d < 0.10:
             return
         self.size += d
         self.config.wheel_size = self.size
         self.wheel_image.move(self.center, self.size)
+
+    def pitch_delta(self, d):
+        self.config.wheel_pitch += d
+        self.config.wheel_pitch %= 360.0
+        self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
+        self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
 
     def discard_x(self):
         self.center = Point(0, self.center.y, self.center.z)
@@ -1222,9 +1266,18 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
        # k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
         # rAxis
         if state_r.rAxis:
-            y = state_r.rAxis[0].y # quest 2 joystick
+            x = state_r.rAxis[0].x # quest 2 joystick
+            y = state_r.rAxis[0].y
             if self._edit_move_wheel:
-                self.resize_delta(y / 30)
+                def dead_and_stretch(v, d):
+                    if abs(v) < d:
+                        return 0.0
+                    else:
+                        s = v / abs(v)
+                        return (v - s*d)/(1-d)
+                self.resize_delta(dead_and_stretch(x, 0.3) / 30)
+                self.pitch_delta(dead_and_stretch(y, 0.75) * 2)
+                self.render()
 
         if state_r.ulButtonPressed:
             btns = list(reversed(bin(state_r.ulButtonPressed)[2:]))
@@ -1249,6 +1302,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
             elif btn_id == openvr.k_EButton_A: #A on right
                 self.discard_x()
+                self.render()
                 print("Set x to 0")
             elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
                 self.wheel_image.set_color((1,1,1))
