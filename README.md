@@ -51,14 +51,14 @@ Changed(applied or planned) behavior:
 
 |Config|Behavior|
 |-|-|
-|Triggers pre press button|Disabled, since sometimes it doesn't get unpressed|
+|Triggers pre press button|Set default to disabled|
 |Triggers press button||
-|5 Button touchpad|As is, with more description in configurator|
-|Haptic feedback for trackpad button zones|As is, with more description in configurator|
+|5 Button touchpad|Disabled as default, more description|
+|Haptic feedback for trackpad button zones|Disabled as default, more description|
 |Touchpad mapping to axis while untouched (axis move to center when released)|Disabled, since joysticks are handlded differently now|
 |Steering wheel is vertical|Disabled, the wheel will be manually rotatable in edit mode|
-|Joystick moves only when grabbed (by right grip)||
-|Joystick grab is a switch||
+|Joystick moves only when grabbed (by right grip)|Hidden; use the original version for better experience|
+|Joystick grab is a switch|Hidden|
 |Layout edit mode|Disabled, users have to enter edit mode by triple grip clicks|
 |Manual wheel grabbing||
 |Continuous (index, checked) or toggle (vive) wheel gripping||

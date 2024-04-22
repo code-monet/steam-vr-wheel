@@ -149,29 +149,16 @@ class VirtualPad:
 
     def set_trigger_touch_left(self):
         if self.config.trigger_pre_press_button:
-            print("A")
-            return
-
-            
             self.device.set_button(31, True)
 
     def set_trigger_touch_right(self):
         if self.config.trigger_pre_press_button:
-            return
-
-
             self.device.set_button(32, True)
 
     def set_trigger_untouch_left(self):
-        return
-
-
         self.device.set_button(31, False)
 
     def set_trigger_untouch_right(self):
-        return
-
-
         self.device.set_button(32, False)
 
     def set_trackpad_touch_left(self):
@@ -196,18 +183,8 @@ class VirtualPad:
     def update(self, left_ctr: Controller, right_ctr: Controller):
         self.device.set_axis(HID_USAGE_SL0, int(left_ctr.axis * 0x8000))
         self.device.set_axis(HID_USAGE_SL1, int(right_ctr.axis * 0x8000))
-        self.trackpadLX = left_ctr.trackpadX
-        self.trackpadLY = left_ctr.trackpadY
 
         haptic_pulse_strength = 1000
-
-        left_zone = self._get_zone(self.trackpadLX, self.trackpadLY)
-        crossed = self._check_zone_change(left_zone, self.previous_left_zone)
-        self.previous_left_zone = left_zone
-        if crossed:
-            #openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
-            pass
-
         DEADZONE_DPAD = 0.9
         """
         |LX|34,35|
@@ -246,12 +223,18 @@ class VirtualPad:
                 else:
                     self.device.set_axis(axis_hid, int(zero * 0x8000))
 
+        self.trackpadLX = left_ctr.trackpadX
+        self.trackpadLY = left_ctr.trackpadY
+
+        left_zone = self._get_zone(self.trackpadLX, self.trackpadLY)
+        crossed = self._check_zone_change(left_zone, self.previous_left_zone)
+        self.previous_left_zone = left_zone
+        if crossed:
+            openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
+            pass
+
         convert_axis(left_ctr.trackpadX, 0x32, 34, self.config.j_l_left_button, self.config.j_l_right_button)
         convert_axis(left_ctr.trackpadY, HID_USAGE_Y, 36, self.config.j_l_down_button, self.config.j_l_up_button)
-            
-        #if (self.trackpadLtouch or self.config.touchpad_always_updates) and self.trackpad_left_enabled:
-        #self.device.set_axis(HID_USAGE_RX, int((left_ctr.trackpadX+1)/2 * 0x8000))
-        #self.device.set_axis(HID_USAGE_RY, int(((-left_ctr.trackpadY+1)/2) * 0x8000))
 
         self.trackpadRX = right_ctr.trackpadX
         self.trackpadRY = right_ctr.trackpadY
@@ -260,12 +243,9 @@ class VirtualPad:
         crossed = self._check_zone_change(right_zone, self.previous_right_zone)
         self.previous_right_zone = right_zone
         if crossed:
-            #openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
+            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
             pass
 
-        #if (self.trackpadRtouch or self.config.touchpad_always_updates): #and self.trackpad_right_enabled:
-        #self.device.set_axis(0x32, int((right_ctr.trackpadX + 1) / 2 * 0x8000))
-        #self.device.set_axis(HID_USAGE_Y, int(((-right_ctr.trackpadY + 1) / 2) * 0x8000))
         convert_axis(right_ctr.trackpadX, HID_USAGE_RX, 38, self.config.j_r_left_button, self.config.j_r_right_button)
         convert_axis(right_ctr.trackpadY, HID_USAGE_RY, 40, self.config.j_r_down_button, self.config.j_r_up_button)
 

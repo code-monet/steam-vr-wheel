@@ -8,22 +8,25 @@ class ConfiguratorApp:
 
         self.app = wx.App()
         self.window = wx.Frame(None, title="Steam Vr Wheel Configuration")
-        self.pnl = wx.Panel(self.window)
+        self.parent_pnl = wx.Panel(self.window)
+        self.parent_hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.pnl = wx.Panel(self.parent_pnl)
         self.vbox = wx.BoxSizer(wx.VERTICAL)
         self.trigger_pre_btn_box = wx.CheckBox(self.pnl, label='Triggers pre press button')
-        self.trigger_pre_btn_box.Disable()
         self.trigger_btn_box = wx.CheckBox(self.pnl, label='Triggers press button')
         self.multibutton_trackpad_box = wx.CheckBox(self.pnl, label='5 Button touchpad')
         self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl,
                                                                   label='Haptic feedback for trackpad button zones')
-        self.multibutton_trackpad_center_haptic_box.Disable()
         self.touchpad_always_updates_box = wx.CheckBox(self.pnl, label='Touchpad mapping to axis while untouched (axis move to center when released)')
+        self.touchpad_always_updates_box.Hide()
         self.vertical_wheel_box = wx.CheckBox(self.pnl, label='Steering wheel is vertical')
-        self.vertical_wheel_box.Disable()
+        self.vertical_wheel_box.Hide()
         self.joystick_updates_only_when_grabbed_box = wx.CheckBox(self.pnl, label='Joystick moves only when grabbed (by right grip)')
+        self.joystick_updates_only_when_grabbed_box.Hide()
         self.joystick_grabbing_switch_box = wx.CheckBox(self.pnl, label='Joystick grab is a switch')
+        self.joystick_grabbing_switch_box.Hide()
         self.edit_mode_box = wx.CheckBox(self.pnl, label='Layout edit mode')
-        self.edit_mode_box.Disable()
+        self.edit_mode_box.Hide()
         self.wheel_grabbed_by_grip_box = wx.CheckBox(self.pnl, label='Manual wheel grabbing')
         self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.pnl, label='Continuous (index, checked) or toggle (vive) wheel gripping')
         self.wheel_show_wheel = wx.CheckBox(self.pnl, label="Show Wheel Overlay")
@@ -33,10 +36,21 @@ class ConfiguratorApp:
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
 
         # Shifter
-        self.shifter_degree = wx.SpinCtrl(self.pnl, name = "Shifter Degree, 15deg", min=0, max=90)
-        self.shifter_alpha = wx.SpinCtrl(self.pnl, name = "Shifter Alpha (%), 100%", min=0, max=100)
-        self.shifter_scale = wx.SpinCtrl(self.pnl, name = "Shifter Height Scale (%), 100%", min=10, max=100)
+        self.pnl_shifter = wx.Panel(self.pnl)
+        self.hbox_shifter = wx.BoxSizer(wx.HORIZONTAL)
 
+        self.pnl_shifter_degree = wx.Panel(self.pnl_shifter)
+        self.vbox_shifter_degree = wx.BoxSizer(wx.VERTICAL)
+        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 15deg", min=0, max=90)
+
+        self.pnl_shifter_alpha = wx.Panel(self.pnl_shifter)
+        self.vbox_shifter_alpha = wx.BoxSizer(wx.VERTICAL)
+        self.shifter_alpha = wx.SpinCtrl(self.pnl_shifter_alpha, name = "Shifter Alpha (%), 100%", min=0, max=100)
+        
+        self.pnl_shifter_scale = wx.Panel(self.pnl_shifter)
+        self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
+        self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
+        
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
         self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
@@ -113,6 +127,8 @@ class ConfiguratorApp:
                                 j_r_down_button=self.j_r_down_button,
                                 )
 
+        self.vbox.AddSpacer(5)
+
         self.vbox.Add(self.trigger_pre_btn_box)
         self.vbox.Add(self.trigger_btn_box)
         self.vbox.Add(self.multibutton_trackpad_box)
@@ -137,14 +153,22 @@ class ConfiguratorApp:
         self.vbox.Add(self.wheel_alpha)
 
         self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Alpha"))
-        self.vbox.Add(self.shifter_alpha)
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Degree"))
-        self.vbox.Add(self.shifter_degree)
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Shifter Height Scale"))
-        self.vbox.Add(self.shifter_scale)
+        self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Degree"))
+        self.vbox_shifter_degree.Add(self.shifter_degree)
+        self.vbox_shifter_alpha.Add(wx.StaticText(self.pnl_shifter_alpha, label = "Shifter Alpha"))
+        self.vbox_shifter_alpha.Add(self.shifter_alpha)
+        self.vbox_shifter_scale.Add(wx.StaticText(self.pnl_shifter_scale, label = "Shifter Height Scale"))
+        self.vbox_shifter_scale.Add(self.shifter_scale)
+
+        self.pnl_shifter_alpha.SetSizerAndFit(self.vbox_shifter_alpha)
+        self.pnl_shifter_degree.SetSizerAndFit(self.vbox_shifter_degree)
+        self.pnl_shifter_scale.SetSizerAndFit(self.vbox_shifter_scale)
+
+        self.hbox_shifter.Add(self.pnl_shifter_alpha)
+        self.hbox_shifter.Add(self.pnl_shifter_degree)
+        self.hbox_shifter.Add(self.pnl_shifter_scale)
+        self.pnl_shifter.SetSizerAndFit(self.hbox_shifter)
+        self.vbox.Add(self.pnl_shifter)
 
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
@@ -160,7 +184,15 @@ class ConfiguratorApp:
         self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
         self.vbox.Add(self.pnl_joystick)
 
+        self.vbox.AddSpacer(5)
+
         self.pnl.SetSizerAndFit(self.vbox)
+
+        self.parent_hbox.AddSpacer(8)
+        self.parent_hbox.Add(self.pnl)
+        self.parent_hbox.AddSpacer(8)
+        self.parent_pnl.SetSizerAndFit(self.parent_hbox)
+
         self.read_config()
         self.window.Fit()
         self.window.Show(True)

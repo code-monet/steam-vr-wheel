@@ -6,11 +6,14 @@ import time
 
 CONFIG_PATH = os.path.expanduser(os.path.join('~', '.steam-vr-wheel', 'config.json'))
 
-DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, multibutton_trackpad=True,
-                      multibutton_trackpad_center_haptic=True, touchpad_always_updates=True, vertical_wheel=True,
-                      joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False, edit_mode=False,
-                      wheel_center=[0, -0.4, -0.35], wheel_size=0.55, wheel_grabbed_by_grip=True,
-                      wheel_grabbed_by_grip_toggle=True, wheel_show_wheel=True, wheel_show_hands=True,
+DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
+                      multibutton_trackpad=False,
+                      multibutton_trackpad_center_haptic=False, 
+                      
+                      wheel_center=[0, -0.4, -0.35], wheel_size=0.55,
+                      wheel_grabbed_by_grip=True,
+                      wheel_grabbed_by_grip_toggle=True,
+                      wheel_show_wheel=True, wheel_show_hands=True,
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
 
                     # Shifter
@@ -25,7 +28,13 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=True, trigger_press_button=True, 
                     j_r_left_button=False,
                     j_r_right_button=False,
                     j_r_up_button=False,
-                    j_r_down_button=False,)
+                    j_r_down_button=False,
+
+                    # Disabled
+                    touchpad_always_updates=True, vertical_wheel=True,
+                    joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False,
+                    edit_mode=False,
+                    )
 
 
 class ConfigException(Exception):
