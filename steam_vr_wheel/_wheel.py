@@ -119,6 +119,7 @@ class HandsImage:
         self.left_ctr = left_ctr
         self.right_ctr = right_ctr
         hand_size = 0.14
+        self.alpha = 0.9
 
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
@@ -132,10 +133,10 @@ class HandsImage:
         check_result(self.vroverlay.setOverlayColor(self.l_ovr2, 1, 1, 1))
         check_result(self.vroverlay.setOverlayColor(self.r_ovr, 1, 1, 1))
         check_result(self.vroverlay.setOverlayColor(self.r_ovr2, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr2, 0)) #!!
-        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr2, 0)) #!!
+        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr, self.alpha))
+        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr2, 0))
+        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr, self.alpha))
+        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr2, 0))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr2, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
@@ -153,10 +154,9 @@ class HandsImage:
         self.r_close_png = os.path.join(this_dir, 'media', 'hand_closed_r.png')
 
         check_result(self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr2, self.l_close_png.encode())) #!!
+        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr2, self.l_close_png.encode()))
         check_result(self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode())) #!!
-
+        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode()))
 
         result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
         result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)
@@ -210,13 +210,13 @@ class HandsImage:
         if not self._handl_closed:
             #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_close_png.encode())
             self.vroverlay.setOverlayAlpha(self.l_ovr, 0)
-            self.vroverlay.setOverlayAlpha(self.l_ovr2, 1)
+            self.vroverlay.setOverlayAlpha(self.l_ovr2, self.alpha)
             self._handl_closed = True
 
     def left_ungrab(self):
         if self._handl_closed:
             #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode())
-            self.vroverlay.setOverlayAlpha(self.l_ovr, 1)
+            self.vroverlay.setOverlayAlpha(self.l_ovr, self.alpha)
             self.vroverlay.setOverlayAlpha(self.l_ovr2, 0)
             self._handl_closed = False
 
@@ -224,13 +224,13 @@ class HandsImage:
         if not self._handr_closed:
             #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_close_png.encode())
             self.vroverlay.setOverlayAlpha(self.r_ovr, 0)
-            self.vroverlay.setOverlayAlpha(self.r_ovr2, 1)
+            self.vroverlay.setOverlayAlpha(self.r_ovr2, self.alpha)
             self._handr_closed = True
 
     def right_ungrab(self):
         if self._handr_closed:
             #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode())
-            self.vroverlay.setOverlayAlpha(self.r_ovr, 1)
+            self.vroverlay.setOverlayAlpha(self.r_ovr, self.alpha)
             self.vroverlay.setOverlayAlpha(self.r_ovr2, 0)
             self._handr_closed = False
 
@@ -358,6 +358,9 @@ class HShifterImage:
         check_result(self.vroverlay.showOverlay(self.slot))
         check_result(self.vroverlay.showOverlay(self.stick))
         check_result(self.vroverlay.showOverlay(self.knob))
+
+        check_result(self.vroverlay.setOverlaySortOrder(self.stick, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.knob, 1))
 
         # Get HMD id for yaw
         vrsys = openvr.VRSystem()
@@ -579,8 +582,8 @@ class HShifterImage:
 
         # Bounds
         self.bounds = [
-            [self.x - x_sin-unit-0.05, self.y+self.stick_height-0.16, self.z -x_sin-unit-0.05], 
-            [self.x + x_sin+unit+0.05, self.y+self.stick_height+0.08, self.z +x_sin+unit+0.05]]
+            [self.x - x_sin-unit-0.065, self.y+self.stick_height-0.16, self.z -z_sin-unit-0.08], 
+            [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
         self.bounds = [
             [x_knob-0.08, self.y+self.stick_height-0.16, z_knob-0.08], 

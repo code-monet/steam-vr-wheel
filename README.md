@@ -4,22 +4,39 @@ This fork is a version I modified for personal use only. So it is highly likely 
 
 ## Memo
 
-Qyuest 2 vJoy mapping
+Qyuest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
 
 |Key|Button ID|Note|
 |-|-|-|
 |LT|1||
 |LT Touch|31||
 |L Grip|2|Disabled|
-|LS|4,5,6,7,8||
+|LS|4 or 4,5,6,7,8||
 |RT|9||
 |RT Touch|32||
 |R Grip|10|Disabled|
-|RS|12,13,14,15,16||
+|RS|12 or 12,13,14,15,16||
 |A|18||
 |B|11||
 |X|17||
 |Y|3||
+|L Left|34 or Z Axis||
+|L Right|35 or Z Axis||
+|L Down|36 or Y Axis||
+|L Up|37 or Y||
+|R Left|38 or RX||
+|R Right|39 or RX||
+|R Down|40 or RY||
+|R Up|41 or RY||
+|Shifter Position 1|43||
+|Shifter Position 2|44||
+|Shifter Position 3|45||
+|Shifter Position 4|46||
+|Shifter Position 5|47||
+|Shifter Position 6|48||
+|Shifter Neutral|42||
+|Shifter Splitter|49|Grab knob and A|
+|Shifter Range Selector|50|Grab knob and Trigger|
 
 ### Todo
 

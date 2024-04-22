@@ -231,7 +231,6 @@ class VirtualPad:
         self.previous_left_zone = left_zone
         if crossed:
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
-            pass
 
         convert_axis(left_ctr.trackpadX, 0x32, 34, self.config.j_l_left_button, self.config.j_l_right_button)
         convert_axis(left_ctr.trackpadY, HID_USAGE_Y, 36, self.config.j_l_down_button, self.config.j_l_up_button)
@@ -244,7 +243,6 @@ class VirtualPad:
         self.previous_right_zone = right_zone
         if crossed:
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
-            pass
 
         convert_axis(right_ctr.trackpadX, HID_USAGE_RX, 38, self.config.j_r_left_button, self.config.j_r_right_button)
         convert_axis(right_ctr.trackpadY, HID_USAGE_RY, 40, self.config.j_r_down_button, self.config.j_r_up_button)

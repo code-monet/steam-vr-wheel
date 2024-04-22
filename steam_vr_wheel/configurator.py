@@ -3,6 +3,13 @@ import wx
 
 from steam_vr_wheel import PadConfig, ConfigException
 
+def _decrease_font(w):
+    f = w.GetFont()
+    p = f.GetPointSize()
+    f.SetPointSize(p-1)
+    w.SetFont(f)
+    return w
+
 class ConfiguratorApp:
     def __init__(self):
 
@@ -40,7 +47,7 @@ class ConfiguratorApp:
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
-        self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 360)
+        self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
 
         # Shifter
         self.pnl_shifter = wx.Panel(self.pnl)
@@ -141,9 +148,11 @@ class ConfiguratorApp:
         self.vbox.Add(self.trigger_pre_btn_box)
         self.vbox.Add(self.trigger_btn_box)
         self.vbox.Add(self.multibutton_trackpad_box)
-        self.vbox.Add(wx.StaticText(self.pnl, label = " Trackpads have 4 more button ids depending on the clicked zone\n Quest 2 is recommended to uncheck"))
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = " Trackpads have 4 more button ids depending on the clicked zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.multibutton_trackpad_center_haptic_box)
-        self.vbox.Add(wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck"))
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.touchpad_always_updates_box)
         self.vbox.Add(self.vertical_wheel_box)
         self.vbox.Add(self.joystick_updates_only_when_grabbed_box)
@@ -155,7 +164,8 @@ class ConfiguratorApp:
         self.vbox.Add(self.wheel_show_hands)
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Degrees"))
-        self.vbox.Add(wx.StaticText(self.pnl, label = " 360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck"))
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck")))
         self.vbox.Add(self.wheel_degrees)
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Center Force"))
@@ -184,10 +194,13 @@ class ConfiguratorApp:
         self.hbox_shifter.Add(self.pnl_shifter_scale)
         self.pnl_shifter.SetSizerAndFit(self.hbox_shifter)
         self.vbox.Add(self.pnl_shifter)
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = "Height 100%=Truck 40%=General")))
 
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
-        self.vbox.Add(wx.StaticText(self.pnl, label = ":: Checked joystick acts as button"))
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = "Checked joystick acts as button")))
         self.hbox_joystick.Add(self.j_l_left_button)
         self.hbox_joystick.Add(self.j_l_right_button)
         self.hbox_joystick.Add(self.j_l_up_button)
