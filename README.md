@@ -71,7 +71,6 @@ Changed(applied or planned) behavior:
 
 - Compatibility of devices other than Quest 2 is not tested.
 - Only the wheel mode(wheel.bat) is tested.
-- Manual grabbing(wheel configuration) is recommended.
 
 ### Edit Mode
 

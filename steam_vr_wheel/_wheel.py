@@ -825,9 +825,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                             degree=self.config.shifter_degree)
 
     def point_in_holding_bounds(self, point):
-        width = 0.10
-        a = self.size/2 + width
-        b = self.size/2 - width
+        a = self.size/2 + 0.06
+        b = self.size/2 - 0.10
         if self.config.vertical_wheel:
             x = point.x - self.center.x
             y = point.y - self.center.y
@@ -837,8 +836,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             y = point.x - self.center.x
             x = point.z - self.center.z
 
-        if abs(z) < width:
-            distance = (x**2+y**2)**0.5
+        if abs(z) < 0.075:
+            distance = sqrt(x**2+y**2)
             if distance < b:
                 return False
             if distance < a:
@@ -1089,6 +1088,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             ungrabber()
             self._hand_snaps[hand] = ''
         else:
+            if self._hand_snaps[hand] != '':
+                return
+
             grabber()
             if self.h_shifter_image.check_collision(ctr) and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
                 self._hand_snaps[hand] = 'shifter'
