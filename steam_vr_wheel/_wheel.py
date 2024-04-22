@@ -918,11 +918,12 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
             if button == openvr.k_EButton_Grip and hand == 'right':
                 self._grip_queue.put(['right', False])
+        else:
+            pass
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
         ctr = left_ctr if hand == 'left' else right_ctr
 
-        # Todo: if shifter snapped, don't send to super
         if self._hand_snaps[hand] == 'shifter':
             if button == openvr.k_EButton_SteamVR_Trigger:
                 self.h_shifter_image.toggle_range(ctr)
@@ -932,12 +933,16 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             super().set_button_press(button, hand)
 
         if button == openvr.k_EButton_Grip and hand == 'left':
-            #if self.config.wheel_grabbed_by_grip_toggle:
-            self._grip_queue.put(['left', True])
+            if self.config.wheel_grabbed_by_grip_toggle:
+                self._grip_queue.put(['left', True])
+            else:
+                self._grip_queue.put(['left', self._hand_snaps['left'] == ''])
 
         if button == openvr.k_EButton_Grip and hand == 'right':
-            #if self.config.wheel_grabbed_by_grip_toggle:
-            self._grip_queue.put(['right', True])
+            if self.config.wheel_grabbed_by_grip_toggle:
+                self._grip_queue.put(['right', True])
+            else:
+                self._grip_queue.put(['right', self._hand_snaps['right'] == ''])
 
 
     def _wheel_update(self, left_ctr, right_ctr):
