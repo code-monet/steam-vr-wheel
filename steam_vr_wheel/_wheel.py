@@ -826,6 +826,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                             alpha=self.config.shifter_alpha,
                             scale=self.config.shifter_scale,
                             degree=self.config.shifter_degree)
+        self._last_knob_haptic = 0
 
     def point_in_holding_bounds(self, point):
         point = self.to_wheel_space(point)
@@ -1137,6 +1138,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self.hands_overlay = HandsImage(left_ctr, right_ctr)
         super().update(left_ctr, right_ctr)
 
+        now = time.time()
+
         # Check hands
         while not self._grip_queue.empty():
             self._update_hands(self._grip_queue.get(), left_ctr, right_ctr)
@@ -1182,6 +1185,15 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.render()
         self.h_shifter_image.render()
         self.h_shifter_image.update()
+
+        # Slight haptic when touching knob
+        if self._hand_snaps['left'] != 'shifter' and self._hand_snaps['right'] != 'shifter':
+            if now - self._last_knob_haptic > 0.25:
+                self._last_knob_haptic = now
+                if self._hand_snaps['left'] == '' and self.h_shifter_image.check_collision(left_ctr):
+                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 100)
+                if self._hand_snaps['right'] == '' and self.h_shifter_image.check_collision(right_ctr):
+                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 100)
 
     def move_wheel(self, right_ctr, left_ctr):
         self.center = Point(right_ctr.x, right_ctr.y, right_ctr.z)
