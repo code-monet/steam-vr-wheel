@@ -806,6 +806,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._grip_queue = queue.Queue()
         self._hand_snaps = dict({'left': '', 'right': ''})
 
+        # for auto grab
+        self._last_left_in_holding = False
+        self._last_right_in_holding = False
+
         # for triple grip:
         self._grip_times = dict({'left': [], 'right': []})
 
@@ -917,14 +921,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
 
     def _wheel_update(self, left_ctr, right_ctr):
-        if self.config.wheel_grabbed_by_grip:
-            left_bound = self._hand_snaps['left'] == 'wheel'
-            right_bound = self._hand_snaps['right'] == 'wheel'
-        else: # automatic gripping
-            right_bound = self.point_in_holding_bounds(right_ctr)
-            left_bound = self.point_in_holding_bounds(left_ctr)
-            if self.ready_to_unsnap(left_ctr, right_ctr):
-                self._snapped = False
+        left_bound = self._hand_snaps['left'] == 'wheel'
+        right_bound = self._hand_snaps['right'] == 'wheel'
 
         if right_bound and left_bound and not self._snapped:
             self.is_held([left_ctr, right_ctr])
@@ -1048,15 +1046,19 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         while not self._grip_queue.empty():
             self._grip_queue.get()
 
+    GRIP_FLAG_AUTO_GRAB = 0x1
+
     def _update_hands(self, grip_info, left_ctr, right_ctr):
         hand = grip_info[0]
+        flag = 0 if len(grip_info) < 3 else grip_info[2]
+
         ctr = left_ctr if hand == 'left' else right_ctr
         grabber = self.hands_overlay.left_grab if hand == 'left' else self.hands_overlay.right_grab
         ungrabber = self.hands_overlay.left_ungrab if hand == 'left' else self.hands_overlay.right_ungrab
         other = 'left' if hand == 'right' else 'right'
 
         # Handle triple grips for edit mode
-        if grip_info[1] == True:
+        if grip_info[1] == True and flag == 0:
             now = time.time()
             self._grip_times[hand].append(now)
             self._grip_times[hand] = self._grip_times[hand][-3:]
@@ -1087,15 +1089,13 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             ungrabber()
             self._hand_snaps[hand] = ''
         else:
-            if self.h_shifter_image.check_collision(ctr):
-                grabber()
+            grabber()
+            if self.h_shifter_image.check_collision(ctr) and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
                 self._hand_snaps[hand] = 'shifter'
                 self.h_shifter_image.snap_ctr(ctr)
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
-                grabber()
                 self._hand_snaps[hand] = 'wheel'
-            
 
     def update(self, left_ctr, right_ctr):
         if self.hands_overlay is None:
@@ -1105,6 +1105,31 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # Check hands
         while not self._grip_queue.empty():
             self._update_hands(self._grip_queue.get(), left_ctr, right_ctr)
+
+        # Check for automatic grabbing
+        if self.config.wheel_grabbed_by_grip:
+            pass
+        else:
+            lh = self.point_in_holding_bounds(left_ctr)
+            rh = self.point_in_holding_bounds(right_ctr)
+
+            if self._last_left_in_holding != lh:
+                if lh:
+                    self._grip_queue.put(['left', True, self.GRIP_FLAG_AUTO_GRAB])
+                elif self._hand_snaps['left'] == 'wheel':
+                    self._grip_queue.put(['left', False])
+
+            if self._last_right_in_holding != rh:
+                if rh:
+                    self._grip_queue.put(['right', True, self.GRIP_FLAG_AUTO_GRAB])
+                elif self._hand_snaps['right'] == 'wheel':
+                    self._grip_queue.put(['right', False])
+
+            if self.ready_to_unsnap(left_ctr, right_ctr):
+                self._snapped = False
+
+            self._last_left_in_holding = lh
+            self._last_right_in_holding = rh
 
         # Update hand transform
         for i in self._hand_snaps.items():

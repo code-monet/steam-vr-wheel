@@ -136,6 +136,8 @@ def main(type='wheel'):
         left = 1/FREQUENCY - (after_work - before_work)
         if left>0:
             time.sleep(left)
+        else:
+            print("Task took too long +", -left, "seconds")
 
 if __name__ == '__main__':
     main()
