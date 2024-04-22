@@ -23,9 +23,7 @@ Qyuest 2 vJoy mapping
 
 ### Todo
 
-- Make controlling of shifter more intuitive
-- Left handed shifter
-- Fast split and range select mode: A button to split and trigger to range select
+- Make wheel and shifter rotatable in space; wheel around x axis; shifter all 3 axes
 - Clean up unused configs
 - Code cleanup
 
@@ -36,7 +34,7 @@ Memos for \*original\* config behaviors. Some configs' behaviors are changed as 
 |Config|Module|Behavior|
 |-|-|-|
 |Triggers pre press button|`VirtualPad`|Touching trigger registers|
-|Triggers press button|`VirtualPad`|Trigger press registers|
+|Triggers press button|`VirtualPad`|Trigger press registers along with axis change|
 |5 Button touchpad|`VirtualPad`|On Quest 2 controller, the axis values determine button id|
 |Haptic feedback for trackpad button zones|`VirtualPad`|Haptic when 5-button button id changed|
 |Touchpad mapping to axis while untouched (axis move to center when released)|`VirtualPad`||
@@ -48,6 +46,24 @@ Memos for \*original\* config behaviors. Some configs' behaviors are changed as 
 |Continuous (index, checked) or toggle (vive) wheel gripping|`Wheel`||
 |Show Wheel Overlay|`Wheel`||
 |Show Hands Overlay|`Wheel`||
+
+Changed(applied or planned) behavior:
+
+|Config|Behavior|
+|-|-|
+|Triggers pre press button|Disabled, since sometimes it doesn't get unpressed|
+|Triggers press button||
+|5 Button touchpad|As is, with more description in configurator|
+|Haptic feedback for trackpad button zones|As is, with more description in configurator|
+|Touchpad mapping to axis while untouched (axis move to center when released)|Disabled, since joysticks are handlded differently now|
+|Steering wheel is vertical|Disabled, the wheel will be manually rotatable in edit mode|
+|Joystick moves only when grabbed (by right grip)||
+|Joystick grab is a switch||
+|Layout edit mode|Disabled, users have to enter edit mode by triple grip clicks|
+|Manual wheel grabbing||
+|Continuous (index, checked) or toggle (vive) wheel gripping||
+|Show Wheel Overlay||
+|Show Hands Overlay||
 
 ## This fork
 

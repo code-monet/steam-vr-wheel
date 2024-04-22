@@ -77,7 +77,7 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
                     print(hand, "HAND EVENT: BUTTON UNPRESS, BUTTON ID", event.data.controller.button)
                 button = event.data.controller.button
                 wheel.set_button_unpress(button, hand)
-    if wheel.config.edit_mode:
+    if wheel.is_edit_mode:
         wheel.edit_mode(left_controller, right_controller)
     else:
         wheel.update(left_controller, right_controller)

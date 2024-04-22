@@ -781,6 +781,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         super().__init__()
         self.vrsys = openvr.VRSystem()
         self.hands_overlay = None
+        self.is_edit_mode = False
         x, y, z = self.config.wheel_center
         size = self.config.wheel_size
         self._inertia = inertia
@@ -1072,7 +1073,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
                 self._reset_hands()
-                self.config.edit_mode = True
+                self.is_edit_mode = True
                 self._edit_mode_entry = time.time()
                 return
 
@@ -1225,7 +1226,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
                 self.wheel_image.set_color((1,1,1))
                 self.h_shifter_image.set_color((1,1,1))
-                self.config.edit_mode = False
+                self.is_edit_mode = False
                 self.__dict__.pop("_edit_check", None)
         else:
             if self._edit_move_wheel:
