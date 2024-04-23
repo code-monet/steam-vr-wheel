@@ -839,14 +839,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         a = self.size/2 + 0.06
         b = self.size/2 - 0.10
-        if self.config.vertical_wheel:
-            x = point.x - self.center.x
-            y = point.y - self.center.y
-            z = point.z - self.center.z
-        else:
-            z = point.y - self.center.y
-            y = point.x - self.center.x
-            x = point.z - self.center.z
+
+        x = point.x - self.center.x
+        y = point.y - self.center.y
+        z = point.z - self.center.z
 
         if abs(z) < 0.075:
             distance = sqrt(x**2+y**2)
@@ -1019,12 +1015,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def render(self):
         wheel_angle = self._wheel_angles[-1]
-        if self.config.vertical_wheel:
-            self.wheel_image.rotate([-wheel_angle, self.config.wheel_pitch*pi/180], [2, 0])
-        else:
-            self.wheel_image.rotate([-wheel_angle, np.pi / 2], [2, 0])
-
-        # Switch alpha
+        self.wheel_image.rotate([-wheel_angle, self.config.wheel_pitch*pi/180], [2, 0])
+        
         self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
 
     def limiter(self, left_ctr, right_ctr):
@@ -1040,7 +1032,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.unwrap_wheel_angles()
 
         self.inertia()
-        if (not self._hand_snaps['left'][:5] == 'wheel') and (not self._hand_snaps['right'][:5] == 'wheel'):
+        if (self._hand_snaps['left'][:5] != 'wheel') and (self._hand_snaps['right'][:5] != 'wheel'):
             self.center_force()
         self.limiter(left_ctr, right_ctr)
         self.send_to_vjoy()
