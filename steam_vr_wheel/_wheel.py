@@ -644,7 +644,7 @@ class HShifterImage:
                 max(min(dp_unsafe[2] / (u_sin + unit), 1.0), -1.0)])
 
             x_mid_margin = 0.55
-            z_end_margin = 0.8
+            z_end_margin = 0.85
             z_mid_margin = 0.7
 
             in_middle = abs(xz_ctr[1]) <= z_mid_margin
