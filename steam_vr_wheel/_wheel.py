@@ -587,8 +587,8 @@ class HShifterImage:
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
         self.bounds = [
-            [x_knob-0.065, self.y+self.stick_height-0.16, z_knob-0.15], 
-            [x_knob+0.065, self.y+self.stick_height+0.1, z_knob+0.15]]
+            [x_knob-0.065, self.y, self.z -z_sin-unit-0.08], 
+            [x_knob+0.065, self.y+self.stick_height+0.1, self.z +z_sin+unit+0.08]]
 
         # Set snap transform
         ctr = self._snap_ctr
