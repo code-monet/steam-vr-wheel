@@ -1063,7 +1063,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 tf[i][j] = self._rot[i][j]
 
         tf[0][3] = self.center.x + offset[0]
-        tf[1][3] = self.center.y + offset[1] - 0.01 - self.hands_overlay.hand_z_offset
+        tf[1][3] = self.center.y + offset[1] - self.hands_overlay.hand_z_offset
         tf[2][3] = self.center.z + 0.005
 
         ab = self.to_absolute_space(Point(tf[0][3], tf[1][3], tf[2][3]))
