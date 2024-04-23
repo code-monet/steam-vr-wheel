@@ -449,6 +449,8 @@ class HShifterImage:
         self._snapped = True
 
 
+
+
         return
 
         # Check double tap
@@ -585,8 +587,8 @@ class HShifterImage:
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
         self.bounds = [
-            [x_knob-0.065, self.y+self.stick_height-0.16, z_knob-0.11], 
-            [x_knob+0.065, self.y+self.stick_height+0.1, z_knob+0.11]]
+            [x_knob-0.065, self.y+self.stick_height-0.16, z_knob-0.15], 
+            [x_knob+0.065, self.y+self.stick_height+0.1, z_knob+0.15]]
 
         # Set snap transform
         ctr = self._snap_ctr
@@ -1061,7 +1063,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 tf[i][j] = self._rot[i][j]
 
         tf[0][3] = self.center.x + offset[0]
-        tf[1][3] = self.center.y + offset[1]
+        tf[1][3] = self.center.y + offset[1] - 0.01 - self.hands_overlay.hand_z_offset
         tf[2][3] = self.center.z + 0.005
 
         ab = self.to_absolute_space(Point(tf[0][3], tf[1][3], tf[2][3]))
@@ -1069,8 +1071,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         tf[0][3] = ab.x
         tf[1][3] = ab.y
         tf[2][3] = ab.z
-
-        tf[2][3] += self.hands_overlay.hand_z_offset
         self.hands_overlay.move(hand, tf)
 
     def _reset_hands(self):
@@ -1195,7 +1195,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         # Slight haptic when touching knob
         if self._hand_snaps['left'] != 'shifter' and self._hand_snaps['right'] != 'shifter':
-            if now - self._last_knob_haptic > 0.25:
+            if now - self._last_knob_haptic > 0.12:
                 self._last_knob_haptic = now
                 if self._hand_snaps['left'] == '' and self.h_shifter_image.check_collision(left_ctr):
                     openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 100)
