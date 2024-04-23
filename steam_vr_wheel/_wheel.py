@@ -733,14 +733,15 @@ class SteeringWheelImage:
     def set_alpha(self, alpha):
         check_result(self.vroverlay.setOverlayAlpha(self.wheel, alpha))
 
-    def move(self, point, size):
+    def move(self, point, size, move=True):
         self.transform[0][3] = point.x
         self.transform[1][3] = point.y
         self.transform[2][3] = point.z
         #print(point.x, point.y, point.z)
         self.size = size
-        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
-        fn(self.wheel, openvr.TrackingUniverseSeated, openvr.byref(self.transform))
+        if move:
+            fn = self.vroverlay.function_table.setOverlayTransformAbsolute
+            fn(self.wheel, openvr.TrackingUniverseSeated, openvr.byref(self.transform))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.wheel, size))
 
     def rotate(self, angles, axis=[2,]):
@@ -1014,9 +1015,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.device.set_axis(HID_USAGE_X, axisX)
 
     def render(self):
-        wheel_angle = self._wheel_angles[-1]
-        self.wheel_image.rotate([-wheel_angle, self.config.wheel_pitch*pi/180], [2, 0])
-
+        self.wheel_image.rotate([
+            -self._wheel_angles[-1],
+            self.config.wheel_pitch*pi/180],
+            [2, 0])
         self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
 
     def limiter(self, left_ctr, right_ctr):
@@ -1027,7 +1029,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self._wheel_angles[-1] < 0:
                 sign = -1
             self._turn_speed = -0.005 * sign
-            
+
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
@@ -1209,18 +1211,23 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
     def move_delta(self, d):
         self.center = Point(self.center.x + d[0], self.center.y + d[1], self.center.z + d[2])
         self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
-        self.wheel_image.move(self.center, self.size)
+        self.wheel_image.move(self.center, self.size, False)
 
     def resize_delta(self, d):
         if self.size + d < 0.10:
             return
         self.size += d
         self.config.wheel_size = self.size
-        self.wheel_image.move(self.center, self.size)
+        self.wheel_image.move(self.center, self.size, False)
 
     def pitch_delta(self, d):
         self.config.wheel_pitch += d
         self.config.wheel_pitch %= 360
+        if self.config.wheel_pitch >= 330:
+            self.config.wheel_pitch = max(-30, -(360 - self.config.wheel_pitch))
+        elif self.config.wheel_pitch >= 120:
+            self.config.wheel_pitch = 120
+
         self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
         self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
 
@@ -1241,6 +1248,15 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self._edit_last_l_pos = [left_ctr.x, left_ctr.y, left_ctr.z]
             self._edit_last_r_pos = [right_ctr.x, right_ctr.y, right_ctr.z]
             self._edit_last_trigger_press = 0
+            self._edit_wheel_alpha_timer = None
+
+            self.wheel_image.set_alpha(1)
+
+        def render_wheel_preview():
+            self.wheel_image.rotate([
+                -self._wheel_angles[-1],
+                self.config.wheel_pitch*pi/180],
+                [2, 0])
 
         if self.hands_overlay != None:
             self.hands_overlay.show()
@@ -1254,6 +1270,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self._edit_move_wheel:
             #self.move_wheel(right_ctr, left_ctr)
             self.move_delta(r_d)
+            render_wheel_preview()
             self.wheel_image.set_color((1,0,0))
         else:
             self.wheel_image.set_color((0,1,0))
@@ -1270,10 +1287,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # Todo: switch alpha, shows the alpha-applied wheel for a second and after that set alpha to 1
 
         # EVRControllerAxisType
-       # k_eControllerAxis_None = 0, 
-       # k_eControllerAxis_TrackPad = 1,
-       # k_eControllerAxis_Joystick = 2,
-       # k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
+        #  k_eControllerAxis_None = 0, 
+        #  k_eControllerAxis_TrackPad = 1,
+        #  k_eControllerAxis_Joystick = 2,
+        #  k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
         # rAxis
         if state_r.rAxis:
             x = state_r.rAxis[0].x # quest 2 joystick
@@ -1287,7 +1304,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                         return (v - s*d)/(1-d)
                 self.resize_delta(dead_and_stretch(x, 0.3) / 30)
                 self.pitch_delta(dead_and_stretch(y, 0.75) * 2)
-                self.render()
+                render_wheel_preview()
 
         if state_r.ulButtonPressed:
             btns = list(reversed(bin(state_r.ulButtonPressed)[2:]))
@@ -1307,12 +1324,21 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 else:
                     self.config.wheel_alpha += step
 
+                if self._edit_wheel_alpha_timer != None:
+                    self._edit_wheel_alpha_timer.cancel()
+                    self._edit_wheel_alpha_timer = None
+
+                def reset_preview():
+                    self.wheel_image.set_alpha(1)
+                self._edit_wheel_alpha_timer = threading.Timer(0.6, reset_preview)
+                self._edit_wheel_alpha_timer.start()
+
                 print("Switch alpha")
-                # Switch alpha
+                # Switch alpha and show preview
                 self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
             elif btn_id == openvr.k_EButton_A: #A on right
                 self.discard_x()
-                self.render()
+                render_wheel_preview()
                 print("Set x to 0")
             elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
                 self.wheel_image.set_color((1,1,1))
