@@ -141,9 +141,9 @@ class HandsImage:
         check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr2, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr2, hand_size))
-        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr, 0))
         check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 1))
-        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 0))
         check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 1))
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
@@ -275,9 +275,9 @@ class HShifterImage:
         self._range_toggled = False
 
         self._pos_to_button = dict({1: 43, 3:   45, 5: 47,
-                                           3.5: 42,
+                                            3.5: None,
                                     2: 44, 4:   46, 6: 48})
-        self._pressed_button = 42 #N
+        self._pressed_button = None
         self._xz = [0,0]
         self._last_xz_grid = np.array([0,0])
 
@@ -358,9 +358,6 @@ class HShifterImage:
         check_result(self.vroverlay.showOverlay(self.slot))
         check_result(self.vroverlay.showOverlay(self.stick))
         check_result(self.vroverlay.showOverlay(self.knob))
-
-        check_result(self.vroverlay.setOverlaySortOrder(self.stick, 1))
-        check_result(self.vroverlay.setOverlaySortOrder(self.knob, 1))
 
         # Get HMD id for yaw
         vrsys = openvr.VRSystem()
@@ -581,14 +578,14 @@ class HShifterImage:
         self.slot_tf[2][3] = self.z
 
         # Bounds
+        """
         self.bounds = [
             [self.x - x_sin-unit-0.065, self.y+self.stick_height-0.16, self.z -z_sin-unit-0.08], 
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
         self.bounds = [
-            [x_knob-0.08, self.y+self.stick_height-0.16, z_knob-0.08], 
-            [x_knob+0.08, self.y+self.stick_height+0.08, z_knob+0.08]]
-        """
+            [x_knob-0.065, self.y+self.stick_height-0.16, z_knob-0.11], 
+            [x_knob+0.065, self.y+self.stick_height+0.1, z_knob+0.11]]
 
         # Set snap transform
         ctr = self._snap_ctr
@@ -619,9 +616,10 @@ class HShifterImage:
     def update(self):
 
         for v in self._pos_to_button.values():
-            if v != self._pressed_button:
+            if v != self._pressed_button and v is not None:
                 self.wheel.device.set_button(v, False)
-        self.wheel.device.set_button(self._pressed_button, True)
+        if self._pressed_button is not None:
+            self.wheel.device.set_button(self._pressed_button, True)
 
         # Toggles
         self.wheel.device.set_button(49, self._splitter_toggled)
