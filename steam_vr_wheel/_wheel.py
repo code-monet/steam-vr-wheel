@@ -1016,12 +1016,18 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
     def render(self):
         wheel_angle = self._wheel_angles[-1]
         self.wheel_image.rotate([-wheel_angle, self.config.wheel_pitch*pi/180], [2, 0])
-        
+
         self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
 
     def limiter(self, left_ctr, right_ctr):
         if abs(self._wheel_angles[-1])/(2*pi)>(self.config.wheel_degrees / 360)/2:
             self._wheel_angles[-1] = self._wheel_angles[-2]
+
+            sign = 1
+            if self._wheel_angles[-1] < 0:
+                sign = -1
+            self._turn_speed = -0.005 * sign
+            
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
