@@ -120,6 +120,7 @@ class HandsImage:
         self.right_ctr = right_ctr
         hand_size = 0.14
         self.alpha = 0.9
+        self.hand_z_offset = 0.03
 
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
@@ -176,7 +177,7 @@ class HandsImage:
         ctr_tf[2][0] = 0.0
         ctr_tf[2][1] = -1.0
         ctr_tf[2][2] = 0.0
-        ctr_tf[2][3] = 0
+        ctr_tf[2][3] = self.hand_z_offset
 
         self.ctr_tf = ctr_tf
         self.attach_to_ctr('left')
@@ -1061,7 +1062,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         tf[0][3] = self.center.x + offset[0]
         tf[1][3] = self.center.y + offset[1]
-        tf[2][3] = self.center.z + 0.02
+        tf[2][3] = self.center.z + 0.005
 
         ab = self.to_absolute_space(Point(tf[0][3], tf[1][3], tf[2][3]))
 
@@ -1069,6 +1070,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         tf[1][3] = ab.y
         tf[2][3] = ab.z
 
+        tf[2][3] += self.hands_overlay.hand_z_offset
         self.hands_overlay.move(hand, tf)
 
     def _reset_hands(self):
