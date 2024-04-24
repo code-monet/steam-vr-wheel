@@ -65,7 +65,7 @@ class ConfiguratorApp:
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
-        self.shifter_button_layout_box = wx.CheckBox(self.pnl, label='Use Knob+A=splitter and Knob+B=range selector')
+        self.shifter_button_layout_box = wx.CheckBox(self.pnl, label='Use Knob+A for splitter')
 
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)

@@ -4,7 +4,7 @@ import openvr
 import time
 
 from steam_vr_wheel.configurator import ConfiguratorApp
-from steam_vr_wheel.pyvjoy.vjoydevice import VJoyDevice, HID_USAGE_SL0, HID_USAGE_SL1, HID_USAGE_X, HID_USAGE_Y, HID_USAGE_RX, HID_USAGE_RY
+from steam_vr_wheel.pyvjoy.vjoydevice import VJoyDevice, HID_USAGE_SL0, HID_USAGE_SL1, HID_USAGE_X, HID_USAGE_Y, HID_USAGE_Z, HID_USAGE_RX, HID_USAGE_RY
 from steam_vr_wheel.vrcontroller import Controller
 from . import PadConfig, ConfigException
 import multiprocessing
@@ -18,6 +18,17 @@ BUTTONS['right'] = {openvr.k_EButton_ApplicationMenu: 11, #openvr.k_EButton_Grip
                      openvr.k_EButton_SteamVR_Touchpad: -2, # 12 13 14 15 16
                     openvr.k_EButton_SteamVR_Trigger: 9, openvr.k_EButton_A: 18
                     }
+
+AXES = {}
+AXES['left'] =  {'left-right': HID_USAGE_Z, 'down-up': HID_USAGE_Y, 'trigger': HID_USAGE_SL0}
+AXES['right'] = {'left-right': HID_USAGE_RX, 'down-up': HID_USAGE_RY, 'trigger': HID_USAGE_SL1}
+AXES_BASE_HID = {}
+AXES_BASE_HID['left'] =  {'left-right': 34, 'down-up': 36}
+AXES_BASE_HID['right'] = {'left-right': 38, 'down-up': 40}
+
+DISABLED_BUTTONS = {}
+DISABLED_AXES = {}
+
 
 class LeftTrackpadAxisDisablerMixin:
     trackpad_left_enabled = False
@@ -95,25 +106,75 @@ class VirtualPad:
             else:
                 return 4
 
+    def set_button(self, btn_id, val):
+        if btn_id in DISABLED_BUTTONS:
+            return
+        self.device.set_button(btn_id, val)
+
+    def set_axis(self, axis_id, val):
+        if axis_id in DISABLED_AXES:
+            return
+        self.device.set_axis(axis_id, val)
+
+    def enable_button(self, hand, button):
+        btn_id = BUTTONS[hand][button]
+        del DISABLED_BUTTONS[btn_id]
+
+    def disable_button(self, hand, button):
+        btn_id = BUTTONS[hand][button]
+        DISABLED_BUTTONS[btn_id] = True
+        self.device.set_button(btn_id, False)
+
+    def enable_axis(self, hand, axis):
+        axis_id = AXES[hand][axis]
+        del DISABLED_AXES[axis_id]
+
+        if axis in AXES_BASE_HID[hand]:
+            b = AXES_BASE_HID[hand][axis]
+            del DISABLED_BUTTONS[b]
+            del DISABLED_BUTTONS[b+1]
+
+    def disable_axis(self, hand, axis):
+        axis_id = AXES[hand][axis]
+        DISABLED_AXES[axis_id] = True
+        btns = self.axis_buttons(hand, axis)
+        zero = 0.0 if btns[0] or btns[1] else 0.5
+        self.device.set_axis(axis_id, int(zero * 0x8000))
+
+        if axis in AXES_BASE_HID[hand]:
+            b = AXES_BASE_HID[hand][axis]
+            DISABLED_BUTTONS[b] = True
+            DISABLED_BUTTONS[b+1] = True
+
+    def axis_buttons(self, hand, axis):
+        AXES_BUTTONS = {}
+        AXES_BUTTONS['left'] = {'left-right': [self.config.j_l_left_button, self.config.j_l_right_button],
+                                'down-up': [self.config.j_l_down_button, self.config.j_l_up_button],
+                                'trigger': [True, True]}
+        AXES_BUTTONS['right'] = {'left-right': [self.config.j_r_left_button, self.config.j_r_right_button],
+                                'down-up': [self.config.j_r_down_button, self.config.j_r_up_button],
+                                'trigger': [True, True]}
+        return AXES_BUTTONS[hand][axis]
+
     def pressed_left_trackpad(self):
         btn_id = self.get_trackpad_zone(right=False)
-        self.device.set_button(btn_id, True)
+        self.set_button(btn_id, True)
 
     def unpressed_left_trackpad(self):
         for btn_id in [4, 5, 6, 7, 8]:
             try:
-                self.device.set_button(btn_id, False)
+                self.set_button(btn_id, False)
             except NameError:
                 pass
 
     def pressed_right_trackpad(self):
         btn_id = self.get_trackpad_zone(right=True)
-        self.device.set_button(btn_id, True)
+        self.set_button(btn_id, True)
 
     def unpressed_right_trackpad(self):
         for btn_id in [12, 13, 14, 15, 16]:
             try:
-                self.device.set_button(btn_id, False)
+                self.set_button(btn_id, False)
             except NameError:
                 pass
 
@@ -130,7 +191,7 @@ class VirtualPad:
             elif btn_id == -2:
                 self.pressed_right_trackpad()
             else:
-                self.device.set_button(btn_id, True)
+                self.set_button(btn_id, True)
                 
         except KeyError:
             pass
@@ -143,23 +204,23 @@ class VirtualPad:
             elif btn_id == -2:
                 self.unpressed_right_trackpad()
             else:
-                self.device.set_button(btn_id, False)
+                self.set_button(btn_id, False)
         except KeyError:
             pass
 
     def set_trigger_touch_left(self):
         if self.config.trigger_pre_press_button:
-            self.device.set_button(31, True)
+            self.set_button(31, True)
 
     def set_trigger_touch_right(self):
         if self.config.trigger_pre_press_button:
-            self.device.set_button(32, True)
+            self.set_button(32, True)
 
     def set_trigger_untouch_left(self):
-        self.device.set_button(31, False)
+        self.set_button(31, False)
 
     def set_trigger_untouch_right(self):
-        self.device.set_button(32, False)
+        self.set_button(32, False)
 
     def set_trackpad_touch_left(self):
         self.trackpadLtouch = True
@@ -181,8 +242,8 @@ class VirtualPad:
         return False
 
     def update(self, left_ctr: Controller, right_ctr: Controller):
-        self.device.set_axis(HID_USAGE_SL0, int(left_ctr.axis * 0x8000))
-        self.device.set_axis(HID_USAGE_SL1, int(right_ctr.axis * 0x8000))
+        self.set_axis(HID_USAGE_SL0, int(left_ctr.axis * 0x8000))
+        self.set_axis(HID_USAGE_SL1, int(right_ctr.axis * 0x8000))
 
         haptic_pulse_strength = 1000
         DEADZONE_DPAD = 0.9
@@ -192,36 +253,41 @@ class VirtualPad:
         |RX|38,39| 
         |RY|40,41|
         """
-        def convert_axis(trackpad, axis_hid, base_hid, minus_is_btn, plus_is_btn):
-            if minus_is_btn == False and plus_is_btn == False:
-                amount = trackpad+1 / 2
-                zero = 0.5
-            else:
+        def convert_axis(trackpad, hand, axis):
+
+            axis_hid = AXES[hand][axis]
+            base_hid = AXES_BASE_HID[hand][axis]
+            btns = self.axis_buttons(hand, axis)
+
+            if btns[0] or btns[1]:
                 amount = abs(trackpad)
                 zero = 0
+            else:
+                amount = trackpad+1 / 2
+                zero = 0.5
 
-            plus_dead = DEADZONE_DPAD if plus_is_btn else 0.1
-            minus_dead = -DEADZONE_DPAD if minus_is_btn else -0.1
+            plus_dead = DEADZONE_DPAD if btns[1] else 0.1
+            minus_dead = -DEADZONE_DPAD if btns[0] else -0.1
 
             if trackpad <= minus_dead:
-                if minus_is_btn:
-                    self.device.set_button(base_hid, True)
+                if btns[0]:
+                    self.set_button(base_hid, True)
                 else:
-                    self.device.set_axis(axis_hid, int(amount * 0x8000))
+                    self.set_axis(axis_hid, int(amount * 0x8000))
             elif trackpad >= plus_dead:
-                if plus_is_btn:
-                    self.device.set_button(base_hid+1, True)
+                if btns[1]:
+                    self.set_button(base_hid+1, True)
                 else:
-                    self.device.set_axis(axis_hid, int(amount * 0x8000))
+                    self.set_axis(axis_hid, int(amount * 0x8000))
             else:
-                if minus_is_btn:
-                    self.device.set_button(base_hid, False)
+                if btns[0]:
+                    self.set_button(base_hid, False)
                 else:
-                    self.device.set_axis(axis_hid, int(zero * 0x8000))
-                if plus_is_btn:
-                    self.device.set_button(base_hid+1, False)
+                    self.set_axis(axis_hid, int(zero * 0x8000))
+                if btns[1]:
+                    self.set_button(base_hid+1, False)
                 else:
-                    self.device.set_axis(axis_hid, int(zero * 0x8000))
+                    self.set_axis(axis_hid, int(zero * 0x8000))
 
         self.trackpadLX = left_ctr.trackpadX
         self.trackpadLY = left_ctr.trackpadY
@@ -232,8 +298,8 @@ class VirtualPad:
         if crossed:
             openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, haptic_pulse_strength)
 
-        convert_axis(left_ctr.trackpadX, 0x32, 34, self.config.j_l_left_button, self.config.j_l_right_button)
-        convert_axis(left_ctr.trackpadY, HID_USAGE_Y, 36, self.config.j_l_down_button, self.config.j_l_up_button)
+        convert_axis(left_ctr.trackpadX, 'left', 'left-right')
+        convert_axis(left_ctr.trackpadY, 'left', 'down-up')
 
         self.trackpadRX = right_ctr.trackpadX
         self.trackpadRY = right_ctr.trackpadY
@@ -244,8 +310,8 @@ class VirtualPad:
         if crossed:
             openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, haptic_pulse_strength)
 
-        convert_axis(right_ctr.trackpadX, HID_USAGE_RX, 38, self.config.j_r_left_button, self.config.j_r_right_button)
-        convert_axis(right_ctr.trackpadY, HID_USAGE_RY, 40, self.config.j_r_down_button, self.config.j_r_up_button)
+        convert_axis(right_ctr.trackpadX, 'right', 'left-right')
+        convert_axis(right_ctr.trackpadY, 'right', 'down-up')
 
     def edit_mode(self, left_ctr, right_ctr):
         pass

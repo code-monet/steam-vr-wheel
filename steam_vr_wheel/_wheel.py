@@ -430,8 +430,12 @@ class HShifterImage:
         t = threading.Thread(target=haptic)
         t.start()
 
-    def toggle_range(self, ctr):
-        self._range_toggled = not self._range_toggled
+    def toggle_range(self, ctr, override=None):
+        if override is not None:
+            self._range_toggled = override
+        else:
+            self._range_toggled = not self._range_toggled
+        
         check_result(self.vroverlay.setOverlayFromFile(self.stick,
             self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
 
@@ -929,24 +933,15 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
         ctr = left_ctr if hand == 'left' else right_ctr
+        super().set_button_press(button, hand)
 
         if self._hand_snaps[hand] == 'shifter':
             if (button == (
-                openvr.k_EButton_A # A
-                if self.config.shifter_button_layout == False else
-                openvr.k_EButton_ApplicationMenu)): # B
-
-                self.h_shifter_image.toggle_range(ctr)
-
-            elif (button == (
                 openvr.k_EButton_SteamVR_Trigger # Trigger
                 if self.config.shifter_button_layout == False else
                 openvr.k_EButton_A)): # A
 
                 self.h_shifter_image.toggle_splitter(ctr)
-
-        else:
-            super().set_button_press(button, hand)
 
         if button == openvr.k_EButton_Grip and hand == 'left':
             if self.config.wheel_grabbed_by_grip_toggle:
@@ -1130,7 +1125,17 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self._hand_snaps[hand][:5] == 'wheel':
                 self._snapped = False
             elif self._hand_snaps[hand] == 'shifter':
+
                 self.h_shifter_image.unsnap()
+
+                # Enable splitter/range related buttons back
+                if self.config.shifter_button_layout == False:
+                    self.enable_button(hand, openvr.k_EButton_SteamVR_Trigger)
+                    self.enable_axis(hand, 'trigger')
+                else:
+                    self.enable_button(hand, openvr.k_EButton_A)
+
+                self.enable_axis(hand, 'down-up')
 
             self.hands_overlay.attach_to_ctr(hand)
             ungrabber()
@@ -1146,6 +1151,16 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             if self.h_shifter_image.check_collision(ctr) and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
                 self._hand_snaps[hand] = 'shifter'
                 self.h_shifter_image.snap_ctr(ctr)
+
+                # Disable splitter/range buttons so that it won't register
+                if self.config.shifter_button_layout == False:
+                    self.disable_button(hand, openvr.k_EButton_SteamVR_Trigger)
+                    self.disable_axis(hand, 'trigger')
+                else:
+                    self.disable_button(hand, openvr.k_EButton_A)
+
+                self.disable_axis(hand, 'down-up')
+
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
@@ -1211,6 +1226,20 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                     openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 100)
                 if self._hand_snaps['right'] == '' and self.h_shifter_image.check_collision(right_ctr):
                     openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 100)
+
+        # Up down joystick for Range
+        shifter_hand = ''
+        if self._hand_snaps['left'] == 'shifter':
+            shifter_hand = 'left'
+        if self._hand_snaps['right'] == 'shifter':
+            shifter_hand = 'right'
+        if shifter_hand != '':
+            shifter_ctr = left_ctr if shifter_hand == 'left' else right_ctr
+            y = shifter_ctr.trackpadY
+            if y >= 0.8:
+                self.h_shifter_image.toggle_range(shifter_ctr, True)
+            elif y <= -0.8:
+                self.h_shifter_image.toggle_range(shifter_ctr, False)
 
     def move_wheel(self, right_ctr, left_ctr):
         self.center = Point(right_ctr.x, right_ctr.y, right_ctr.z)
