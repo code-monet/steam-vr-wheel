@@ -20,6 +20,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
                     # Shifter
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100,
                       shifter_scale=100,
+                      shifter_button_layout=False,
 
                     # Joystick as button
                     j_l_left_button=False,
@@ -353,6 +354,17 @@ class PadConfig:
     def shifter_scale(self, x: int):
         with self.data_lock:
             self._data['shifter_scale'] = x
+        self._write()
+
+    @property
+    def shifter_button_layout(self):
+        with self.data_lock:
+            return self._data['shifter_button_layout']
+
+    @shifter_button_layout.setter
+    def shifter_button_layout(self, x: bool):
+        with self.data_lock:
+            self._data['shifter_button_layout'] = x
         self._write()
 
     # Joystick as button

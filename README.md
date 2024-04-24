@@ -34,8 +34,8 @@ Qyuest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and al
 |Shifter Position 4|46||
 |Shifter Position 5|47||
 |Shifter Position 6|48||
-|Shifter Splitter|49|Grab knob and A|
-|Shifter Range Selector|50|Grab knob and Trigger|
+|Shifter Splitter|49|Grab knob + Trigger(layout 1) or A(layout 2)|
+|Shifter Range Selector|50|Grab knob + A or B|
 
 ### Todo
 
@@ -140,5 +140,7 @@ It is a h-shifter with 6 positions, a splitter(A while grabbing knob), and a ran
 |Position 4|46||
 |Position 5|47||
 |Position 6|48||
-|Splitter|49|Grab knob and A|
-|Range Selector|50|Grab knob and Trigger|
+|Splitter|49|Grab knob + Trigger or A|
+|Range Selector|50|Grab knob + A or B|
+
+Buttons for splitter and range selector have two layouts: 1. splitter=trigger range=A 2. splitter=A range=B

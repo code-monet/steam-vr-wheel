@@ -931,10 +931,20 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         ctr = left_ctr if hand == 'left' else right_ctr
 
         if self._hand_snaps[hand] == 'shifter':
-            if button == openvr.k_EButton_SteamVR_Trigger:
+            if (button == (
+                openvr.k_EButton_A # A
+                if self.config.shifter_button_layout == False else
+                openvr.k_EButton_ApplicationMenu)): # B
+
                 self.h_shifter_image.toggle_range(ctr)
-            elif button == openvr.k_EButton_A:
+
+            elif (button == (
+                openvr.k_EButton_SteamVR_Trigger # Trigger
+                if self.config.shifter_button_layout == False else
+                openvr.k_EButton_A)): # A
+
                 self.h_shifter_image.toggle_splitter(ctr)
+
         else:
             super().set_button_press(button, hand)
 
