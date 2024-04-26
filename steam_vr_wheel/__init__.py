@@ -18,7 +18,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
                       wheel_pitch=0, wheel_transparent_center=False,
 
                     # Shifter
-                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100,
+                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
                       shifter_scale=100,
                       shifter_button_layout=False,
 
