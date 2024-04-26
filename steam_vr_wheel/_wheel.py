@@ -613,17 +613,18 @@ class HShifterImage:
             p1[2] -= self._snap_ctr_offset[2]
 
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
+            dp_unsafe = [dp_unsafe[0] / (u_sin + unit),
+                        0,
+                        dp_unsafe[2] / (u_sin + unit)]
             xz_ctr = np.array([
-                max(min(dp_unsafe[0] / (u_sin + unit), 1.0), -1.0),
-                max(min(dp_unsafe[2] / (u_sin + unit), 1.0), -1.0)])
+                max(min(dp_unsafe[0], 1.0), -1.0),
+                max(min(dp_unsafe[2], 1.0), -1.0)])
 
             x_mid_margin = 0.55
             z_end_margin = 0.85
             z_mid_margin = 0.7
 
             in_middle = abs(xz_ctr[1]) <= z_mid_margin
-            if x_mid_margin < abs(xz_ctr[0]) < 1 and not in_middle:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             xz_pos_0 = self._xz_pos()
             xz_pos_1 = xz_pos_0.copy()
@@ -639,7 +640,10 @@ class HShifterImage:
                     xz_1[0] = 1
                     xz_pos_1[0] = 1
                 elif abs(xz_ctr[0]) <= x_mid_margin:
-                    xz_1[0] = 0
+                    if abs(xz_ctr[0]) < abs(xz_ctr[1]):
+                        xz_1[0] = 0
+                    else:
+                        xz_1[1] = 0
                     xz_pos_1[0] = 0
                 else:
                     xz_1[1] = 0
@@ -652,6 +656,10 @@ class HShifterImage:
                     xz_pos_1[1] = 1
                 else:
                     xz_pos_1[1] = 0
+
+            restrained_margin = 0.75
+            if abs(dp_unsafe[0]-xz_pos_1[0]) > restrained_margin or abs(dp_unsafe[2]-xz_pos_1[1]) > restrained_margin:
+                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             if xz_pos_0 != xz_pos_1 and xz_pos_1[1] != 0:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
