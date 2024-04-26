@@ -1021,7 +1021,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
             a = (pc_d/d/1.414)
             t0 = 10/90
-            t1 = 30/90
+            t1 = 35/90
             if a <= t0:
                 alpha = 0.0
             elif a <= t1:
