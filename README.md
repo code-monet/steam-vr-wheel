@@ -2,9 +2,9 @@
 
 This fork is a version I modified for personal use only. So it is highly likely that it won't work on other platforms than Quest 2 or alike. If you're, by any chance, inclined to try, download from the releases, since the current commit could be unfunctional.
 
-https://github.com/hjjg200/steam-vr-wheel/assets/18535223/861de753-93f5-42fb-8022-0ae159620e7e
+https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-8848-c691d39f6034
 
-- [Youtube](https://www.youtube.com/watch?v=aCCVCgAIRPM)
+- [Full demo](https://www.youtube.com/watch?v=aCCVCgAIRPM)
 
 ## Memo
 
@@ -139,9 +139,7 @@ Example 2, you can make all 8 directions to buttons; so that you can use them li
 
 ### Virtual H Shifter
 
-```text
-<Video Demo>
-```
+https://github.com/hjjg200/steam-vr-wheel/assets/18535223/861de753-93f5-42fb-8022-0ae159620e7e
 
 It is a h-shifter with 6 positions, a splitter(A while grabbing knob), and a range selector(Trigger while grabbing knob).
 
