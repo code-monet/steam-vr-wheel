@@ -1,5 +1,5 @@
 from collections import deque
-from math import pi, atan2, sin, cos, ceil, sqrt
+from math import pi, atan2, sin, cos, ceil, sqrt, acos, tan
 
 import numpy as np
 import openvr
@@ -1015,25 +1015,24 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                     [m[1][0], m[1][1], m[1][2]],
                     [m[2][0], m[2][1], m[2][2]]]
             p = np.array([hmd.x, hmd.y, hmd.z])
-            d = sqrt(
-                (self.center.x-p[0])**2+
-                (self.center.y-p[1])**2+
-                (self.center.z-p[2])**2)
+            d = sqrt((self.center.x-p[0])**2+
+                        (self.center.y-p[1])**2+
+                        (self.center.z-p[2])**2)
             v = np.array([0, 0, -d])
             r_v = np.dot(r, v)
             p2 = np.array([r_v[0]+p[0], r_v[1]+p[1], r_v[2]+p[2]])
-            pc_d = sqrt(
-                (self.center.x-p2[0])**2+
-                (self.center.y-p2[1])**2+
-                (self.center.z-p2[2])**2)
-
-            a = (pc_d/d/1.414)
-            t0 = 10/90
-            t1 = 35/90
-            if a <= t0:
-                alpha = 0.0
-            elif a <= t1:
-                alpha *= (a-t0)/(t1-t0)
+            pc_d = sqrt((self.center.x-p2[0])**2+
+                        (self.center.y-p2[1])**2+
+                        (self.center.z-p2[2])**2)
+            th = acos(-((pc_d/d)**2/2-1))
+            if th < pi/2:
+                a = tan(th)*d
+                t0 = self.size/4
+                t1 = self.size
+                if a <= t0:
+                    alpha = 0.0
+                elif a <= t1:
+                    alpha *= (a-t0)/(t1-t0)
 
         self.wheel_image.set_alpha(alpha)
 
