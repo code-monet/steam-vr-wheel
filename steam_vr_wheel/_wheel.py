@@ -1088,6 +1088,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         while not self._grip_queue.empty():
             self._grip_queue.get()
 
+        self.enable_all()
+
     GRIP_FLAG_AUTO_GRAB = 0x1
 
     def _update_hands(self, grip_info, left_ctr, right_ctr):

@@ -116,6 +116,10 @@ class VirtualPad:
             return
         self.device.set_axis(axis_id, val)
 
+    def enable_all(self):
+        DISABLED_BUTTONS = {}
+        DISABLED_AXES = {}
+
     def enable_button(self, hand, button):
         btn_id = BUTTONS[hand][button]
         del DISABLED_BUTTONS[btn_id]
