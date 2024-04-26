@@ -2,6 +2,8 @@
 
 This fork is a version I modified for personal use only. So it is highly likely that it won't work on other platforms than Quest 2 or alike. If you're, by any chance, inclined to try, download from the releases, since the current commit could be unfunctional.
 
+https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-8848-c691d39f6034
+
 ## Memo
 
 Qyuest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
