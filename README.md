@@ -4,6 +4,8 @@ This fork is a version I modified for personal use only. So it is highly likely 
 
 https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-8848-c691d39f6034
 
+- [Full Demo](https://www.youtube.com/watch?v=aCCVCgAIRPM)
+
 ## Memo
 
 Qyuest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
