@@ -1,7 +1,9 @@
 import math
+from math import pi, atan2, sin, cos, ceil, sqrt
 
 import openvr
 import sys
+import numpy as np
 
 if 'DEBUG' in sys.argv:
     DEBUG = True
@@ -9,54 +11,71 @@ else:
     DEBUG = False
 
 class Controller:
-    def __init__(self, id, name='', vrsys = None):
+    def __init__(self, id, name='', vrsys = None, is_controller=True):
 
         self.id = openvr.TrackedDeviceIndex_t(id)
 
-        self.axis = 0
+        self.is_controller = is_controller
+        if is_controller:
+            self.axis = 0
+            self.trackpadX = 0
+            self.trackpadY = 0
         self.x, self.y, self.z = 0, 0, 0
-        self.pitch, self.yaw, self.roll = 0, 0 ,0
+        self.pitch, self.yaw, self.roll = 0, 0, 0
         self.name = name
-        self.trackpadX = 0
-        self.trackpadY = 0
 
     def update(self, pose):
         vrsys = openvr.VRSystem()
-        result, pControllerState = vrsys.getControllerState(self.id)
 
-        self.x = pose.mDeviceToAbsoluteTracking[0][3]
-        self.y = pose.mDeviceToAbsoluteTracking[1][3]
-        self.z = pose.mDeviceToAbsoluteTracking[2][3]
+        self.m = pose.mDeviceToAbsoluteTracking
+        m = self.m
 
-        pose_mat = pose.mDeviceToAbsoluteTracking
-        try:
-            self.yaw = 180 / math.pi * math.atan(pose_mat[1][0] / pose_mat[0][0])
-        except ZeroDivisionError:
-            self.yaw = 0
-        try:
-            self.pitch = 180 / math.pi * math.atan(
-                -1 * pose_mat[2][0] / math.sqrt(pow(pose_mat[2][1], 2) + math.pow(pose_mat[2][2], 2)))
-        except ZeroDivisionError:
-            self.pitch = 0
+        self.x = m[0][3]
+        self.y = m[1][3]
+        self.z = m[2][3]
 
-        try:
-            self.roll = 180 / math.pi * math.atan(pose_mat[2][1] / pose_mat[2][2])
-        except ZeroDivisionError:
-            self.roll = 0
-        self.axis = pControllerState.rAxis[1].x
-        self.trackpadX = pControllerState.rAxis[0].x
-        self.trackpadY = pControllerState.rAxis[0].y
+        R = np.array([[m[0][0], m[0][1], m[0][2]],
+                    [m[1][0], m[1][1], m[1][2]],
+                    [m[2][0], m[2][1], m[2][2]]])
+        #https://learnopencv.com/rotation-matrix-to-euler-angles/
+        sy = sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+        singular = sy < 1e-6
+     
+        if not singular:
+            x = atan2(R[2,1] , R[2,2])
+            y = atan2(-R[2,0], sy)
+            z = atan2(R[1,0], R[0,0])
+        else :
+            x = atan2(-R[1,2], R[1,1])
+            y = atan2(-R[2,0], sy)
+            z = 0
+        self.pitch, self.yaw, self.roll = [x/pi*180, y/pi*180, z/pi*180]
+
+        if self.is_controller:
+            result, pControllerState = vrsys.getControllerState(self.id)
+            self.axis = pControllerState.rAxis[1].x
+            self.trackpadX = pControllerState.rAxis[0].x
+            self.trackpadY = pControllerState.rAxis[0].y
+        
         self.valid = pose.bPoseIsValid
         if DEBUG:
-            print(self.name, "controller axis:")
-            for n, i in enumerate(pControllerState.rAxis):
-                print("AXIS", n, "x:", i.x, "y:", i.y)
+            if self.is_controller:
+                print(self.name, "controller axis:")
+                for n, i in enumerate(pControllerState.rAxis):
+                    print("AXIS", n, "x:", i.x, "y:", i.y)
 
     def __repr__(self):
-        return '<{} {} Controller position x={}, y={}, z={}, axis={} valid={}>'.format(self.name,
+        if self.is_controller:
+            return '<{} {} Controller position x={}, y={}, z={}, axis={} valid={}>'.format(self.name,
                                                                                        self.id,
                                                                                        self.x,
                                                                                        self.y,
                                                                                        self.z,
                                                                                        self.axis,
+                                                                                       self.valid)
+        return '<{} {} Device position x={}, y={}, z={}, valid={}>'.format(self.name,
+                                                                                       self.id,
+                                                                                       self.x,
+                                                                                       self.y,
+                                                                                       self.z,
                                                                                        self.valid)

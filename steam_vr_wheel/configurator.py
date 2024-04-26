@@ -47,6 +47,7 @@ class ConfiguratorApp:
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
+        self.wheel_transparent_center_box = wx.CheckBox(self.pnl, label='Wheel becomes transparent while looking at it')
         self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
 
         # Shifter
@@ -96,6 +97,7 @@ class ConfiguratorApp:
         self.wheel_degrees.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_centerforce.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.wheel_transparent_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_pitch.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         # Shifter
@@ -130,6 +132,7 @@ class ConfiguratorApp:
                                 wheel_degrees=self.wheel_degrees,
                                 wheel_centerforce=self.wheel_centerforce,
                                 wheel_alpha=self.wheel_alpha,
+                                wheel_transparent_center=self.wheel_transparent_center_box,
                                 wheel_pitch=self.wheel_pitch,
 
                                 shifter_degree=self.shifter_degree,
@@ -177,6 +180,7 @@ class ConfiguratorApp:
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Alpha"))
         self.vbox.Add(self.wheel_alpha)
+        self.vbox.Add(self.wheel_transparent_center_box)
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Pitch"))
         self.vbox.Add(self.wheel_pitch)

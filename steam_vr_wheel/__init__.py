@@ -15,7 +15,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
                       wheel_grabbed_by_grip_toggle=True,
                       wheel_show_wheel=True, wheel_show_hands=True,
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
-                      wheel_pitch=0,
+                      wheel_pitch=0, wheel_transparent_center=False,
 
                     # Shifter
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=15, shifter_alpha=100,
@@ -287,6 +287,17 @@ class PadConfig:
     def wheel_pitch(self, x: int):
         with self.data_lock:
             self._data['wheel_pitch'] = x
+        self._write()
+
+    @property
+    def wheel_transparent_center(self):
+        with self.data_lock:
+            return self._data['wheel_transparent_center']
+
+    @wheel_transparent_center.setter
+    def wheel_transparent_center(self, x: bool):
+        with self.data_lock:
+            self._data['wheel_transparent_center'] = x
         self._write()
 
     @property

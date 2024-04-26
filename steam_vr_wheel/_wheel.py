@@ -360,15 +360,6 @@ class HShifterImage:
         check_result(self.vroverlay.showOverlay(self.stick))
         check_result(self.vroverlay.showOverlay(self.knob))
 
-        # Get HMD id for yaw
-        vrsys = openvr.VRSystem()
-        for i in range(openvr.k_unMaxTrackedDeviceCount):
-            device_class = vrsys.getTrackedDeviceClass(i)
-            if device_class == openvr.TrackedDeviceClass_HMD:
-                self._hmd_id = i
-        poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
-        self._poses = poses_t()
-
         self.last_pos = 3.5
 
     def check_collision(self, ctr):
@@ -378,27 +369,6 @@ class HShifterImage:
         x2, y2, z2 = pM
         
         return x0<=x<=x2 and y0<=y<=y2 and z0<=z<=z2
-
-    def _get_hmd_rot(self):
-        openvr.VRSystem().getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(self._poses), self._poses)
-        m = self._poses[self._hmd_id].mDeviceToAbsoluteTracking
-        R = np.array([[m[0][0], m[1][0], m[2][0]],
-            [m[0][1], m[1][1], m[2][1]],
-            [m[0][2], m[1][2], m[2][2]]])
-        #https://learnopencv.com/rotation-matrix-to-euler-angles/
-        sy = sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
-     
-        singular = sy < 1e-6
-     
-        if not singular :
-            x = atan2(R[2,1] , R[2,2])
-            y = atan2(-R[2,0], sy)
-            z = atan2(R[1,0], R[0,0])
-        else :
-            x = atan2(-R[1,2], R[1,1])
-            y = atan2(-R[2,0], sy)
-            z = 0
-        return [x/pi*180, y/pi*180, z/pi*180]
 
     def set_stick_xz_pos(self, xz_pos, ctr=None):
         
@@ -523,10 +493,10 @@ class HShifterImage:
     def _move_stick(self, xz):
         self._xz = xz
 
-    def render(self):
+    def render(self, hmd):
         # xz = relative and normalized
         xz = self._xz
-        pitch, yaw, roll = self._get_hmd_rot()
+        pitch, yaw, roll = [hmd.pitch, hmd.yaw, hmd.roll]
 
         unit = (self.size/2 - self.stick_width/2)
 
@@ -538,7 +508,7 @@ class HShifterImage:
         z_knob = self.z + xz[1] * (z_sin + unit)
         x_stick = self.x + xz[0] * unit
         z_stick = self.z + xz[1] * unit
-        rot_knob = rotation_matrix(0, -yaw, 0)
+        rot_knob = rotation_matrix(0, yaw, 0)
         rot_stick = rotation_matrix(xz[1] * z_deg, 0, xz[0] * -x_deg)
 
         y_knob = (self.y + self.stick_height - 
@@ -591,8 +561,8 @@ class HShifterImage:
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
         self.bounds = [
-            [x_knob-0.065, self.y, self.z -z_sin-unit-0.08], 
-            [x_knob+0.065, self.y+self.stick_height+0.1, self.z +z_sin+unit+0.08]]
+            [x_knob-0.065, y_knob-0.1, self.z -z_sin-unit-0.08], 
+            [x_knob+0.065, y_knob+0.1, self.z +z_sin+unit+0.08]]
 
         # Set snap transform
         ctr = self._snap_ctr
@@ -1022,12 +992,42 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         axisX = int((-wheel_turn / (self.config.wheel_degrees / 360) + 0.5) * 0x8000)
         self.device.set_axis(HID_USAGE_X, axisX)
 
-    def render(self):
+    def render(self, hmd):
         self.wheel_image.rotate([
             -self._wheel_angles[-1],
             self.config.wheel_pitch*pi/180],
             [2, 0])
-        self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
+
+        alpha = self.config.wheel_alpha / 100.0
+        
+        if self.config.wheel_transparent_center:
+            m = hmd.m
+            r = np.eye(3)
+            r[:] = [[m[0][0], m[0][1], m[0][2]],
+                    [m[1][0], m[1][1], m[1][2]],
+                    [m[2][0], m[2][1], m[2][2]]]
+            p = np.array([hmd.x, hmd.y, hmd.z])
+            d = sqrt(
+                (self.center.x-p[0])**2+
+                (self.center.y-p[1])**2+
+                (self.center.z-p[2])**2)
+            v = np.array([0, 0, -d])
+            r_v = np.dot(r, v)
+            p2 = np.array([r_v[0]+p[0], r_v[1]+p[1], r_v[2]+p[2]])
+            pc_d = sqrt(
+                (self.center.x-p2[0])**2+
+                (self.center.y-p2[1])**2+
+                (self.center.z-p2[2])**2)
+
+            a = (pc_d/d/1.414)
+            t0 = 10/90
+            t1 = 30/90
+            if a <= t0:
+                alpha = 0.0
+            elif a <= t1:
+                alpha *= (a-t0)/(t1-t0)
+
+        self.wheel_image.set_alpha(alpha)
 
     def limiter(self, left_ctr, right_ctr):
         if abs(self._wheel_angles[-1])/(2*pi)>(self.config.wheel_degrees / 360)/2:
@@ -1165,10 +1165,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             else:
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
 
-    def update(self, left_ctr, right_ctr):
+    def update(self, left_ctr, right_ctr, hmd):
         if self.hands_overlay is None:
             self.hands_overlay = HandsImage(left_ctr, right_ctr)
-        super().update(left_ctr, right_ctr)
+        super().update(left_ctr, right_ctr, hmd)
 
         now = time.time()
 
@@ -1214,8 +1214,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         self._wheel_update_common(angle, left_ctr, right_ctr)
 
-        self.render()
-        self.h_shifter_image.render()
+        self.render(hmd)
+        self.h_shifter_image.render(hmd)
         self.h_shifter_image.update()
 
         # Slight haptic when touching knob
@@ -1277,7 +1277,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
         self.wheel_image.move(self.center, self.size)
 
-    def edit_mode(self, left_ctr, right_ctr):
+    def edit_mode(self, left_ctr, right_ctr, hmd):
 
         result, state_r = openvr.VRSystem().getControllerState(right_ctr.id)
         now = time.time()
@@ -1304,7 +1304,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self.wheel_image != None:
             self.wheel_image.show()
 
-        self.h_shifter_image.render()
+        self.h_shifter_image.render(hmd)
 
         r_d = [right_ctr.x-self._edit_last_r_pos[0], right_ctr.y-self._edit_last_r_pos[1], right_ctr.z-self._edit_last_r_pos[2]]
 
@@ -1395,4 +1395,4 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         self._edit_last_l_pos = [left_ctr.x, left_ctr.y, left_ctr.z]
         self._edit_last_r_pos = [right_ctr.x, right_ctr.y, right_ctr.z]
-        super().edit_mode(left_ctr, right_ctr)
+        super().edit_mode(left_ctr, right_ctr, hmd)

@@ -241,7 +241,7 @@ class VirtualPad:
                 return True
         return False
 
-    def update(self, left_ctr: Controller, right_ctr: Controller):
+    def update(self, left_ctr: Controller, right_ctr: Controller, hmd: Controller):
         self.set_axis(HID_USAGE_SL0, int(left_ctr.axis * 0x8000))
         self.set_axis(HID_USAGE_SL1, int(right_ctr.axis * 0x8000))
 
@@ -313,5 +313,5 @@ class VirtualPad:
         convert_axis(right_ctr.trackpadX, 'right', 'left-right')
         convert_axis(right_ctr.trackpadY, 'right', 'down-up')
 
-    def edit_mode(self, left_ctr, right_ctr):
+    def edit_mode(self, left_ctr, right_ctr, hmd):
         pass

@@ -22,8 +22,9 @@ if 'DEBUG' in sys.argv:
 else:
     DEBUG = False
 
-def do_work(vrsystem, left_controller: Controller, right_controller: Controller, wheel: Wheel, poses):
+def do_work(vrsystem, left_controller: Controller, right_controller: Controller, hmd: Controller, wheel: Wheel, poses):
     vrsystem.getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(poses), poses)
+    hmd.update(poses[hmd.id.value])
     left_controller.update(poses[left_controller.id.value])
     right_controller.update(poses[right_controller.id.value])
     event = openvr.VREvent_t()
@@ -78,9 +79,9 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
                 button = event.data.controller.button
                 wheel.set_button_unpress(button, hand)
     if wheel.is_edit_mode:
-        wheel.edit_mode(left_controller, right_controller)
+        wheel.edit_mode(left_controller, right_controller, hmd)
     else:
-        wheel.update(left_controller, right_controller)
+        wheel.update(left_controller, right_controller, hmd)
 
 
 def get_controller_ids():
@@ -93,7 +94,10 @@ def get_controller_ids():
                  right = i
             if role == openvr.TrackedControllerRole_LeftHand:
                  left = i
-    return left, right
+
+        elif device_class == openvr.TrackedDeviceClass_HMD:
+            hmd = i
+    return hmd, left, right
 
 
 def main(type='wheel'):
@@ -105,16 +109,14 @@ def main(type='wheel'):
     while not hands_got:
         try:
             print('Searching for left and right hand controllers')
-            left, right = get_controller_ids()
+            hmd, left, right = get_controller_ids()
             hands_got = True
-            for i in range(4):
-                openvr.VRSystem().triggerHapticPulse(right, 0, 3000)
-                time.sleep(0.2)
             print('left and right hands found')
         except NameError:
             pass
-        time.sleep(0.1)
+        time.sleep(0.2)
 
+    hmd_device = Controller(hmd, name='hmd', vrsys=vrsystem, is_controller=False)
     left_controller = Controller(left, name='left', vrsys=vrsystem)
     right_controller = Controller(right, name='right', vrsys=vrsystem)
     if type == 'wheel':
@@ -131,7 +133,7 @@ def main(type='wheel'):
     poses = poses_t()
     while True:
         before_work = time.time()
-        do_work(vrsystem, left_controller, right_controller, wheel, poses)
+        do_work(vrsystem, left_controller, right_controller, hmd_device, wheel, poses)
         after_work = time.time()
         left = 1/FREQUENCY - (after_work - before_work)
         if left>0:

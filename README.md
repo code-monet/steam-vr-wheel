@@ -53,8 +53,6 @@ Troubleshooting records for the issues I personally experienced.
 ### Todo
 
 - Make shifter rotatable in space
-- 0 value to trigger axis while holding shifter knob
-- Layout 2 of splitter/range: A to split, joystick up to range high and down to range low
 - Shifter degrees x and z
 - Code cleanup
 
