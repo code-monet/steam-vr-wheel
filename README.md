@@ -4,7 +4,7 @@ This fork is a version I modified for personal use only. So it is highly likely 
 
 https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-8848-c691d39f6034
 
-- [Full demo](https://www.youtube.com/watch?v=aCCVCgAIRPM)
+- [Full demo](https://www.youtube.com/watch?v=mNbI7f03d1Y)
 
 ## Memo
 
