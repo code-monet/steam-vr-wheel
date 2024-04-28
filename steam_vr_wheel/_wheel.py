@@ -1234,7 +1234,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
 
     def adapt_center(self, left_ctr, right_ctr):
-        limit_radius = 0.055
+        limit_radius = 0.045
         ctr = None
         if self._hand_snaps['left'][:5] == 'wheel':
             ctr = left_ctr

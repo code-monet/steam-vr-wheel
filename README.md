@@ -8,7 +8,7 @@ https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-884
 
 ## Memo
 
-Quest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
+Quest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled; FFB(force feedback) disabled; POV 0
 
 |Key|Button ID|Note|
 |-|-|-|
@@ -52,7 +52,7 @@ Troubleshooting records for the issues I personally experienced.
 #### Buttons do not register in vJoy monitor app
 
 - It does NOT work on vJoy 2.2.1.1, possibly due to the old version of sdk included in the project.
-- Tested working on vJoy 2.1.9.1 (vJoySetup.exe SHA256: f103ced4e7ff7ccb49c8415a542c56768ed4da4fea252b8f4ffdac343074654a)
+- Tested working on vJoy 2.1.9.1 (vJoySetup.exe SHA256: `f103ced4e7ff7ccb49c8415a542c56768ed4da4fea252b8f4ffdac343074654a`)
 
 #### Wheel doesn't move in AMS 2
 
