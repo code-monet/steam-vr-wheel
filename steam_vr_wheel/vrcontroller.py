@@ -56,6 +56,17 @@ class Controller:
             self.axis = pControllerState.rAxis[1].x
             self.trackpadX = pControllerState.rAxis[0].x
             self.trackpadY = pControllerState.rAxis[0].y
+
+        else:
+            # Populate normal
+            r = np.eye(3)
+            r[:] = [[m[0][0], m[0][1], m[0][2]],
+                    [m[1][0], m[1][1], m[1][2]],
+                    [m[2][0], m[2][1], m[2][2]]]
+            p = np.array([self.x, self.y, self.z])
+            v = np.array([0, 0, -1])
+            r_v = np.dot(r, v)
+            self.normal = np.array([r_v[0]+p[0], r_v[1]+p[1], r_v[2]+p[2]])
         
         self.valid = pose.bPoseIsValid
         if DEBUG:

@@ -560,9 +560,33 @@ class HShifterImage:
             [self.x - x_sin-unit-0.065, self.y+self.stick_height-0.16, self.z -z_sin-unit-0.08], 
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
-        self.bounds = [
-            [x_knob-0.065, y_knob-0.1, z_knob-0.08], 
-            [x_knob+0.065, y_knob+0.1, z_knob+0.08]]
+        if self.wheel.config.shifter_adaptive_bounds:
+            d = sqrt((x_knob-hmd.x)**2+
+                        (y_knob-hmd.y)**2+
+                        (z_knob-hmd.z)**2)
+            p2 = hmd.normal.copy() * d
+            pc_d = sqrt((x_knob-p2[0])**2+
+                        (y_knob-p2[1])**2+
+                        (z_knob-p2[2])**2)
+
+            a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
+            th = acos(a)
+
+            def fit(m, M, lower, upper):
+                a = min(max(0.0, (th-lower)/(upper-lower)), 1.0)
+                return m + a*(M-m)
+
+            self.bounds = [
+                [x_knob-fit(0.06, 0.085,        pi/12, pi/6),
+                y_knob+0.055 -fit(0.075, 0.12,  pi/12, pi/4),
+                z_knob-fit(0.08, 0.12,          pi/12, pi/6)], 
+                [x_knob+fit(0.06, 0.085,        pi/12, pi/6),
+                y_knob+0.055 +fit(0.075, 0.12,  pi/12, pi/4),
+                z_knob+fit(0.08, 0.12,          pi/12, pi/6)]]
+        else:
+            self.bounds = [
+                [x_knob-0.065, y_knob+0.055 -0.1, z_knob-0.08], 
+                [x_knob+0.065, y_knob+0.055 +0.1, z_knob+0.08]]
 
         # Set snap transform
         ctr = self._snap_ctr
@@ -657,7 +681,7 @@ class HShifterImage:
                 else:
                     xz_pos_1[1] = 0
 
-            restrained_margin = 0.75
+            restrained_margin = 1.5
             if abs(dp_unsafe[0]-xz_pos_1[0]) > restrained_margin or abs(dp_unsafe[2]-xz_pos_1[1]) > restrained_margin:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
@@ -1055,22 +1079,15 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         alpha = self.config.wheel_alpha / 100.0
 
-        m = hmd.m
-        r = np.eye(3)
-        r[:] = [[m[0][0], m[0][1], m[0][2]],
-                [m[1][0], m[1][1], m[1][2]],
-                [m[2][0], m[2][1], m[2][2]]]
-        p = np.array([hmd.x, hmd.y, hmd.z])
-        d = sqrt((adapt_center.x-p[0])**2+
-                    (adapt_center.y-p[1])**2+
-                    (adapt_center.z-p[2])**2)
-        v = np.array([0, 0, -d])
-        r_v = np.dot(r, v)
-        p2 = np.array([r_v[0]+p[0], r_v[1]+p[1], r_v[2]+p[2]])
+        d = sqrt((adapt_center.x-hmd.x)**2+
+                    (adapt_center.y-hmd.y)**2+
+                    (adapt_center.z-hmd.z)**2)
+        p2 = hmd.normal.copy() * d
         pc_d = sqrt((adapt_center.x-p2[0])**2+
                     (adapt_center.y-p2[1])**2+
                     (adapt_center.z-p2[2])**2)
-        th = acos(-((pc_d/d)**2/2-1))
+        a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
+        th = acos(a)
 
         if self.config.wheel_transparent_center:
             if th < pi/2:
@@ -1082,12 +1099,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 elif a <= t1:
                     alpha *= (a-t0)/(t1-t0)
 
-        # Reset the adaptive center if the wheel is in sight
-        # This is to assist the user when they are doing reverse
-        if th < pi/4:
-            if (self._hand_snaps['left'][:5] != 'wheel' and
-                self._hand_snaps['right'][:5] != 'wheel'):
-                self.reset_adapt_center()
+        if (self._hand_snaps['left'][:5] != 'wheel' and
+            self._hand_snaps['right'][:5] != 'wheel'):
+            self.reset_adapt_center()
 
         self.wheel_image.set_alpha(alpha)
 
@@ -1253,9 +1267,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         ctr_wheel = self.to_wheel_space(ctr)
         l = sqrt((adapt_center.x-ctr_wheel.x)**2+
                 (adapt_center.y-ctr_wheel.y)**2)
-
-        l_to_real = sqrt(self._wheel_adpative_offset[0]**2+
-                    self._wheel_adpative_offset[1]**2)
 
         if l < limit_radius:
             off = [ctr_wheel.x-adapt_center.x, ctr_wheel.y-adapt_center.y]

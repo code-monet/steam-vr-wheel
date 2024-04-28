@@ -58,6 +58,30 @@ Troubleshooting records for the issues I personally experienced.
 
 - Controller Damping has to be set to 0, in the section where there are Steering Sensitivity, etc. (not FFB section)
 
+### Euro Truck Simulator 2
+
+Example bindings
+
+|Key|Action|
+|-|-|
+|LT|Brake|
+|RT|Throttle|
+|L Joy Click|Attach/Detach Trailer (T)|
+|L Joy Left|`Button` Left Turn Indicator|
+|L Joy Up|`Button` Wiper|
+|L Joy Right|`Button` Light Modes|
+|L Joy Down|`Axis` Clutch|
+|R Joy Click|Interact (Enter)|
+|R Joy Left|`Button` Navigation Mode (F5)|
+|R Joy Up|`Button` Route Advisor Menu (F1) for pausing game|
+|R Joy Right|`Button` Right Turn Indicator|
+|R Joy Down|`Button` Parking Brake|
+|X|Horn|
+|Y|High Beam|
+|A|Cruise Control|
+|B|Next Camera|
+|Shifter Toggles Use Switch Mode|ON|
+
 ## This fork
 
 ### Comaptibility
@@ -123,7 +147,8 @@ Buttons for splitter and range selector have two layouts: 1. splitter=trigger ra
 ### Todo
 
 - Make shifter rotatable in space
-- Shifter degrees x and z
+- Different shifter degrees around x and z axes
+- Easier steering when looking back
 - Code cleanup
 
 ### Config memo

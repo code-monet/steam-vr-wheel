@@ -49,7 +49,7 @@ class ConfiguratorApp:
         self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
         self.wheel_transparent_center_box = wx.CheckBox(self.pnl, label='Wheel becomes transparent while looking at it')
-        self.wheel_adaptive_center_box = wx.CheckBox(self.pnl, label='Wheel moves in order to prevent abrupt turn')
+        self.wheel_adaptive_center_box = wx.CheckBox(self.pnl, label='Wheel moves in order to prevent abrupt turn (experimental)')
 
         # Shifter
         self.pnl_shifter = wx.Panel(self.pnl)
@@ -68,6 +68,7 @@ class ConfiguratorApp:
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
         self.shifter_button_layout_box = wx.CheckBox(self.pnl, label='Use Knob+A for splitter')
+        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='Knob is easier to grab when it\'s out of sight (experimental)')
 
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
@@ -107,6 +108,7 @@ class ConfiguratorApp:
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_button_layout_box.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.shifter_adaptive_bounds_box.Bind(wx.EVT_CHECKBOX, self.config_change)
 
         # Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -142,6 +144,7 @@ class ConfiguratorApp:
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_scale=self.shifter_scale,
                                 shifter_button_layout=self.shifter_button_layout_box,
+                                shifter_adaptive_bounds=self.shifter_adaptive_bounds_box,
 
                                 j_l_left_button=self.j_l_left_button,
                                 j_l_right_button=self.j_l_right_button,
@@ -211,6 +214,7 @@ class ConfiguratorApp:
 
         self.vbox.AddSpacer(4)
         self.vbox.Add(self.shifter_button_layout_box)
+        self.vbox.Add(self.shifter_adaptive_bounds_box)
 
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))

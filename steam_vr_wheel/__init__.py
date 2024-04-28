@@ -10,7 +10,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False
                       multibutton_trackpad=False,
                       multibutton_trackpad_center_haptic=False,
                       
-                      wheel_center=[0, -0.4, -0.35], wheel_size=0.55,
+                      wheel_center=[0, -0.4, -0.35], wheel_size=0.48,
                       wheel_grabbed_by_grip=True,
                       wheel_grabbed_by_grip_toggle=True,
                       wheel_show_wheel=True, wheel_show_hands=True,
@@ -22,6 +22,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
                       shifter_scale=100,
                       shifter_button_layout=False,
+                      shifter_adaptive_bounds=False,
 
                     # Joystick as button
                     j_l_left_button=False,
@@ -388,6 +389,17 @@ class PadConfig:
     def shifter_button_layout(self, x: bool):
         with self.data_lock:
             self._data['shifter_button_layout'] = x
+        self._write()
+
+    @property
+    def shifter_adaptive_bounds(self):
+        with self.data_lock:
+            return self._data['shifter_adaptive_bounds']
+
+    @shifter_adaptive_bounds.setter
+    def shifter_adaptive_bounds(self, x: bool):
+        with self.data_lock:
+            self._data['shifter_adaptive_bounds'] = x
         self._write()
 
     # Joystick as button
