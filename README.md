@@ -8,7 +8,7 @@ https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-884
 
 ## Memo
 
-Qyuest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
+Quest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled
 
 |Key|Button ID|Note|
 |-|-|-|
@@ -54,49 +54,9 @@ Troubleshooting records for the issues I personally experienced.
 - It does NOT work on vJoy 2.2.1.1, possibly due to the old version of sdk included in the project.
 - Tested working on vJoy 2.1.9.1 (vJoySetup.exe SHA256: f103ced4e7ff7ccb49c8415a542c56768ed4da4fea252b8f4ffdac343074654a)
 
-### Todo
+#### Wheel doesn't move in AMS 2
 
-- Make shifter rotatable in space
-- Shifter degrees x and z
-- Code cleanup
-
-### Config memo
-
-Memos for \*original\* config behaviors. Some configs' behaviors are changed as I don't have Vive controllers to test the behavior
-
-|Config|Module|Behavior|
-|-|-|-|
-|Triggers pre press button|`VirtualPad`|Touching trigger registers|
-|Triggers press button|`VirtualPad`|Trigger press registers along with axis change|
-|5 Button touchpad|`VirtualPad`|On Quest 2 controller, the axis values determine button id|
-|Haptic feedback for trackpad button zones|`VirtualPad`|Haptic when 5-button button id changed|
-|Touchpad mapping to axis while untouched (axis move to center when released)|`VirtualPad`||
-|Steering wheel is vertical|`Wheel`||
-|Joystick moves only when grabbed (by right grip)|`Joystick`||
-|Joystick grab is a switch|`Joystick`||
-|Layout edit mode|`Wheel`||
-|Manual wheel grabbing|`Wheel`||
-|Continuous (index, checked) or toggle (vive) wheel gripping|`Wheel`||
-|Show Wheel Overlay|`Wheel`||
-|Show Hands Overlay|`Wheel`||
-
-Changed(applied or planned) behavior:
-
-|Config|Behavior|
-|-|-|
-|Triggers pre press button|Set default to disabled|
-|Triggers press button||
-|5 Button touchpad|Disabled as default, more description|
-|Haptic feedback for trackpad button zones|Disabled as default, more description|
-|Touchpad mapping to axis while untouched (axis move to center when released)|Disabled, since joysticks are handlded differently now|
-|Steering wheel is vertical|Disabled, the wheel will be manually rotatable in edit mode|
-|Joystick moves only when grabbed (by right grip)|Hidden; use the original version for better experience|
-|Joystick grab is a switch|Hidden|
-|Layout edit mode|Disabled, users have to enter edit mode by triple grip clicks|
-|Manual wheel grabbing||
-|Continuous (index, checked) or toggle (vive) wheel gripping||
-|Show Wheel Overlay||
-|Show Hands Overlay||
+- Controller Damping has to be set to 0, in the section where there are Steering Sensitivity, etc. (not FFB section)
 
 ## This fork
 
@@ -159,3 +119,47 @@ It is a h-shifter with 6 positions, a splitter(A while grabbing knob), and a ran
 |Range Selector|50|Grab knob + Joystick down or up|
 
 Buttons for splitter and range selector have two layouts: 1. splitter=trigger range=A 2. splitter=A range=B
+
+### Todo
+
+- Make shifter rotatable in space
+- Shifter degrees x and z
+- Code cleanup
+
+### Config memo
+
+Memos for \*original\* config behaviors. Some configs' behaviors are changed as I don't have Vive controllers to test the behavior
+
+|Config|Module|Behavior|
+|-|-|-|
+|Triggers pre press button|`VirtualPad`|Touching trigger registers|
+|Triggers press button|`VirtualPad`|Trigger press registers along with axis change|
+|5 Button touchpad|`VirtualPad`|On Quest 2 controller, the axis values determine button id|
+|Haptic feedback for trackpad button zones|`VirtualPad`|Haptic when 5-button button id changed|
+|Touchpad mapping to axis while untouched (axis move to center when released)|`VirtualPad`||
+|Steering wheel is vertical|`Wheel`||
+|Joystick moves only when grabbed (by right grip)|`Joystick`||
+|Joystick grab is a switch|`Joystick`||
+|Layout edit mode|`Wheel`||
+|Manual wheel grabbing|`Wheel`||
+|Continuous (index, checked) or toggle (vive) wheel gripping|`Wheel`||
+|Show Wheel Overlay|`Wheel`||
+|Show Hands Overlay|`Wheel`||
+
+Changed(applied or planned) behavior:
+
+|Config|Behavior|
+|-|-|
+|Triggers pre press button|Set default to disabled|
+|Triggers press button|Disabled as default, some games do not allow multiple input while configuring keys|
+|5 Button touchpad|Disabled as default, more description|
+|Haptic feedback for trackpad button zones|Disabled as default, more description|
+|Touchpad mapping to axis while untouched (axis move to center when released)|Disabled, since joysticks are handlded differently now|
+|Steering wheel is vertical|Disabled, the wheel will be manually rotatable in edit mode|
+|Joystick moves only when grabbed (by right grip)|Hidden; use the original version for better experience|
+|Joystick grab is a switch|Hidden|
+|Layout edit mode|Disabled, users have to enter edit mode by triple grip clicks|
+|Manual wheel grabbing||
+|Continuous (index, checked) or toggle (vive) wheel gripping||
+|Show Wheel Overlay||
+|Show Hands Overlay||

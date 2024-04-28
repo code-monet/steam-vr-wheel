@@ -6,7 +6,7 @@ import time
 
 CONFIG_PATH = os.path.expanduser(os.path.join('~', '.steam-vr-wheel', 'config.json'))
 
-DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=True,
+DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False,
                       multibutton_trackpad=False,
                       multibutton_trackpad_center_haptic=False,
                       
