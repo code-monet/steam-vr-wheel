@@ -655,6 +655,8 @@ class HShifterImage:
             xz_0 = self._xz
             xz_1 = xz_0.copy()
             if in_middle:
+                xz_pos_1[1] = 0 # Set to Neutral
+
                 xz_1[0] = xz_ctr[0]
                 xz_1[1] = xz_ctr[1]
                 if xz_ctr[0] == -1:
