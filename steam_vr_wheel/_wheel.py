@@ -577,12 +577,12 @@ class HShifterImage:
                 return m + a*(M-m)
 
             self.bounds = [
-                [x_knob-fit(0.06, 0.085,        pi/12, pi/6),
-                y_knob+0.055 -fit(0.075, 0.12,  pi/12, pi/4),
-                z_knob-fit(0.08, 0.12,          pi/12, pi/6)], 
-                [x_knob+fit(0.06, 0.085,        pi/12, pi/6),
-                y_knob+0.055 +fit(0.075, 0.12,  pi/12, pi/4),
-                z_knob+fit(0.08, 0.12,          pi/12, pi/6)]]
+                [x_knob-fit(0.045, 0.075,       pi/12, pi/4),
+                y_knob+0.055 -fit(0.075, 0.12,  pi/12, pi/3),
+                z_knob-fit(0.08, 0.12,          pi/12, pi/4)], 
+                [x_knob+fit(0.045, 0.075,       pi/12, pi/4),
+                y_knob+0.055 +fit(0.075, 0.12,  pi/12, pi/3),
+                z_knob+fit(0.08, 0.12,          pi/12, pi/4)]]
         else:
             self.bounds = [
                 [x_knob-0.065, y_knob+0.055 -0.1, z_knob-0.08], 
