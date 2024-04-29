@@ -70,7 +70,7 @@ Example bindings
 |L Joy Left|`Button` Left Turn Indicator|
 |L Joy Up|`Button` Wiper|
 |L Joy Right|`Button` Light Modes|
-|L Joy Down|`Axis` Clutch|
+|L Joy Down|`Axis` Clutch (clutch range 95%)|
 |R Joy Click|Interact (Enter)|
 |R Joy Left|`Button` Navigation Mode (F5)|
 |R Joy Up|`Button` Route Advisor Menu (F1) for pausing game|
@@ -80,7 +80,8 @@ Example bindings
 |Y|High Beam|
 |A|Cruise Control|
 |B|Next Camera|
-|Shifter Toggles Use Switch Mode|ON|
+
+- Set **Shifter Toggles Use Switch Mode** to ON
 
 ## This fork
 
