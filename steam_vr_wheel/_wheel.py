@@ -275,9 +275,9 @@ class HShifterImage:
         self._splitter_toggled = False
         self._range_toggled = False
 
-        self._pos_to_button = dict({1: 43, 3:   45, 5: 47,
-                                            3.5: None,
-                                    2: 44, 4:   46, 6: 48})
+        self._pos_to_button = dict({1: 43,     3: 45,     5: 47,
+                                    1.5: None, 3.5: None, 5.5: None,
+                                    2: 44,     4: 46,     6: 48})
         self._pressed_button = None
         self._xz = [0,0]
         self._last_xz_grid = np.array([0,0])
