@@ -10,7 +10,7 @@ import threading
 import queue
 
 from steam_vr_wheel._virtualpad import VirtualPad, RightTrackpadAxisDisablerMixin
-from steam_vr_wheel.pyvjoy import HID_USAGE_X
+from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType
 
 def check_result(result):
     if result:
@@ -823,7 +823,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         size = self.config.wheel_size
         self._inertia = inertia
         self._center_speed = center_speed  # radians per frame, force which returns wheel to center when not grabbed
-        self._center_speed_coeff = 1  # might be calculated later using game telemetry
+        self._center_speed_ffb = 0 
         # FFB
         if self.config.wheel_ffb:
             self.device.ffb_callback(self.ffb_callback)
@@ -873,8 +873,54 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._last_knob_haptic = 0
 
     def ffb_callback(self, data):
-        if "Constant" in data:
-            print(data['Constant']['Magnitude'])
+
+        now = time.time()
+        if hasattr(self, "_ffb_test_t") == False:
+            self._ffb_test_t = now
+            self._ffb_test_d = dict()
+            self._ffb_handled = dict()
+
+        if "Eff_Constant" in data: #FFBPType.PT_CONSTREP
+            m = data['Eff_Constant']['Magnitude'] / 10000.0
+            self._center_speed_ffb = m * 5 # TODO set coeff
+
+            if not FFBPType.PT_CONSTREP in self._ffb_handled:
+                self._ffb_handled[FFBPType.PT_CONSTREP] = 0
+            self._ffb_handled[FFBPType.PT_CONSTREP] += 1
+
+        if "DevCtrl" in data: #FFBPType.PT_CTRLREP
+            if data['DevCtrl'] in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
+                self._center_speed_ffb = 0
+
+            if not FFBPType.PT_CTRLREP in self._ffb_handled:
+                self._ffb_handled[FFBPType.PT_CTRLREP] = 0
+            self._ffb_handled[FFBPType.PT_CTRLREP] += 1
+
+
+        if data['Type'] in [
+            FFBPType.PT_EFFREP,
+            FFBPType.PT_ENVREP,
+            FFBPType.PT_CONDREP,
+            FFBPType.PT_PRIDREP,
+            FFBPType.PT_RAMPREP,
+            FFBPType.PT_CSTMREP,
+            FFBPType.PT_SMPLREP,
+            FFBPType.PT_EFOPREP,
+            FFBPType.PT_BLKFRREP,
+            FFBPType.PT_GAINREP,
+
+            #  {1: 19313, 10: 19190, 11: 2, 13: 4}
+
+            ]:
+            t = data['Type']
+            if not t in self._ffb_test_d:
+                self._ffb_test_d[t] = 0
+            self._ffb_test_d[t] += 1
+
+        if now - self._ffb_test_t > 2.0:
+            print("[TEST] FFB behaviors\n  NO ", self._ffb_test_d, "\n  YES", self._ffb_handled)
+            self._ffb_test_t = now
+
 
     def point_in_holding_bounds(self, point):
         point = self.to_wheel_space(point)
@@ -1061,13 +1107,19 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def center_force(self):
         angle = self._wheel_angles[-1]
-        sign = 1
-        if angle < 0:
-            sign = -1
-        if abs(angle) < self._center_speed * self.config.wheel_centerforce:
-            self._wheel_angles[-1] = 0
-            return
-        self._wheel_angles[-1] -= self._center_speed * self.config.wheel_centerforce * sign
+        epsilon = self._center_speed * self.config.wheel_centerforce
+
+        if self.config.wheel_ffb:
+            epsilon *= self._center_speed_ffb
+            self._wheel_angles[-1] += epsilon
+        else:
+            if abs(angle) < abs(epsilon):
+                self._wheel_angles[-1] = 0
+                return
+
+            if angle < 0:
+                epsilon *= -1
+            self._wheel_angles[-1] -= epsilon
 
     def send_to_vjoy(self):
         wheel_turn = self._wheel_angles[-1] / (2 * pi)

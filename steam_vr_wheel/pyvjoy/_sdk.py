@@ -262,7 +262,7 @@ class FfbGenCB:
 
 			effect = FFB_EFF_REPORT()
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Report(fData, byref(effect)):
-				pydata['EffectReport'] = dict({
+				pydata['Eff_Report'] = dict({
 					"EffectType": effect.EffectType,
 					"Duration": effect.Duration,
 					"TriggerRepeatInterval": effect.TrigerRpt,
@@ -279,23 +279,28 @@ class FfbGenCB:
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Constant(fData, byref(cnst)):
 
 				# https://github.com/jshafer817/vJoy/blob/911a2a53a972f73ea8b4a021c390c953012b7fb9/driver/sys/driver.c#L659
+				# unless it's cast to short, the negative values got wrapped around 65535
 				# TODO why this behavior?
 				ofs = getattr(FFB_EFF_CONSTANT, 'Magnitude').offset
 				p = pointer(c_long.from_buffer(cnst, ofs))
 				mag = cast(p, POINTER(c_short))
 
-				pydata['Constant'] = dict({
+				pydata['Eff_Constant'] = dict({
 					"Magnitude": mag.contents.value
 					})
 
 			prd = FFB_EFF_PERIOD()
+			# cf https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee418719(v=vs.85)
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Period(fData, byref(prd)):
-				pydata['Period'] = dict({
+				pydata['Eff_Period'] = dict({
 					"Magnitude": prd.Magnitude,
 					"Offset": prd.Offset,
 					"Phase": prd.Phase,
 					"Period": prd.Period
 					})
+
+			if ERROR_SUCCESS == _vj.Ffb_h_DevCtrl(fData, byref(i)):
+				pydata['DevCtrl'] = i.value
 
 			self.pyfunc(pydata)
 		self.cfunc = FFB_GEN_CB(f)
