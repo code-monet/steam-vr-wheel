@@ -65,7 +65,10 @@ class VJoyDevice(object):
 		"""Send the stored Joystick data to the device in one go (the 'efficient' method)"""
 		return self._sdk.UpdateVJD(self.rID, self.data)
 
-		
+	# FFB
+	def is_device_ffb(self):
+		return self._sdk.IsDeviceFfb(self.rID)
 
-		
+	def ffb_register_gen_cb(self):
+		self._sdk.FfbRegisterGenCB()
 	

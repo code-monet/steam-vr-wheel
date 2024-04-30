@@ -1,12 +1,12 @@
-import openvr
 
-openvr.init(openvr.VRApplication_Background)
+from steam_vr_wheel.pyvjoy.vjoydevice import VJoyDevice, HID_USAGE_SL0, HID_USAGE_SL1, HID_USAGE_X, HID_USAGE_Y, HID_USAGE_Z, HID_USAGE_RX, HID_USAGE_RY
+import time
 
-while True:
-    print()
-    for c in range(16):
-        result, pControllerState = openvr.VRSystem().getControllerState(c)
-        for i in pControllerState.rAxis:
-            if i.x != 0 or i.y != 0:
-                print(i.x, i.y)
+def main():
+    device = VJoyDevice(1)
+    device.ffb_register_gen_cb()
+    while True:
+        time.sleep(0.2)
 
+if __name__ == "__main__":
+    main()

@@ -2,7 +2,7 @@ import os
 import sys
 from ctypes import *
 
-from .constants import DLL_FILENAME
+from .constants import *
 from .exceptions import *
 from ctypes import wintypes	# Makes this lib work in Python36
 
@@ -189,3 +189,30 @@ class _JOYSTICK_POSITION_V2(Structure):
 		self.bDevice=c_byte(rID)
 		self.bHats=-1
 
+
+# FFB
+
+class FFB_DATA(Structure):
+	_fields_ = [("size", c_ulong),
+				("cmd", c_ulong),
+				("data", POINTER(c_ubyte))]
+
+def IsDeviceFfb(rID):
+	return _vj.IsDeviceFfb(rID)
+
+@WINFUNCTYPE(None, c_void_p, c_void_p)
+def FfbGenCB(data, userData):
+	fData = cast(data, POINTER(FFB_DATA))
+
+	i = c_int()
+	result = _vj.Ffb_h_DeviceID(fData, byref(i))
+	if result == ERROR_SUCCESS:
+		print("Device ID", i)
+
+	result = _vj.Ffb_h_Type(fData, byref(i))
+	if result == ERROR_SUCCESS:
+		print("FFB Type", i)
+
+
+def FfbRegisterGenCB():
+	_vj.FfbRegisterGenCB(FfbGenCB, None)
