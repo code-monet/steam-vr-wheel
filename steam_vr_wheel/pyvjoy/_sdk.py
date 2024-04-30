@@ -197,22 +197,111 @@ class FFB_DATA(Structure):
 				("cmd", c_ulong),
 				("data", POINTER(c_ubyte))]
 
+# cf. https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416616(v=vs.85)
+class FFB_EFF_REPORT(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("EffectType", c_uint),
+				("Duration", c_ushort),
+				("TrigerRpt", c_ushort),
+				("SamplePrd", c_ushort),
+				("Gain", c_char),
+				("TrigerBtn", c_char),
+				("Polar", c_bool),
+				("Direction", c_char),
+				("DirX", c_char),
+				("DirY", c_char)]
+
+class FFB_EFF_OP(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("EffectOp", c_uint),
+				("LoopCount", c_char)]
+
+class FFB_EFF_CONSTANT(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("Magnitude", c_long)]
+
+class FFB_EFF_RAMP(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("Start", c_long),
+				("End", c_long)]
+
+class FFB_EFF_PERIOD(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("Magnitude", c_ulong),
+				("Offset", c_long),
+				("Phase", c_ulong),
+				("Period", c_ulong)]
+
+class FFB_EFF_ENVLP(Structure):
+	_fields_ = [("EffectBlockIndex", c_char),
+				("AttackLevel", c_ulong),
+				("FadeLevel", c_ulong),
+				("AttackTime", c_ulong),
+				("FadeTime", c_ulong)]
+
 def IsDeviceFfb(rID):
 	return _vj.IsDeviceFfb(rID)
 
-@WINFUNCTYPE(None, c_void_p, c_void_p)
-def FfbGenCB(data, userData):
-	fData = cast(data, POINTER(FFB_DATA))
+FFB_GEN_CB = WINFUNCTYPE(None, c_void_p, c_void_p)
 
-	i = c_int()
-	result = _vj.Ffb_h_DeviceID(fData, byref(i))
-	if result == ERROR_SUCCESS:
-		print("Device ID", i)
+class FfbGenCB:
 
-	result = _vj.Ffb_h_Type(fData, byref(i))
-	if result == ERROR_SUCCESS:
-		print("FFB Type", i)
+	def __init__(self, pyfunc):
+		self.pyfunc = pyfunc
+		def f(data, userData):
+			fData = cast(data, POINTER(FFB_DATA))
+
+			pydata = dict()
+
+			i = c_int()
+			if ERROR_SUCCESS == _vj.Ffb_h_DeviceID(fData, byref(i)):
+				pydata['DeviceID'] = i.value
+
+			if ERROR_SUCCESS == _vj.Ffb_h_Type(fData, byref(i)):
+				pydata['Type'] = i.value
+
+			effect = FFB_EFF_REPORT()
+			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Report(fData, byref(effect)):
+				pydata['EffectReport'] = dict({
+					"EffectType": effect.EffectType,
+					"Duration": effect.Duration,
+					"TriggerRepeatInterval": effect.TrigerRpt,
+					"SamplePeriod": effect.SamplePrd,
+					"Gain": ord(effect.Gain),
+					"TriggerButton": ord(effect.TrigerBtn),
+					"Polar": True if effect.Polar == 1 else False,
+					"Direction": ord(effect.Direction),
+					"DirX": ord(effect.DirX),
+					"DirY": ord(effect.DirY),
+					})
+
+			cnst = FFB_EFF_CONSTANT()
+			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Constant(fData, byref(cnst)):
+
+				# https://github.com/jshafer817/vJoy/blob/911a2a53a972f73ea8b4a021c390c953012b7fb9/driver/sys/driver.c#L659
+				# TODO why this behavior?
+				ofs = getattr(FFB_EFF_CONSTANT, 'Magnitude').offset
+				p = pointer(c_long.from_buffer(cnst, ofs))
+				mag = cast(p, POINTER(c_short))
+
+				pydata['Constant'] = dict({
+					"Magnitude": mag.contents.value
+					})
+
+			prd = FFB_EFF_PERIOD()
+			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Period(fData, byref(prd)):
+				pydata['Period'] = dict({
+					"Magnitude": prd.Magnitude,
+					"Offset": prd.Offset,
+					"Phase": prd.Phase,
+					"Period": prd.Period
+					})
+
+			self.pyfunc(pydata)
+		self.cfunc = FFB_GEN_CB(f)
 
 
-def FfbRegisterGenCB():
-	_vj.FfbRegisterGenCB(FfbGenCB, None)
+def FfbRegisterGenCB(pyfunc):
+	cb = FfbGenCB(pyfunc)
+	_vj.FfbRegisterGenCB(cb.cfunc, None)
+	return cb

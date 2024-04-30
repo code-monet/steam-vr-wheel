@@ -824,6 +824,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._inertia = inertia
         self._center_speed = center_speed  # radians per frame, force which returns wheel to center when not grabbed
         self._center_speed_coeff = 1  # might be calculated later using game telemetry
+        # FFB
+        if self.config.wheel_ffb:
+            self.device.ffb_callback(self.ffb_callback)
+
         self.x = 0  # -1 0 1
         self._wheel_angles = deque(maxlen=10)
         self._wheel_angles.append(0)
@@ -867,6 +871,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                             scale=self.config.shifter_scale,
                             degree=self.config.shifter_degree)
         self._last_knob_haptic = 0
+
+    def ffb_callback(self, data):
+        if "Constant" in data:
+            print(data['Constant']['Magnitude'])
 
     def point_in_holding_bounds(self, point):
         point = self.to_wheel_space(point)

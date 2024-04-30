@@ -17,6 +17,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False
                       wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
                       wheel_pitch=0, wheel_transparent_center=False,
                       wheel_adaptive_center=False,
+                      wheel_ffb=False,
 
                     # Shifter
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
@@ -311,6 +312,17 @@ class PadConfig:
     def wheel_adaptive_center(self, x: bool):
         with self.data_lock:
             self._data['wheel_adaptive_center'] = x
+        self._write()
+
+    @property
+    def wheel_ffb(self):
+        with self.data_lock:
+            return self._data['wheel_ffb']
+
+    @wheel_ffb.setter
+    def wheel_ffb(self, x: bool):
+        with self.data_lock:
+            self._data['wheel_ffb'] = x
         self._write()
 
     @property

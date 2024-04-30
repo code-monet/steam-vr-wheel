@@ -69,6 +69,7 @@ class VJoyDevice(object):
 	def is_device_ffb(self):
 		return self._sdk.IsDeviceFfb(self.rID)
 
-	def ffb_register_gen_cb(self):
-		self._sdk.FfbRegisterGenCB()
+	def ffb_callback(self, cb):
+		self._ffb_gen_cb = self._sdk.FfbRegisterGenCB(cb) # func(dict)
+
 	

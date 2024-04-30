@@ -46,6 +46,8 @@ class ConfiguratorApp:
         self.wheel_show_hands.Disable()
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
+        self.wheel_ffb = wx.CheckBox(self.pnl, label="Enabled Force Feedback (test)")
+        self.wheel_ffb.Disable()
         self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
         self.wheel_transparent_center_box = wx.CheckBox(self.pnl, label='Wheel becomes transparent while looking at it')
@@ -135,6 +137,7 @@ class ConfiguratorApp:
                                 wheel_show_hands=self.wheel_show_hands,
                                 wheel_degrees=self.wheel_degrees,
                                 wheel_centerforce=self.wheel_centerforce,
+                                wheel_ffb=self.wheel_ffb,
                                 wheel_pitch=self.wheel_pitch,
                                 wheel_alpha=self.wheel_alpha,
                                 wheel_transparent_center=self.wheel_transparent_center_box,
@@ -183,6 +186,7 @@ class ConfiguratorApp:
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Center Force"))
         self.vbox.Add(self.wheel_centerforce)
+        self.vbox.Add(self.wheel_ffb)
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Pitch"))
         self.vbox.Add(self.wheel_pitch)

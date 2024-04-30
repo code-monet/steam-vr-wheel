@@ -1,4 +1,3 @@
-from enum import Enum
 
 DLL_FILENAME = "vJoyInterface.dll"
 
@@ -63,7 +62,7 @@ HID_ID_NEWEFREP = 0x01 # Usage Create New Effect Report
 HID_ID_BLKLDREP = 0x02 # Usage Block Load Report
 HID_ID_POOLREP = 0x03 # Usage PID Pool Report
 
-class FFBEType(Enum):
+class FFBEType:
 	ET_NONE = 0
 	ET_CONST = 1
 	ET_RAMP = 2
@@ -78,7 +77,7 @@ class FFBEType(Enum):
 	ET_FRCTN = 11
 	ET_CSTM = 12
 
-class FFBPType(Enum):
+class FFBPType:
 	# Write
 	PT_EFFREP	=  HID_ID_EFFREP 	# Usage Set Effect Report
 	PT_ENVREP	=  HID_ID_ENVREP 	# Usage Set Envelope Report
@@ -99,12 +98,12 @@ class FFBPType(Enum):
 	PT_BLKLDREP	=  HID_ID_BLKLDREP+0x10 	# Usage Block Load Report
 	PT_POOLREP	=  HID_ID_POOLREP+0x10 		# Usage PID Pool Report
 
-class FFBOP(Enum):
+class FFBOP:
 	EFF_START = 1
 	EFF_SOLO = 2
 	EFF_STOP = 3
 
-class FFB_CTRL(Enum):
+class FFB_CTRL:
 	CTRL_ENACT = 1
 	CTRL_DISACT = 2
 	CTRL_STOPALL = 3
@@ -112,7 +111,7 @@ class FFB_CTRL(Enum):
 	CTRL_DEVPAUSE = 5
 	CTRL_DEVCONT = 6
 
-class FFB_EFFECTS(Enum):
+class FFB_EFFECTS:
 	Constant	= 0x0001
 	Ramp		= 0x0002
 	Square		= 0x0004
