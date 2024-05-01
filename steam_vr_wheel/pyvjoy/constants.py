@@ -79,24 +79,24 @@ class FFBEType:
 
 class FFBPType:
 	# Write
-	PT_EFFREP	=  HID_ID_EFFREP 	# Usage Set Effect Report
-	PT_ENVREP	=  HID_ID_ENVREP 	# Usage Set Envelope Report
-	PT_CONDREP	=  HID_ID_CONDREP 	# Usage Set Condition Report
-	PT_PRIDREP	=  HID_ID_PRIDREP 	# Usage Set Periodic Report
-	PT_CONSTREP	=  HID_ID_CONSTREP 	# Usage Set Constant Force Report
-	PT_RAMPREP	=  HID_ID_RAMPREP 	# Usage Set Ramp Force Report
-	PT_CSTMREP	=  HID_ID_CSTMREP 	# Usage Custom Force Data Report
-	PT_SMPLREP	=  HID_ID_SMPLREP 	# Usage Download Force Sample
-	PT_EFOPREP	=  HID_ID_EFOPREP 	# Usage Effect Operation Report
-	PT_BLKFRREP	=  HID_ID_BLKFRREP 	# Usage PID Block Free Report
-	PT_CTRLREP	=  HID_ID_CTRLREP 	# Usage PID Device Control
-	PT_GAINREP	=  HID_ID_GAINREP 	# Usage Device Gain Report
-	PT_SETCREP	=  HID_ID_SETCREP 	# Usage Set Custom Force Report
+	PT_EFFREP	=  HID_ID_EFFREP 	# Usage Set Effect Report					1
+	PT_ENVREP	=  HID_ID_ENVREP 	# Usage Set Envelope Report					2
+	PT_CONDREP	=  HID_ID_CONDREP 	# Usage Set Condition Report				3
+	PT_PRIDREP	=  HID_ID_PRIDREP 	# Usage Set Periodic Report					4
+	PT_CONSTREP	=  HID_ID_CONSTREP 	# Usage Set Constant Force Report			5
+	PT_RAMPREP	=  HID_ID_RAMPREP 	# Usage Set Ramp Force Report				6
+	PT_CSTMREP	=  HID_ID_CSTMREP 	# Usage Custom Force Data Report			7
+	PT_SMPLREP	=  HID_ID_SMPLREP 	# Usage Download Force Sample				8
+	PT_EFOPREP	=  HID_ID_EFOPREP 	# Usage Effect Operation Report				10
+	PT_BLKFRREP	=  HID_ID_BLKFRREP 	# Usage PID Block Free Report				11
+	PT_CTRLREP	=  HID_ID_CTRLREP 	# Usage PID Device Control					12
+	PT_GAINREP	=  HID_ID_GAINREP 	# Usage Device Gain Report					13
+	PT_SETCREP	=  HID_ID_SETCREP 	# Usage Set Custom Force Report				14
 
 	# Feature
-	PT_NEWEFREP	=  HID_ID_NEWEFREP+0x10 	# Usage Create New Effect Report
-	PT_BLKLDREP	=  HID_ID_BLKLDREP+0x10 	# Usage Block Load Report
-	PT_POOLREP	=  HID_ID_POOLREP+0x10 		# Usage PID Pool Report
+	PT_NEWEFREP	=  HID_ID_NEWEFREP+0x10 	# Usage Create New Effect Report	17
+	PT_BLKLDREP	=  HID_ID_BLKLDREP+0x10 	# Usage Block Load Report			18
+	PT_POOLREP	=  HID_ID_POOLREP+0x10 		# Usage PID Pool Report				19
 
 class FFBOP:
 	EFF_START = 1

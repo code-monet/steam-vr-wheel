@@ -242,8 +242,14 @@ class FFB_EFF_ENVLP(Structure):
 def IsDeviceFfb(rID):
 	return _vj.IsDeviceFfb(rID)
 
+def _twos_comp(val, bits):
+    if (val & (1 << (bits - 1))) != 0:
+        val = val - (1 << bits) 
+    return val
+
 FFB_GEN_CB = WINFUNCTYPE(None, c_void_p, c_void_p)
 
+# cf https://github.com/jshafer817/vJoy/blob/v2.1.9.1/apps/common/vJoyInterface/vjoyinterface.h
 class FfbGenCB:
 
 	def __init__(self, pyfunc):
@@ -259,6 +265,16 @@ class FfbGenCB:
 
 			if ERROR_SUCCESS == _vj.Ffb_h_Type(fData, byref(i)):
 				pydata['Type'] = i.value
+
+			if ERROR_SUCCESS == _vj.Ffb_h_DevCtrl(fData, byref(i)):
+				pydata['DevCtrl'] = i.value
+
+			op = FFB_EFF_OP()
+			if ERROR_SUCCESS == _vj.Ffb_h_EffOp(fData, byref(op)):
+				pydata['EffOp'] = dict({
+					"EffectOp": op.EffectOp,
+					"LoopCount": op.LoopCount,
+					})
 
 			effect = FFB_EFF_REPORT()
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Report(fData, byref(effect)):
@@ -278,15 +294,8 @@ class FfbGenCB:
 			cnst = FFB_EFF_CONSTANT()
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Constant(fData, byref(cnst)):
 
-				# https://github.com/jshafer817/vJoy/blob/911a2a53a972f73ea8b4a021c390c953012b7fb9/driver/sys/driver.c#L659
-				# unless it's cast to short, the negative values got wrapped around 65535
-				# TODO why this behavior?
-				ofs = getattr(FFB_EFF_CONSTANT, 'Magnitude').offset
-				p = pointer(c_long.from_buffer(cnst, ofs))
-				mag = cast(p, POINTER(c_short))
-
 				pydata['Eff_Constant'] = dict({
-					"Magnitude": mag.contents.value
+					"Magnitude": _twos_comp(cnst.Magnitude, 16)
 					})
 
 			prd = FFB_EFF_PERIOD()
@@ -294,13 +303,10 @@ class FfbGenCB:
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Period(fData, byref(prd)):
 				pydata['Eff_Period'] = dict({
 					"Magnitude": prd.Magnitude,
-					"Offset": prd.Offset,
+					"Offset": _twos_comp(prd.Offset, 16),
 					"Phase": prd.Phase,
 					"Period": prd.Period
 					})
-
-			if ERROR_SUCCESS == _vj.Ffb_h_DevCtrl(fData, byref(i)):
-				pydata['DevCtrl'] = i.value
 
 			self.pyfunc(pydata)
 		self.cfunc = FFB_GEN_CB(f)

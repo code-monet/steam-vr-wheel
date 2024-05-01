@@ -877,49 +877,73 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         now = time.time()
         if hasattr(self, "_ffb_test_t") == False:
             self._ffb_test_t = now
-            self._ffb_test_d = dict()
-            self._ffb_handled = dict()
+            self._ffb_test_unhandled = dict()
+            self._ffb_test_handled = dict()
+
+            self.last_now = now
+
+        def _ffb_test_f(handled, t, sub=None):
+            k = str(t)
+            if sub is not None:
+                k += "-" + str(sub)
+
+            d = self._ffb_test_handled if handled else self._ffb_test_unhandled
+            if not k in d:
+                d[k] = 0
+            d[k] += 1
+
+        elapsed = now-self.last_now
+
+
+        if "EffOp" in data: #FFBPType.PT_EFOPREP
+            _ffb_test_f(False, FFBPType.PT_EFOPREP, data['EffOp']['EffectOp'])
 
         if "Eff_Constant" in data: #FFBPType.PT_CONSTREP
-            m = data['Eff_Constant']['Magnitude'] / 10000.0
-            self._center_speed_ffb = m * 5 # TODO set coeff
+            self._center_speed_ffb = data['Eff_Constant']['Magnitude'] / 10000.0
+            if elapsed != 0:
+                self._center_speed_ffb *= elapsed * 200
 
-            if not FFBPType.PT_CONSTREP in self._ffb_handled:
-                self._ffb_handled[FFBPType.PT_CONSTREP] = 0
-            self._ffb_handled[FFBPType.PT_CONSTREP] += 1
+            _ffb_test_f(True, FFBPType.PT_CONSTREP)
 
         if "DevCtrl" in data: #FFBPType.PT_CTRLREP
             if data['DevCtrl'] in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
                 self._center_speed_ffb = 0
+                _ffb_test_f(True, FFBPType.PT_CTRLREP, data['DevCtrl'])
+            else:
+                _ffb_test_f(False, FFBPType.PT_CTRLREP, data['DevCtrl'])
 
-            if not FFBPType.PT_CTRLREP in self._ffb_handled:
-                self._ffb_handled[FFBPType.PT_CTRLREP] = 0
-            self._ffb_handled[FFBPType.PT_CTRLREP] += 1
 
-
-        if data['Type'] in [
-            FFBPType.PT_EFFREP,
-            FFBPType.PT_ENVREP,
-            FFBPType.PT_CONDREP,
-            FFBPType.PT_PRIDREP,
-            FFBPType.PT_RAMPREP,
-            FFBPType.PT_CSTMREP,
-            FFBPType.PT_SMPLREP,
+        if data['Type'] not in [
+            FFBPType.PT_CONSTREP,
+            FFBPType.PT_CTRLREP,
             FFBPType.PT_EFOPREP,
-            FFBPType.PT_BLKFRREP,
-            FFBPType.PT_GAINREP,
 
             #  {1: 19313, 10: 19190, 11: 2, 13: 4}
 
+            # [TEST] FFB behaviors
+            # NO  {1: 109433, 10: 115706, 11: 2, 13: 2}
+            # YES {12: 3, 5: 109077}
+
+            # NO  {1: 59864, 3: 1, 4: 9036, 10: 22, 11: 6, 13: 115}
+            # YES {12: 37, 5: 50915}
+
+            # NO  {'10': 46739, '11': 1, '17': 1, '13': 35, '1': 46708}
+            # YES {'12-3': 2, '12-4': 2, '5': 46827}
+
+            # NO  {'13': 1, '10-1': 1721, '1': 1741, '17': 1}
+            # YES {'5': 1744, '12-4': 1, '12-3': 2}
+
             ]:
             t = data['Type']
-            if not t in self._ffb_test_d:
-                self._ffb_test_d[t] = 0
-            self._ffb_test_d[t] += 1
+            _ffb_test_f(False, t)
 
         if now - self._ffb_test_t > 2.0:
-            print("[TEST] FFB behaviors\n  NO ", self._ffb_test_d, "\n  YES", self._ffb_handled)
+            print("[TEST] FFB behaviors",
+                "\n  NO ", self._ffb_test_unhandled,
+                "\n  YES", self._ffb_test_handled)
             self._ffb_test_t = now
+
+        self.last_now = now
 
 
     def point_in_holding_bounds(self, point):
@@ -1106,14 +1130,18 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self._turn_speed *= self._inertia
 
     def center_force(self):
-        angle = self._wheel_angles[-1]
+        
         epsilon = self._center_speed * self.config.wheel_centerforce
 
         if self.config.wheel_ffb:
+
             epsilon *= self._center_speed_ffb
-            self._wheel_angles[-1] += epsilon
+            self._wheel_angles.append(self._wheel_angles[-1] + epsilon)
+
         else:
-            if abs(angle) < abs(epsilon):
+            angle = self._wheel_angles[-1]
+
+            if abs(angle) < epsilon:
                 self._wheel_angles[-1] = 0
                 return
 
@@ -1154,7 +1182,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self.config.wheel_transparent_center:
             if th < pi/2:
                 a = tan(th)*d
-                t0 = self.size/4
+                t0 = self.size/2
                 t1 = self.size
                 if a <= t0:
                     alpha = 0.0
