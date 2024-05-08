@@ -363,29 +363,29 @@ class HShifterImage:
         self.last_pos = 3.5
 
     def check_collision(self, ctr):
-        r = self.collision_radius
-        p = np.array([ctr.x, ctr.y, ctr.z])
-        a = np.array([self.x_stick, self.y, self.z_stick])
-        b = np.array([self.x_knob, self.y_knob, self.z_knob])
+        if self.wheel.config.shifter_adaptive_bounds:
+            r = self.collision_radius
+            p = np.array([ctr.x, ctr.y, ctr.z])
+            a = np.array([self.x_stick, self.y, self.z_stick])
+            b = np.array([self.x_knob, self.y_knob, self.z_knob])
 
-        ap = p - a
-        ab = b - a
+            ap = p - a
+            ab = b - a
 
-        l = np.dot(ap, ab) / np.dot(ab, ab)
-        l = max(0, min(1, l))
-        c = a + ab * l
-        cp = p - c
+            l = np.dot(ap, ab) / np.dot(ab, ab)
+            l = max(0, min(1, l))
+            c = a + ab * l
+            cp = p - c
 
-        d = np.sqrt(np.dot(cp, cp))
-        return d <= r
-
-    def __check_collision(self, ctr):
-        x, y, z = ctr.x, ctr.y, ctr.z
-        pm, pM = self.bounds
-        x0, y0, z0 = pm
-        x2, y2, z2 = pM
-        
-        return x0<=x<=x2 and y0<=y<=y2 and z0<=z<=z2
+            d = np.sqrt(np.dot(cp, cp))
+            return d <= r
+        else:
+            x, y, z = ctr.x, ctr.y, ctr.z
+            pm, pM = self.bounds
+            x0, y0, z0 = pm
+            x2, y2, z2 = pM
+            
+            return x0<=x<=x2 and y0<=y<=y2 and z0<=z<=z2
 
     def set_stick_xz_pos(self, xz_pos, ctr=None):
         
@@ -572,67 +572,12 @@ class HShifterImage:
         self.slot_tf[2][3] = self.z
 
         # Bounds
-        """
-        self.bounds = [
-            [self.x - x_sin-unit-0.065, self.y+self.stick_height-0.16, self.z -z_sin-unit-0.08], 
-            [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
-        """
-        """
         if self.wheel.config.shifter_adaptive_bounds:
-            d = sqrt((x_knob-hmd.x)**2+
-                        (y_knob-hmd.y)**2+
-                        (z_knob-hmd.z)**2)
-            p2 = hmd.normal.copy() * d
-            pc_d = sqrt((x_knob-p2[0])**2+
-                        (y_knob-p2[1])**2+
-                        (z_knob-p2[2])**2)
-
-            a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
-            th = acos(a)
-
-            def fit(m, M, lower, upper):
-                a = min(max(0.0, (th-lower)/(upper-lower)), 1.0)
-                return m + a*(M-m)
-
-            self.bounds = [
-                [x_knob-fit(0.045, 0.075,       pi/12, pi/4),
-                y_knob+0.055 -fit(0.075, 0.12,  pi/12, pi/3),
-                z_knob-fit(0.08, 0.12,          pi/12, pi/4)], 
-                [x_knob+fit(0.045, 0.075,       pi/12, pi/4),
-                y_knob+0.055 +fit(0.075, 0.12,  pi/12, pi/3),
-                z_knob+fit(0.08, 0.12,          pi/12, pi/4)]]
+            self.collision_radius = 0.07
         else:
             self.bounds = [
-                [x_knob-0.065, y_knob+0.055 -0.1, z_knob-0.08], 
-                [x_knob+0.065, y_knob+0.055 +0.1, z_knob+0.08]]
-        """
-        if self.wheel.config.shifter_adaptive_bounds:
-            d = sqrt((x_knob-hmd.x)**2+
-                        (y_knob-hmd.y)**2+
-                        (z_knob-hmd.z)**2)
-            p2 = hmd.normal.copy() * d
-            pc_d = sqrt((x_knob-p2[0])**2+
-                        (y_knob-p2[1])**2+
-                        (z_knob-p2[2])**2)
-
-            a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
-            th = acos(a)
-
-            lower = pi/12
-            upper = pi/3
-
-            r_low = 0.08
-            r_high = 0.12
-
-            if th < lower:
-                self.collision_radius = r_low
-            elif th < upper:
-                self.collision_radius = r_low + ((r_high-r_low) * (th-lower)/(upper-lower))
-            else:
-                self.collision_radius = r_high
-
-        else:
-            self.collision_radius = 0.06
+                [self.x - x_sin-unit, y_knob+0.055-0.1, self.z -z_sin-unit], 
+                [self.x + x_sin+unit, y_knob+0.055, self.z +z_sin+unit]]
 
         self.x_knob = x_knob
         self.y_knob = y_knob
@@ -815,36 +760,6 @@ class SteeringWheelImage:
             self.size = size
             check_result(self.vroverlay.setOverlayWidthInMeters(self.wheel, size))
 
-    def move(self, point, size, move=True):
-        self.transform[0][3] = point.x
-        self.transform[1][3] = point.y
-        self.transform[2][3] = point.z
-        #print(point.x, point.y, point.z)
-        self.size = size
-        if move:
-            fn = self.vroverlay.function_table.setOverlayTransformAbsolute
-            fn(self.wheel, openvr.TrackingUniverseSeated, openvr.byref(self.transform))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.wheel, size))
-
-    def rotate(self, angles, axis=[2,]):
-        try:
-            self.rotation_matrix
-        except AttributeError:
-            self.rotation_matrix = openvr.HmdMatrix34_t()
-        if not isinstance(angles, list):
-            angles = [angles, ]
-
-        if not isinstance(axis, list):
-            axis = [axis, ]
-
-        result = copy.copy(self.transform)
-        for angle, ax in zip(angles, axis):
-            initRotationMatrix(ax, -angle, self.rotation_matrix)
-            result = matMul33(self.rotation_matrix, result)
-
-        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
-        fn(self.wheel, openvr.TrackingUniverseSeated, openvr.byref(result))
-
     def hide(self):
         check_result(self.vroverlay.hideOverlay(self.wheel))
 
@@ -930,7 +845,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         now = time.time()
         if hasattr(self, "_ffb_test_t") == False:
-            self._ffb_test_t = now
+            self._ffb_test_t = now - 20.0
             self._ffb_test_unhandled = dict()
             self._ffb_test_handled = dict()
 
@@ -978,7 +893,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self._ffb_stopped = True
                 _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
             else:
-                #
+                # Not handled
                 _ffb_test_f(False, FFBPType.PT_EFOPREP, op)
 
         #FFBPType.PT_EFFREP
@@ -1036,7 +951,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             ]:
             _ffb_test_f(False, typ)
 
-        if now - self._ffb_test_t > 2.0:
+        if now - self._ffb_test_t > 30.0:
             print("[TEST] FFB behaviors",
                 "\n  NO ", self._ffb_test_unhandled,
                 "\n  YES", self._ffb_test_handled,
