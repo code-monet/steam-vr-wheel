@@ -668,13 +668,22 @@ class HShifterImage:
                 xz_1[0] = xz_ctr[0]
                 xz_1[1] = xz_ctr[1]
                 if xz_ctr[0] <= -1:
-                    if xz_ctr[0] > -2.0 or (xz_pos_0[0] != -2 and self._reverse_locked):
+                    if self._reverse_locked and xz_pos_0[0] != -2:
                         xz_1[0] = -1
                         xz_pos_1[0] = -1
                     else:
-                        xz_1[0] = -2
-                        xz_pos_1[0] = -2
-                        xz_1[1] = max(0, xz_1[1])
+
+                        if xz_ctr[0] > -2:
+                            xz_1[0] = xz_ctr[0]
+                            xz_1[1] = 0
+
+                            xz_pos_1[0] = -1
+                        else:
+                            xz_1[0] = -2
+                            xz_1[1] = max(0, xz_1[1])
+                            
+                            xz_pos_1[0] = -2
+
                 elif xz_ctr[0] == 1:
                     xz_1[0] = 1
                     xz_pos_1[0] = 1

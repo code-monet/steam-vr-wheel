@@ -46,7 +46,7 @@ class ConfiguratorApp:
         self.wheel_show_hands.Disable()
         self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
         self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
-        self.wheel_ffb = wx.CheckBox(self.pnl, label="Enabled Force Feedback (test)")
+        self.wheel_ffb = wx.CheckBox(self.pnl, label="Enable Force Feedback (test)")
         self.wheel_ffb.Disable()
         self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
@@ -69,9 +69,7 @@ class ConfiguratorApp:
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
-        self.shifter_button_layout_box = wx.CheckBox(self.pnl, label='Use Knob+A for splitter')
-        self.shifter_button_layout_box.Disable()
-        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='Knob grabbing has to be accurate')
+        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='You need to grab where the shifter exactly is')
 
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
@@ -110,7 +108,6 @@ class ConfiguratorApp:
         self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.shifter_button_layout_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.shifter_adaptive_bounds_box.Bind(wx.EVT_CHECKBOX, self.config_change)
 
         # Joystick button or axis
@@ -147,7 +144,6 @@ class ConfiguratorApp:
                                 shifter_degree=self.shifter_degree,
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_scale=self.shifter_scale,
-                                shifter_button_layout=self.shifter_button_layout_box,
                                 shifter_adaptive_bounds=self.shifter_adaptive_bounds_box,
 
                                 j_l_left_button=self.j_l_left_button,
@@ -218,7 +214,6 @@ class ConfiguratorApp:
             wx.StaticText(self.pnl, label = "Height 100%=Truck 40%=General")))
 
         self.vbox.AddSpacer(4)
-        self.vbox.Add(self.shifter_button_layout_box)
         self.vbox.Add(self.shifter_adaptive_bounds_box)
 
         self.vbox.AddSpacer(10)
