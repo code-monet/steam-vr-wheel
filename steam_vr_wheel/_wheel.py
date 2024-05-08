@@ -10,7 +10,7 @@ import threading
 import queue
 
 from steam_vr_wheel._virtualpad import VirtualPad, RightTrackpadAxisDisablerMixin
-from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType
+from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
 def check_result(result):
     if result:
@@ -827,6 +827,8 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         # FFB
         if self.config.wheel_ffb:
             self.device.ffb_callback(self.ffb_callback)
+            self._ffb_stopped = False
+            self._ffb_end = 0
 
         self.x = 0  # -1 0 1
         self._wheel_angles = deque(maxlen=10)
@@ -881,6 +883,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             self._ffb_test_handled = dict()
 
             self.last_now = now
+            self._ffb_test_dir_map = dict()
 
         def _ffb_test_f(handled, t, sub=None):
             k = str(t)
@@ -894,53 +897,98 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         elapsed = now-self.last_now
 
+        # Ignored types
+        typ = data['Type']
+        if typ in [
+            FFBPType.PT_CONDREP, # Ignore condtions
+            ]:
+            _ffb_test_f(True, typ)
 
-        if "EffOp" in data: #FFBPType.PT_EFOPREP
-            _ffb_test_f(False, FFBPType.PT_EFOPREP, data['EffOp']['EffectOp'])
+        if typ == FFBPType.PT_GAINREP:
+            pass
 
-        if "Eff_Constant" in data: #FFBPType.PT_CONSTREP
+        #FFBPType.PT_EFOPREP 10
+        if "EffOp" in data:
+            op = data['EffOp']['EffectOp']
+            if op == FFBOP.EFF_START or op == FFBOP.EFF_SOLO:
+
+                self._ffb_stopped = False
+            
+                loop = data['EffOp']['LoopCount']
+                if loop == 0:
+                    # Indefinite loop
+                    _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
+                else:
+                    # Not handled
+                    _ffb_test_f(False, FFBPType.PT_EFOPREP, "%d-%d" % (op, loop))
+
+            elif op == FFBOP.EFF_STOP:
+                self._ffb_stopped = True
+                _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
+            else:
+                #
+                _ffb_test_f(False, FFBPType.PT_EFOPREP, op)
+
+        #FFBPType.PT_EFFREP
+        if "Eff_Report" in data:
+
+            rep = data["Eff_Report"]
+            d = rep["Duration"]
+            if d == 0xFFFF:
+                self._ffb_end = 0
+            else:
+                self._ffb_end = now + d/1000.0
+
+            # Dir map
+            self._ffb_test_dir_map["DirX %d" % rep["DirX"]] = 0
+            self._ffb_test_dir_map["Direction %d" % rep["Direction"]] = 0
+
+            _ffb_test_f(True, FFBPType.PT_EFFREP)
+
+        #FFBPType.PT_CONSTREP
+        if "Eff_Constant" in data:
             self._center_speed_ffb = data['Eff_Constant']['Magnitude'] / 10000.0
             if elapsed != 0:
                 self._center_speed_ffb *= elapsed * 200
 
             _ffb_test_f(True, FFBPType.PT_CONSTREP)
+        
+        #FFBPType.PT_PRIDREP
+        if "Eff_Period" in data:
+            _ffb_test_f(True, FFBPType.PT_PRIDREP)
 
-        if "DevCtrl" in data: #FFBPType.PT_CTRLREP
+        #FFBPType.PT_CTRLREP
+        if "DevCtrl" in data:
             if data['DevCtrl'] in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
                 self._center_speed_ffb = 0
                 _ffb_test_f(True, FFBPType.PT_CTRLREP, data['DevCtrl'])
             else:
                 _ffb_test_f(False, FFBPType.PT_CTRLREP, data['DevCtrl'])
 
-
-        if data['Type'] not in [
+        if typ not in [
             FFBPType.PT_CONSTREP,
             FFBPType.PT_CTRLREP,
             FFBPType.PT_EFOPREP,
-
-            #  {1: 19313, 10: 19190, 11: 2, 13: 4}
+            FFBPType.PT_CONDREP,
+            FFBPType.PT_PRIDREP,
+            FFBPType.PT_EFFREP,
+            FFBPType.PT_GAINREP,
 
             # [TEST] FFB behaviors
-            # NO  {1: 109433, 10: 115706, 11: 2, 13: 2}
-            # YES {12: 3, 5: 109077}
+            # NO  {'13': 2, '11': 1, '10-1-1': 4, '17': 4}
+            # YES {'13': 2, '5': 74874, '1': 4, '12-4': 3, '10-3': 2, '12-3': 14, '3': 10060}
+            # Dir {'DirX 0': 0, 'Direction 0': 0}
 
-            # NO  {1: 59864, 3: 1, 4: 9036, 10: 22, 11: 6, 13: 115}
-            # YES {12: 37, 5: 50915}
-
-            # NO  {'10': 46739, '11': 1, '17': 1, '13': 35, '1': 46708}
-            # YES {'12-3': 2, '12-4': 2, '5': 46827}
-
-            # NO  {'13': 1, '10-1': 1721, '1': 1741, '17': 1}
-            # YES {'5': 1744, '12-4': 1, '12-3': 2}
+            # 17, 11, 1
 
             ]:
-            t = data['Type']
-            _ffb_test_f(False, t)
+            _ffb_test_f(False, typ)
 
         if now - self._ffb_test_t > 2.0:
             print("[TEST] FFB behaviors",
                 "\n  NO ", self._ffb_test_unhandled,
-                "\n  YES", self._ffb_test_handled)
+                "\n  YES", self._ffb_test_handled,
+                "\n  Dir", self._ffb_test_dir_map)
             self._ffb_test_t = now
 
         self.last_now = now

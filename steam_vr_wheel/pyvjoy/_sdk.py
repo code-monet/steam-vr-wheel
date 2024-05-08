@@ -273,7 +273,7 @@ class FfbGenCB:
 			if ERROR_SUCCESS == _vj.Ffb_h_EffOp(fData, byref(op)):
 				pydata['EffOp'] = dict({
 					"EffectOp": op.EffectOp,
-					"LoopCount": op.LoopCount,
+					"LoopCount": ord(op.LoopCount),
 					})
 
 			effect = FFB_EFF_REPORT()
@@ -287,8 +287,8 @@ class FfbGenCB:
 					"TriggerButton": ord(effect.TrigerBtn),
 					"Polar": True if effect.Polar == 1 else False,
 					"Direction": ord(effect.Direction),
-					"DirX": ord(effect.DirX),
-					"DirY": ord(effect.DirY),
+					"DirX": _twos_comp(ord(effect.DirX), 8),
+					"DirY": _twos_comp(ord(effect.DirY), 8),
 					})
 
 			cnst = FFB_EFF_CONSTANT()
