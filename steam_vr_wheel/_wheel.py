@@ -674,14 +674,12 @@ class HShifterImage:
                     else:
 
                         if xz_ctr[0] > -2:
-                            xz_1[0] = xz_ctr[0]
                             xz_1[1] = 0
 
                             xz_pos_1[0] = -1
                         else:
-                            xz_1[0] = -2
                             xz_1[1] = max(0, xz_1[1])
-                            
+
                             xz_pos_1[0] = -2
 
                 elif xz_ctr[0] == 1:
@@ -1093,10 +1091,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
     def set_button_unpress(self, button, hand):
         super().set_button_unpress(button, hand)
 
-        if self._hand_snaps[hand] == 'shifter':
-            if button == openvr.k_EButton_SteamVR_Trigger:
-                self.h_shifter_image.lock_reverse()
-
         if self.config.wheel_grabbed_by_grip_toggle:
             if button == openvr.k_EButton_Grip and hand == 'left':
                 self._grip_queue.put(['left', False])
@@ -1113,8 +1107,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         if self._hand_snaps[hand] == 'shifter':
             if button == openvr.k_EButton_A: # A
                 self.h_shifter_image.toggle_splitter(ctr)
-            if button == openvr.k_EButton_SteamVR_Trigger:
-                self.h_shifter_image.unlock_reverse()
 
         if button == openvr.k_EButton_Grip and hand == 'left':
             if self.config.wheel_grabbed_by_grip_toggle:
@@ -1498,6 +1490,12 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 self.h_shifter_image.toggle_range(shifter_ctr, True)
             elif y <= -0.8:
                 self.h_shifter_image.toggle_range(shifter_ctr, False)
+
+            trg = shifter_ctr.axis
+            if trg >= 0.7:
+                self.h_shifter_image.unlock_reverse()
+            else:
+                self.h_shifter_image.lock_reverse()
 
     def move_delta(self, d):
         self.center = Point(self.center.x + d[0], self.center.y + d[1], self.center.z + d[2])
