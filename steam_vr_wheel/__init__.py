@@ -23,6 +23,7 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False
                       shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
                       shifter_scale=100,
                       shifter_adaptive_bounds=False,
+                      shifter_reverse_orientation="Bottom Left",
 
                     # Joystick as button
                     j_l_left_button=False,
@@ -411,6 +412,17 @@ class PadConfig:
     def shifter_adaptive_bounds(self, x: bool):
         with self.data_lock:
             self._data['shifter_adaptive_bounds'] = x
+        self._write()
+
+    @property
+    def shifter_reverse_orientation(self):
+        with self.data_lock:
+            return self._data['shifter_reverse_orientation']
+
+    @shifter_reverse_orientation.setter
+    def shifter_reverse_orientation(self, x: bool):
+        with self.data_lock:
+            self._data['shifter_reverse_orientation'] = x
         self._write()
 
     # Joystick as button

@@ -71,6 +71,10 @@ class ConfiguratorApp:
         
         self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='You need to grab where the shifter exactly is')
 
+        self.shifter_reverse_orientation = wx.RadioBox(self.pnl, label="Reverse Position",
+            choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
+            majorDimension=1, style=wx.RA_SPECIFY_ROWS)
+
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
         self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
@@ -109,6 +113,7 @@ class ConfiguratorApp:
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_adaptive_bounds_box.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
         # Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -145,6 +150,7 @@ class ConfiguratorApp:
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_scale=self.shifter_scale,
                                 shifter_adaptive_bounds=self.shifter_adaptive_bounds_box,
+                                shifter_reverse_orientation=self.shifter_reverse_orientation,
 
                                 j_l_left_button=self.j_l_left_button,
                                 j_l_right_button=self.j_l_right_button,
@@ -215,6 +221,7 @@ class ConfiguratorApp:
 
         self.vbox.AddSpacer(4)
         self.vbox.Add(self.shifter_adaptive_bounds_box)
+        self.vbox.Add(self.shifter_reverse_orientation)
 
         self.vbox.AddSpacer(10)
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
@@ -257,11 +264,17 @@ class ConfiguratorApp:
             else:
                 sys.exit(1)
         for key, item in self._config_map.items():
-            item.SetValue(getattr(self.config, key))
+            if type(item) is wx.RadioBox:
+                item.SetSelection(item.FindString(getattr(self.config, key)))
+            else:
+                item.SetValue(getattr(self.config, key))
 
     def config_change(self, event):
         for key, item in self._config_map.items():
-            setattr(self.config, key, item.GetValue())
+            if type(item) is wx.RadioBox:
+                setattr(self.config, key, item.GetString(item.GetSelection()))
+            else:
+                setattr(self.config, key, item.GetValue())
 
     def run(self):
         self.app.MainLoop()
