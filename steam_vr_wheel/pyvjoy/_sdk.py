@@ -197,8 +197,13 @@ class FFB_DATA(Structure):
 				("cmd", c_ulong),
 				("data", POINTER(c_ubyte))]
 
+class FFB_DIR_UNION(Union):
+	_fields_ = [("Direction", c_char),
+				("DirX", c_char)]
+
 # cf. https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416616(v=vs.85)
 class FFB_EFF_REPORT(Structure):
+	_anonymous_ = ("FFB_DIR_UNION",)
 	_fields_ = [("EffectBlockIndex", c_char),
 				("EffectType", c_uint),
 				("Duration", c_ushort),
@@ -207,8 +212,7 @@ class FFB_EFF_REPORT(Structure):
 				("Gain", c_char),
 				("TrigerBtn", c_char),
 				("Polar", c_bool),
-				("Direction", c_char),
-				("DirX", c_char),
+				("FFB_DIR_UNION", FFB_DIR_UNION),
 				("DirY", c_char)]
 
 class FFB_EFF_OP(Structure):
@@ -243,9 +247,9 @@ def IsDeviceFfb(rID):
 	return _vj.IsDeviceFfb(rID)
 
 def _twos_comp(val, bits):
-    if (val & (1 << (bits - 1))) != 0:
-        val = val - (1 << bits) 
-    return val
+	if (val & (1 << (bits - 1))) != 0:
+		val = val - (1 << bits) 
+	return val
 
 FFB_GEN_CB = WINFUNCTYPE(None, c_void_p, c_void_p)
 

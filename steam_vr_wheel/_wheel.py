@@ -256,7 +256,7 @@ class HShifterImage:
         self.x = x
         self.y = y
         self.z = z
-        self.size = 7 / 100
+        self.size = 14 / 100
         self.degree = degree
         self.pos = 3.5
         self.wheel = wheel
@@ -274,10 +274,11 @@ class HShifterImage:
 
         self._splitter_toggled = False
         self._range_toggled = False
+        self._reverse_locked = True
 
-        self._pos_to_button = dict({1: 43,     3: 45,     5: 47,
-                                    1.5: None, 3.5: None, 5.5: None,
-                                    2: 44,     4: 46,     6: 48})
+        self._pos_to_button = dict({-1: None,   1: 43,     3: 45,     5: 47,
+                                    -0.5: None, 1.5: None, 3.5: None, 5.5: None,
+                                    0: 51,      2: 44,     4: 46,     6: 48})
         self._pressed_button = None
         self._xz = [0,0]
         self._last_xz_grid = np.array([0,0])
@@ -292,7 +293,7 @@ class HShifterImage:
 
         # Images
         this_dir = os.path.abspath(os.path.dirname(__file__))
-        slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot.png')
+        slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
         self._stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick_low.png')
         self._stick_img_2 = os.path.join(this_dir, 'media', 'h_shifter_stick_high.png')
         self._knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
@@ -305,7 +306,7 @@ class HShifterImage:
         # Visibility
         check_result(self.vroverlay.setOverlayColor(self.slot, 0.2, 0.2, 0.2)) # default gray outline
         check_result(self.vroverlay.setOverlayAlpha(self.slot, alpha/100))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 7cm
+        check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 14cm
         
         stick_width = 0.02
         self.stick_width = stick_width
@@ -405,6 +406,12 @@ class HShifterImage:
             btn_id = self._pos_to_button[self.pos]
             self._pressed_button = btn_id
 
+    def lock_reverse(self):
+        self._reverse_locked = True
+
+    def unlock_reverse(self):
+        self._reverse_locked = False
+
     def toggle_splitter(self, ctr):
         self._splitter_toggled = not self._splitter_toggled
         check_result(self.vroverlay.setOverlayFromFile(self.knob, 
@@ -486,7 +493,7 @@ class HShifterImage:
 
     def unsnap(self):
         self._snapped = False
-        if self.pos == 1.5 or self.pos == 5.5:
+        if self.pos in [-0.5, 1.5, 5.5]:
             self.set_stick_xz_pos([0,0])
 
         self._move_stick(self._xz_pos())
@@ -515,7 +522,7 @@ class HShifterImage:
         xz = self._xz
         pitch, yaw, roll = [hmd.pitch, hmd.yaw, hmd.roll]
 
-        unit = (self.size/2 - self.stick_width/2)
+        unit = (self.size/4 - self.stick_width/2)
 
         x_deg = self.degree * abs(xz[0])
         z_deg = self.degree * abs(xz[1])
@@ -575,9 +582,13 @@ class HShifterImage:
         if self.wheel.config.shifter_adaptive_bounds:
             self.collision_radius = 0.07
         else:
+            x_sin_full = sin(self.degree*pi/180) * self.stick_height
+            z_sin_full = sin(self.degree*pi/180) * self.stick_height
+            margin = 0.05
+
             self.bounds = [
-                [self.x - x_sin-unit, y_knob+0.055-0.1, self.z -z_sin-unit], 
-                [self.x + x_sin+unit, y_knob+0.055, self.z +z_sin+unit]]
+                [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
+                [self.x + x_sin_full+unit     + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
 
         self.x_knob = x_knob
         self.y_knob = y_knob
@@ -625,7 +636,7 @@ class HShifterImage:
 
         if self._snapped:
             u_sin = (self.stick_height * sin(self.degree*pi/180))
-            unit = (self.size/2 - self.stick_width/2)
+            unit = (self.size/4 - self.stick_width/2)
 
             ctr = self._snap_ctr
             p1 = [ctr.x, ctr.y, ctr.z]
@@ -638,7 +649,7 @@ class HShifterImage:
                         0,
                         dp_unsafe[2] / (u_sin + unit)]
             xz_ctr = np.array([
-                max(min(dp_unsafe[0], 1.0), -1.0),
+                max(min(dp_unsafe[0], 1.0), -2.0), # -2.0 for reverse
                 max(min(dp_unsafe[2], 1.0), -1.0)])
 
             x_mid_margin = 0.55
@@ -656,9 +667,14 @@ class HShifterImage:
 
                 xz_1[0] = xz_ctr[0]
                 xz_1[1] = xz_ctr[1]
-                if xz_ctr[0] == -1:
-                    xz_1[0] = -1
-                    xz_pos_1[0] = -1
+                if xz_ctr[0] <= -1:
+                    if xz_ctr[0] > -2.0 or (xz_pos_0[0] != -2 and self._reverse_locked):
+                        xz_1[0] = -1
+                        xz_pos_1[0] = -1
+                    else:
+                        xz_1[0] = -2
+                        xz_pos_1[0] = -2
+                        xz_1[1] = max(0, xz_1[1])
                 elif xz_ctr[0] == 1:
                     xz_1[0] = 1
                     xz_pos_1[0] = 1
@@ -672,13 +688,21 @@ class HShifterImage:
                     xz_1[1] = 0
             else:
                 xz_1[0] = xz_pos_0[0]
-                xz_1[1] = xz_ctr[1]
-                if xz_ctr[1] < -z_end_margin:
-                    xz_pos_1[1] = -1
-                elif xz_ctr[1] > z_end_margin:
-                    xz_pos_1[1] = 1
+
+                if xz_pos_0[0] == -2: # reverse
+                    xz_1[1] = max(0, xz_ctr[1])
+                    if xz_ctr[1] > z_end_margin:
+                        xz_pos_1[1] = 1
+                    else:
+                        xz_pos_1[1] = 0
                 else:
-                    xz_pos_1[1] = 0
+                    xz_1[1] = xz_ctr[1]
+                    if xz_ctr[1] < -z_end_margin:
+                        xz_pos_1[1] = -1
+                    elif xz_ctr[1] > z_end_margin:
+                        xz_pos_1[1] = 1
+                    else:
+                        xz_pos_1[1] = 0
 
             restrained_margin = 1.5
             if abs(dp_unsafe[0]-xz_pos_1[0]) > restrained_margin or abs(dp_unsafe[2]-xz_pos_1[1]) > restrained_margin:
@@ -1059,6 +1083,11 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
     def set_button_unpress(self, button, hand):
         super().set_button_unpress(button, hand)
+
+        if self._hand_snaps[hand] == 'shifter':
+            if button == openvr.k_EButton_SteamVR_Trigger:
+                self.h_shifter_image.lock_reverse()
+
         if self.config.wheel_grabbed_by_grip_toggle:
             if button == openvr.k_EButton_Grip and hand == 'left':
                 self._grip_queue.put(['left', False])
@@ -1073,12 +1102,10 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         super().set_button_press(button, hand)
 
         if self._hand_snaps[hand] == 'shifter':
-            if (button == (
-                openvr.k_EButton_SteamVR_Trigger # Trigger
-                if self.config.shifter_button_layout == False else
-                openvr.k_EButton_A)): # A
-
+            if button == openvr.k_EButton_A: # A
                 self.h_shifter_image.toggle_splitter(ctr)
+            if button == openvr.k_EButton_SteamVR_Trigger:
+                self.h_shifter_image.unlock_reverse()
 
         if button == openvr.k_EButton_Grip and hand == 'left':
             if self.config.wheel_grabbed_by_grip_toggle:

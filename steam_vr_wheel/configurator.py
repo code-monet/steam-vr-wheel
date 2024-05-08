@@ -70,7 +70,8 @@ class ConfiguratorApp:
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
         self.shifter_button_layout_box = wx.CheckBox(self.pnl, label='Use Knob+A for splitter')
-        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='Knob is easier to grab when it\'s out of sight (experimental)')
+        self.shifter_button_layout_box.Disable()
+        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='Knob grabbing has to be accurate')
 
         # Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
