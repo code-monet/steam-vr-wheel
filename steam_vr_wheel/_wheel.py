@@ -450,6 +450,9 @@ class HShifterImage:
 
     def toggle_range(self, ctr, override=None):
         if override is not None:
+            if self._range_toggled == override:
+                return
+            
             self._range_toggled = override
         else:
             self._range_toggled = not self._range_toggled

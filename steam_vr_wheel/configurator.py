@@ -217,7 +217,7 @@ class ConfiguratorApp:
         self.pnl_shifter.SetSizerAndFit(self.hbox_shifter)
         self.vbox.Add(self.pnl_shifter)
         self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = "Height 100%=Truck 40%=General")))
+            wx.StaticText(self.pnl, label = "Height 100%=Truck 30%=General")))
 
         self.vbox.AddSpacer(4)
         self.vbox.Add(self.shifter_adaptive_bounds_box)
