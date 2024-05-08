@@ -363,6 +363,23 @@ class HShifterImage:
         self.last_pos = 3.5
 
     def check_collision(self, ctr):
+        r = self.collision_radius
+        p = np.array([ctr.x, ctr.y, ctr.z])
+        a = np.array([self.x_stick, self.y, self.z_stick])
+        b = np.array([self.x_knob, self.y_knob, self.z_knob])
+
+        ap = p - a
+        ab = b - a
+
+        l = np.dot(ap, ab) / np.dot(ab, ab)
+        l = max(0, min(1, l))
+        c = a + ab * l
+        cp = p - c
+
+        d = np.sqrt(np.dot(cp, cp))
+        return d <= r
+
+    def __check_collision(self, ctr):
         x, y, z = ctr.x, ctr.y, ctr.z
         pm, pM = self.bounds
         x0, y0, z0 = pm
@@ -395,7 +412,7 @@ class HShifterImage:
 
         def haptic():
             openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-            time.sleep(0.16)
+            time.sleep(0.11)
             openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
         t = threading.Thread(target=haptic)
         t.start()
@@ -410,9 +427,9 @@ class HShifterImage:
             self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
 
         def haptic():
-            for i in range(16):
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-                time.sleep(0.02)
+            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+            time.sleep(0.11)
+            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
         t = threading.Thread(target=haptic)
         t.start()
 
@@ -560,6 +577,7 @@ class HShifterImage:
             [self.x - x_sin-unit-0.065, self.y+self.stick_height-0.16, self.z -z_sin-unit-0.08], 
             [self.x + x_sin+unit+0.065, self.y+self.stick_height+0.08, self.z +z_sin+unit+0.08]]
         """
+        """
         if self.wheel.config.shifter_adaptive_bounds:
             d = sqrt((x_knob-hmd.x)**2+
                         (y_knob-hmd.y)**2+
@@ -587,6 +605,40 @@ class HShifterImage:
             self.bounds = [
                 [x_knob-0.065, y_knob+0.055 -0.1, z_knob-0.08], 
                 [x_knob+0.065, y_knob+0.055 +0.1, z_knob+0.08]]
+        """
+        if self.wheel.config.shifter_adaptive_bounds:
+            d = sqrt((x_knob-hmd.x)**2+
+                        (y_knob-hmd.y)**2+
+                        (z_knob-hmd.z)**2)
+            p2 = hmd.normal.copy() * d
+            pc_d = sqrt((x_knob-p2[0])**2+
+                        (y_knob-p2[1])**2+
+                        (z_knob-p2[2])**2)
+
+            a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
+            th = acos(a)
+
+            lower = pi/12
+            upper = pi/3
+
+            r_low = 0.08
+            r_high = 0.12
+
+            if th < lower:
+                self.collision_radius = r_low
+            elif th < upper:
+                self.collision_radius = r_low + ((r_high-r_low) * (th-lower)/(upper-lower))
+            else:
+                self.collision_radius = r_high
+
+        else:
+            self.collision_radius = 0.06
+
+        self.x_knob = x_knob
+        self.y_knob = y_knob
+        self.z_knob = z_knob
+        self.x_stick = x_stick
+        self.z_stick = z_stick
 
         # Set snap transform
         ctr = self._snap_ctr
