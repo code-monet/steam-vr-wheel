@@ -1,5 +1,6 @@
 import sys
 import wx
+import os
 
 from steam_vr_wheel import PadConfig, ConfigException
 
@@ -14,11 +15,21 @@ class ConfiguratorApp:
     def __init__(self):
 
         self.app = wx.App()
-        self.window = wx.Frame(None, title="Steam Vr Wheel Configuration")
+        self.window = wx.Frame(None, title="steam-vr-wheel Configuration", style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER ^ wx.MINIMIZE_BOX ^ wx.MAXIMIZE_BOX)
         self.parent_pnl = wx.Panel(self.window)
         self.parent_hbox = wx.BoxSizer(wx.HORIZONTAL)
         self.pnl = wx.Panel(self.parent_pnl)
         self.vbox = wx.BoxSizer(wx.VERTICAL)
+
+        #
+        self.pnl_profile_buttons = wx.Panel(self.pnl)
+        self.hbox_profile_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self.profile_combo = wx.ComboBox(self.pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
+        self.profile_new = wx.Button(self.pnl_profile_buttons, label="New", size=(60,22))
+        self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
+        self.profile_open_dir = wx.Button(self.pnl_profile_buttons, label="Open", size=(60,22))
+
+        #
         self.trigger_pre_btn_box = wx.CheckBox(self.pnl, label='Button click when resting finger on triggers (button 31, 32)')
         self.trigger_btn_box = wx.CheckBox(self.pnl, label='Button click when pressing triggers (button 1, 9)')
         self.multibutton_trackpad_box = wx.CheckBox(self.pnl, label='(VIVE) Trackpad clicks has 4 additional zones')
@@ -87,7 +98,14 @@ class ConfiguratorApp:
         self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
         self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
 
+        # BINDINGS
+        # Profile binds
+        self.profile_combo.Bind(wx.EVT_COMBOBOX, self.profile_change)
+        self.profile_new.Bind(wx.EVT_BUTTON, self.profile_buttons)
+        self.profile_delete.Bind(wx.EVT_BUTTON, self.profile_buttons)
+        self.profile_open_dir.Bind(wx.EVT_BUTTON, self.profile_buttons)
 
+        #
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -163,6 +181,16 @@ class ConfiguratorApp:
                                 )
 
         self.vbox.AddSpacer(5)
+
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Selected Profile"))
+        self.hbox_profile_buttons.Add(self.profile_combo)
+        self.hbox_profile_buttons.AddSpacer(6)
+        self.hbox_profile_buttons.Add(self.profile_new)
+        self.hbox_profile_buttons.Add(self.profile_delete)
+        self.hbox_profile_buttons.Add(self.profile_open_dir)
+        self.pnl_profile_buttons.SetSizerAndFit(self.hbox_profile_buttons)
+        self.vbox.Add(self.pnl_profile_buttons)
+        self.vbox.AddSpacer(12)
 
         self.vbox.Add(self.trigger_pre_btn_box)
         self.vbox.Add(self.trigger_btn_box)
@@ -276,7 +304,41 @@ class ConfiguratorApp:
             else:
                 setattr(self.config, key, item.GetValue())
 
+        p = self.profile_combo.GetValue()
+        if p != "":
+            self.config.save_to_profile(p)
+
+    def profile_change(self, event):
+        v = event.GetEventObject().GetValue()
+        self.config.switch_profile(v)
+        self.read_config()
+
+    def profile_buttons(self, event):
+        l = event.GetEventObject().GetLabel()
+        if l == "New":
+            p = self.config.save_as_new_profile()
+            i = self.profile_combo.Append(p)
+            self.profile_combo.SetSelection(i)
+        elif l == "Delete":
+            i = self.profile_combo.GetSelection()
+            if i != wx.NOT_FOUND:
+                self.config.delete_profile(self.profile_combo.GetValue())
+                self.profile_combo.Delete(i)
+        elif l == "Open":
+            os.startfile(self.config.get_config_dir())
+
     def run(self):
+
+        for p in PadConfig.get_profiles():
+            self.profile_combo.Append(p)
+
+        p = self.config.find_current_profile()
+        if p != "":
+            i = self.profile_combo.FindString(p)
+            if i == wx.NOT_FOUND:
+                raise Exception("Config file not loaded")
+            self.profile_combo.SetSelection(i)
+
         self.app.MainLoop()
 
 
