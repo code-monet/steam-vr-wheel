@@ -958,8 +958,9 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             ]:
             _ffb_test_f(True, typ)
 
+        # Gain
         if typ == FFBPType.PT_GAINREP:
-            pass
+            _ffb_test_f(False, typ)
 
         #FFBPType.PT_EFOPREP 10
         if "EffOp" in data:
@@ -989,7 +990,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
             rep = data["Eff_Report"]
             d = rep["Duration"]
             if d == 0xFFFF:
-                self._ffb_end = 0
+                self._ffb_end = now + 86400 * 365
             else:
                 self._ffb_end = now + d/1000.0
 
@@ -1009,7 +1010,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         
         #FFBPType.PT_PRIDREP
         if "Eff_Period" in data:
-            _ffb_test_f(True, FFBPType.PT_PRIDREP)
+            _ffb_test_f(False, FFBPType.PT_PRIDREP)
 
         #FFBPType.PT_CTRLREP
         if "DevCtrl" in data:
@@ -1235,7 +1236,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
         if self.config.wheel_ffb:
 
-            if self._ffb_stopped or (self._ffb_end != 0 and now > self._ffb_end):
+            if self._ffb_stopped or now > self._ffb_end:
                 epsilon = 0
             else:
                 epsilon *= self._center_speed_ffb
