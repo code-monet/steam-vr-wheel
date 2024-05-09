@@ -399,15 +399,6 @@ class PadConfig:
         self._write()
 
     @property
-    def shifter_button_layout(self):
-        return self._data['shifter_button_layout']
-
-    @shifter_button_layout.setter
-    def shifter_button_layout(self, x: bool):
-        self._data['shifter_button_layout'] = x
-        self._write()
-
-    @property
     def shifter_adaptive_bounds(self):
         return self._data['shifter_adaptive_bounds']
 

@@ -138,11 +138,15 @@ class VirtualPad:
             del DISABLED_BUTTONS[b]
             del DISABLED_BUTTONS[b+1]
 
+    def get_axis_zero(self, hand, axis):
+        btns = self.axis_buttons(hand, axis)
+        zero = 0.0 if btns[0] or btns[1] else 0.5
+        return zero
+
     def disable_axis(self, hand, axis):
         axis_id = AXES[hand][axis]
         DISABLED_AXES[axis_id] = True
-        btns = self.axis_buttons(hand, axis)
-        zero = 0.0 if btns[0] or btns[1] else 0.5
+        zero = self.get_axis_zero(hand, axis)
         self.device.set_axis(axis_id, int(zero * 0x8000))
 
         if axis in AXES_BASE_HID[hand]:

@@ -473,51 +473,6 @@ class HShifterImage:
         self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
 
-
-
-
-        return
-
-        # Check double tap
-        self._snap_times.append(now)
-        self._snap_times = self._snap_times[-3:]
-
-        if len(self._snap_times) >= 3 and self._snap_times[-1] - self._snap_times[-3] <= 1.0:
-
-            self._snap_db_timer.cancel()
-            self._snap_times = []
-
-            #self.wheel.device.set_button(50, True)
-            #self._button_queue.append([50, time.time()])
-            self._range_toggled = not self._range_toggled
-            check_result(self.vroverlay.setOverlayFromFile(self.stick,
-                self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
-
-            def haptic():
-                for i in range(16):
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-                    time.sleep(0.02)
-            t = threading.Thread(target=haptic)
-            t.run()
-
-        elif len(self._snap_times) >= 2 and self._snap_times[-1] - self._snap_times[-2] <= 0.5:
-            def wait_for_third():
-                self._snap_times = []
-
-                #self.wheel.device.set_button(49, True)
-                #self._button_queue.append([49, time.time()])
-                self._splitter_toggled = not self._splitter_toggled
-                check_result(self.vroverlay.setOverlayFromFile(self.knob, 
-                    self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
-                def haptic():
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-                    time.sleep(0.16)
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-                t = threading.Thread(target=haptic)
-                t.run()
-            self._snap_db_timer = threading.Timer(0.35, wait_for_third)
-            self._snap_db_timer.start()
-
     def unsnap(self):
         self._snapped = False
         if self._pressed_button is None:
@@ -927,6 +882,7 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                             scale=self.config.shifter_scale,
                             degree=self.config.shifter_degree)
         self._last_knob_haptic = 0
+        self._shifter_button_lock = threading.Lock()
 
     def ffb_callback(self, data):
 
@@ -1399,24 +1355,61 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
                 return
 
         if grip_info[1] == False:
-            if self._hand_snaps[hand][:5] == 'wheel':
-                self._snapped = False
-            elif self._hand_snaps[hand] == 'shifter':
+            v = self._hand_snaps[hand]
+            self._hand_snaps[hand] = ''
 
+            if v[:5] == 'wheel':
+                self._snapped = False
+            elif v == 'shifter':
                 self.h_shifter_image.unsnap()
 
-                # Enable splitter/range related buttons back
-                if self.config.shifter_button_layout == False:
-                    self.enable_button(hand, openvr.k_EButton_SteamVR_Trigger)
-                    self.enable_axis(hand, 'trigger')
-                else:
-                    self.enable_button(hand, openvr.k_EButton_A)
+                def enabler():
+                    # Enable splitter/range related buttons back
+                    ## Wait for each button to be unpressed to prevent unwanted button presses
+                    t = [False, False, False, False]
+                    c = ctr
+                    while True:
 
-                self.enable_axis(hand, 'down-up')
+                        self._shifter_button_lock.acquire()
+                        if self._hand_snaps['left'] == 'shifter' or self._hand_snaps['right'] == 'shifter':
+                            self._shifter_button_lock.release()
+                            break
+
+                        if t[0]:
+                            pass
+                        elif c.is_pressed(openvr.k_EButton_SteamVR_Trigger) == False:
+                            self.enable_button(hand, openvr.k_EButton_SteamVR_Trigger)
+                            t[0] = True
+
+                        if t[1]:
+                            pass
+                        elif c.is_pressed(openvr.k_EButton_A) == False:
+                            self.enable_button(hand, openvr.k_EButton_A)
+                            t[1] = True
+
+                        if t[2]:
+                            pass
+                        elif abs(c.trackpadY) <= 0.1:
+                            self.enable_axis(hand, 'down-up')
+                            t[2] = True
+
+                        if t[3]:
+                            pass
+                        elif c.axis <= 0.1:
+                            self.enable_axis(hand, 'trigger')
+                            t[3] = True
+                        self._shifter_button_lock.release()
+
+                        if False not in t:
+                            break
+
+                        time.sleep(0.1)
+
+                t = threading.Thread(target=enabler)
+                t.start()
 
             self.hands_overlay.attach_to_ctr(hand)
             ungrabber()
-            self._hand_snaps[hand] = ''
         else:
             if self._hand_snaps[hand] == 'wheel_auto':
                 self._hand_snaps[hand] = 'wheel'
@@ -1426,17 +1419,18 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
 
             grabber()
             if self.h_shifter_image.check_collision(ctr) and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
+
+                self._shifter_button_lock.acquire()
                 self._hand_snaps[hand] = 'shifter'
-                self.h_shifter_image.snap_ctr(ctr)
 
                 # Disable splitter/range buttons so that it won't register
-                if self.config.shifter_button_layout == False:
-                    self.disable_button(hand, openvr.k_EButton_SteamVR_Trigger)
-                    self.disable_axis(hand, 'trigger')
-                else:
-                    self.disable_button(hand, openvr.k_EButton_A)
-
+                self.disable_button(hand, openvr.k_EButton_SteamVR_Trigger)
+                self.disable_axis(hand, 'trigger')
+                self.disable_button(hand, openvr.k_EButton_A)
                 self.disable_axis(hand, 'down-up')
+                self._shifter_button_lock.release()
+
+                self.h_shifter_image.snap_ctr(ctr)
 
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
