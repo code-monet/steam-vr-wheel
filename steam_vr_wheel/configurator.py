@@ -49,23 +49,36 @@ class ConfiguratorApp:
         self.edit_mode_box.Hide()
         ###
 
-        self.wheel_grabbed_by_grip_box = wx.CheckBox(self.pnl, label='Manual wheel grabbing')
-        self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.pnl, label='Grabbing object is NOT toggle')
-        self.wheel_show_wheel = wx.CheckBox(self.pnl, label="Show Wheel Overlay")
+        self.nb = wx.Notebook(self.pnl)
+
+        self.nb_pnl_wheel_wrapper = wx.Panel(self.nb)
+        self.nb_hbox_wheel_wrapper = wx.BoxSizer(wx.HORIZONTAL)
+        self.nb_pnl_wheel = wx.Panel(self.nb_pnl_wheel_wrapper)
+        self.nb_vbox_wheel = wx.BoxSizer(wx.VERTICAL)
+
+        self.nb_pnl_bike_wrapper = wx.Panel(self.nb)
+        self.nb_hbox_bike_wrapper = wx.BoxSizer(wx.HORIZONTAL)
+        self.nb_pnl_bike = wx.Panel(self.nb)
+        self.nb_vbox_bike = wx.BoxSizer(wx.VERTICAL)
+
+
+        self.wheel_grabbed_by_grip_box = wx.CheckBox(self.nb_pnl_wheel, label='Manual wheel grabbing')
+        self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.nb_pnl_wheel, label='Grabbing object is NOT toggle')
+        self.wheel_show_wheel = wx.CheckBox(self.nb_pnl_wheel, label="Show Wheel Overlay")
         self.wheel_show_wheel.Disable()
-        self.wheel_show_hands = wx.CheckBox(self.pnl, label="Show Hands Overlay")
+        self.wheel_show_hands = wx.CheckBox(self.nb_pnl_wheel, label="Show Hands Overlay")
         self.wheel_show_hands.Disable()
-        self.wheel_degrees = wx.SpinCtrl(self.pnl, name = "Wheel Degrees", max = 10000)
-        self.wheel_centerforce = wx.SpinCtrl(self.pnl, name = "Center Force")
-        self.wheel_ffb = wx.CheckBox(self.pnl, label="Enable Force Feedback (test)")
+        self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max = 10000)
+        self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force")
+        self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Enable Force Feedback (test)")
         self.wheel_ffb.Disable()
-        self.wheel_pitch = wx.SpinCtrl(self.pnl, name = "Wheel Pitch", min=-30, max=120)
-        self.wheel_alpha = wx.SpinCtrl(self.pnl, name = "Wheel Alpha", max = 100)
-        self.wheel_transparent_center_box = wx.CheckBox(self.pnl, label='Wheel becomes transparent while looking at it')
-        self.wheel_adaptive_center_box = wx.CheckBox(self.pnl, label='Wheel moves in order to prevent abrupt turn (experimental)')
+        self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
+        self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max = 100)
+        self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
+        self.wheel_adaptive_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel moves in order to prevent abrupt turn (experimental)')
 
         # Shifter
-        self.pnl_shifter = wx.Panel(self.pnl)
+        self.pnl_shifter = wx.Panel(self.nb_pnl_wheel)
         self.hbox_shifter = wx.BoxSizer(wx.HORIZONTAL)
 
         self.pnl_shifter_degree = wx.Panel(self.pnl_shifter)
@@ -80,14 +93,14 @@ class ConfiguratorApp:
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
-        self.shifter_adaptive_bounds_box = wx.CheckBox(self.pnl, label='You need to grab where the shifter exactly is')
+        self.shifter_adaptive_bounds_box = wx.CheckBox(self.nb_pnl_wheel, label='You need to grab where the shifter exactly is')
 
-        self.shifter_reverse_orientation = wx.RadioBox(self.pnl, label="Reverse Position",
+        self.shifter_reverse_orientation = wx.RadioBox(self.nb_pnl_wheel, label="Reverse Position",
             choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
             majorDimension=1, style=wx.RA_SPECIFY_ROWS)
 
         # Joystick button or axis
-        self.pnl_joystick = wx.Panel(self.pnl)
+        self.pnl_joystick = wx.Panel(self.nb_pnl_wheel)
         self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
         self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
         self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
@@ -180,6 +193,7 @@ class ConfiguratorApp:
                                 j_r_down_button=self.j_r_down_button,
                                 )
 
+        # Adding items
         self.vbox.AddSpacer(5)
 
         self.vbox.Add(wx.StaticText(self.pnl, label = "Selected Profile"))
@@ -201,33 +215,36 @@ class ConfiguratorApp:
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.touchpad_always_updates_box)
-        self.vbox.Add(self.vertical_wheel_box)
-        self.vbox.Add(self.joystick_updates_only_when_grabbed_box)
-        self.vbox.Add(self.joystick_grabbing_switch_box)
-        self.vbox.Add(self.edit_mode_box)
-        self.vbox.Add(self.wheel_grabbed_by_grip_box)
-        self.vbox.Add(self.wheel_grabbed_by_grip_box_toggle)
-        self.vbox.Add(self.wheel_show_wheel)
-        self.vbox.Add(self.wheel_show_hands)
-        self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Degrees"))
-        self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck")))
-        self.vbox.Add(self.wheel_degrees)
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Center Force"))
-        self.vbox.Add(self.wheel_centerforce)
-        self.vbox.Add(self.wheel_ffb)
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Pitch"))
-        self.vbox.Add(self.wheel_pitch)
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Wheel Alpha"))
-        self.vbox.Add(self.wheel_alpha)
-        self.vbox.Add(self.wheel_transparent_center_box)
-        self.vbox.Add(self.wheel_adaptive_center_box)
 
-        self.vbox.AddSpacer(10)
+        ## Adding items to Wheel page
+        self.nb_vbox_wheel.AddSpacer(5)
+        self.nb_vbox_wheel.Add(self.vertical_wheel_box)
+        self.nb_vbox_wheel.Add(self.joystick_updates_only_when_grabbed_box)
+        self.nb_vbox_wheel.Add(self.joystick_grabbing_switch_box)
+        self.nb_vbox_wheel.Add(self.edit_mode_box)
+        self.nb_vbox_wheel.Add(self.wheel_grabbed_by_grip_box)
+        self.nb_vbox_wheel.Add(self.wheel_grabbed_by_grip_box_toggle)
+        self.nb_vbox_wheel.Add(self.wheel_show_wheel)
+        self.nb_vbox_wheel.Add(self.wheel_show_hands)
+        self.nb_vbox_wheel.AddSpacer(10)
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Degrees"))
+        self.nb_vbox_wheel.Add(_decrease_font(
+            wx.StaticText(self.nb_pnl_wheel, label = "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck")))
+        self.nb_vbox_wheel.Add(self.wheel_degrees)
+        self.nb_vbox_wheel.AddSpacer(4)
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Center Force"))
+        self.nb_vbox_wheel.Add(self.wheel_centerforce)
+        self.nb_vbox_wheel.Add(self.wheel_ffb)
+        self.nb_vbox_wheel.AddSpacer(4)
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Pitch"))
+        self.nb_vbox_wheel.Add(self.wheel_pitch)
+        self.nb_vbox_wheel.AddSpacer(4)
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Alpha"))
+        self.nb_vbox_wheel.Add(self.wheel_alpha)
+        self.nb_vbox_wheel.Add(self.wheel_transparent_center_box)
+        self.nb_vbox_wheel.Add(self.wheel_adaptive_center_box)
+
+        self.nb_vbox_wheel.AddSpacer(10)
         self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Degree"))
         self.vbox_shifter_degree.Add(self.shifter_degree)
         self.vbox_shifter_alpha.Add(wx.StaticText(self.pnl_shifter_alpha, label = "Shifter Alpha"))
@@ -243,18 +260,18 @@ class ConfiguratorApp:
         self.hbox_shifter.Add(self.pnl_shifter_degree)
         self.hbox_shifter.Add(self.pnl_shifter_scale)
         self.pnl_shifter.SetSizerAndFit(self.hbox_shifter)
-        self.vbox.Add(self.pnl_shifter)
-        self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = "Height 100%=Truck 30%=General")))
+        self.nb_vbox_wheel.Add(self.pnl_shifter)
+        self.nb_vbox_wheel.Add(_decrease_font(
+            wx.StaticText(self.nb_pnl_wheel, label = "Height 100%=Truck 30%=General")))
 
-        self.vbox.AddSpacer(4)
-        self.vbox.Add(self.shifter_adaptive_bounds_box)
-        self.vbox.Add(self.shifter_reverse_orientation)
+        self.nb_vbox_wheel.AddSpacer(4)
+        self.nb_vbox_wheel.Add(self.shifter_adaptive_bounds_box)
+        self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)
 
-        self.vbox.AddSpacer(10)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
-        self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = "Checked joystick acts as button")))
+        self.nb_vbox_wheel.AddSpacer(10)
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Use Joystick as Axis/Button"))
+        self.nb_vbox_wheel.Add(_decrease_font(
+            wx.StaticText(self.nb_pnl_wheel, label = "Checked joystick acts as button")))
         self.hbox_joystick.Add(self.j_l_left_button)
         self.hbox_joystick.Add(self.j_l_right_button)
         self.hbox_joystick.Add(self.j_l_up_button)
@@ -264,10 +281,35 @@ class ConfiguratorApp:
         self.hbox_joystick.Add(self.j_r_up_button)
         self.hbox_joystick.Add(self.j_r_down_button)
         self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
-        self.vbox.Add(self.pnl_joystick)
+        self.nb_vbox_wheel.Add(self.pnl_joystick)
+
+        self.nb_vbox_wheel.AddSpacer(5)
+
+        self.nb_pnl_wheel.SetSizerAndFit(self.nb_vbox_wheel)
+
+        self.nb_hbox_wheel_wrapper.AddSpacer(6)
+        self.nb_hbox_wheel_wrapper.Add(self.nb_pnl_wheel)
+        self.nb_hbox_wheel_wrapper.AddSpacer(6)
+        self.nb_pnl_wheel_wrapper.SetSizerAndFit(self.nb_hbox_wheel_wrapper)
+        self.nb.AddPage(self.nb_pnl_wheel_wrapper, "Wheel")
+
+
+        ## Adding items to Bike page
+        self.nb_vbox_bike.AddSpacer(5)
+
+        
+        self.nb_vbox_bike.AddSpacer(5)
+        self.nb_pnl_bike.SetSizerAndFit(self.nb_vbox_bike)
+
+        self.nb_hbox_bike_wrapper.AddSpacer(6)
+        self.nb_hbox_bike_wrapper.Add(self.nb_pnl_bike) # NOTE: if you add boxsizer, not panel, it will take long for the window to close
+        self.nb_hbox_bike_wrapper.AddSpacer(6)
+        self.nb_pnl_bike_wrapper.SetSizerAndFit(self.nb_hbox_bike_wrapper)
+        self.nb.AddPage(self.nb_pnl_bike_wrapper, "Bike")
 
         self.vbox.AddSpacer(5)
-
+        self.vbox.Add(self.nb)
+        self.vbox.AddSpacer(5)
         self.pnl.SetSizerAndFit(self.vbox)
 
         self.parent_hbox.AddSpacer(8)
