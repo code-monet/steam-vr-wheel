@@ -26,8 +26,8 @@ class ConfiguratorApp:
         self.hbox_profile_buttons = wx.BoxSizer(wx.HORIZONTAL)
         self.profile_combo = wx.ComboBox(self.pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
         self.profile_new = wx.Button(self.pnl_profile_buttons, label="New", size=(60,22))
-        self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
         self.profile_open_dir = wx.Button(self.pnl_profile_buttons, label="Open", size=(60,22))
+        self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
 
         #
         self.trigger_pre_btn_box = wx.CheckBox(self.pnl, label='Button click when resting finger on triggers (button 31, 32)')
@@ -58,10 +58,10 @@ class ConfiguratorApp:
 
         self.nb_pnl_bike_wrapper = wx.Panel(self.nb)
         self.nb_hbox_bike_wrapper = wx.BoxSizer(wx.HORIZONTAL)
-        self.nb_pnl_bike = wx.Panel(self.nb)
+        self.nb_pnl_bike = wx.Panel(self.nb_pnl_bike_wrapper)
         self.nb_vbox_bike = wx.BoxSizer(wx.VERTICAL)
 
-
+        ## Wheel Page
         self.wheel_grabbed_by_grip_box = wx.CheckBox(self.nb_pnl_wheel, label='Manual wheel grabbing')
         self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.nb_pnl_wheel, label='Grabbing object is NOT toggle')
         self.wheel_show_wheel = wx.CheckBox(self.nb_pnl_wheel, label="Show Wheel Overlay")
@@ -75,9 +75,9 @@ class ConfiguratorApp:
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max = 100)
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
-        self.wheel_adaptive_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel moves in order to prevent abrupt turn (experimental)')
+        self.wheel_adaptive_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel moves in order to prevent abrupt turn')
 
-        # Shifter
+        ### Shifter
         self.pnl_shifter = wx.Panel(self.nb_pnl_wheel)
         self.hbox_shifter = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -99,7 +99,7 @@ class ConfiguratorApp:
             choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
             majorDimension=1, style=wx.RA_SPECIFY_ROWS)
 
-        # Joystick button or axis
+        ### Joystick button or axis
         self.pnl_joystick = wx.Panel(self.nb_pnl_wheel)
         self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
         self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
@@ -111,6 +111,14 @@ class ConfiguratorApp:
         self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
         self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
 
+        ## Bike page
+        self.bike_show_handlebar = wx.CheckBox(self.nb_pnl_bike, label="Show Handlebar Overlay")
+        self.bike_show_handlebar.Disable()
+        self.bike_show_hands = wx.CheckBox(self.nb_pnl_bike, label="Show Hands Overlay")
+        self.bike_show_hands.Disable()
+        self.bike_handlebar_height = wx.SpinCtrl(self.nb_pnl_bike, name="Handlebar Height (cm)", min=0, max=300)
+        self.bike_max_lean = wx.SpinCtrl(self.nb_pnl_bike, name="Lean Angle (Degrees)", min=0, max=90)
+
         # BINDINGS
         # Profile binds
         self.profile_combo.Bind(wx.EVT_COMBOBOX, self.profile_change)
@@ -118,7 +126,7 @@ class ConfiguratorApp:
         self.profile_delete.Bind(wx.EVT_BUTTON, self.profile_buttons)
         self.profile_open_dir.Bind(wx.EVT_BUTTON, self.profile_buttons)
 
-        #
+        # Wheel
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -139,14 +147,14 @@ class ConfiguratorApp:
         self.wheel_transparent_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_adaptive_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
 
-        # Shifter
+        ## Shifter
         self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_adaptive_bounds_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
-        # Joystick button or axis
+        ## Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_l_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_l_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -155,6 +163,9 @@ class ConfiguratorApp:
         self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+
+        # Bike
+        self.bike_max_lean.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
@@ -191,6 +202,11 @@ class ConfiguratorApp:
                                 j_r_right_button=self.j_r_right_button,
                                 j_r_up_button=self.j_r_up_button,
                                 j_r_down_button=self.j_r_down_button,
+
+                                bike_show_handlebar=self.bike_show_handlebar,
+                                bike_show_hands=self.bike_show_hands,
+                                bike_handlebar_height=self.bike_handlebar_height,
+                                bike_max_lean=self.bike_max_lean,
                                 )
 
         # Adding items
@@ -200,8 +216,8 @@ class ConfiguratorApp:
         self.hbox_profile_buttons.Add(self.profile_combo)
         self.hbox_profile_buttons.AddSpacer(6)
         self.hbox_profile_buttons.Add(self.profile_new)
-        self.hbox_profile_buttons.Add(self.profile_delete)
         self.hbox_profile_buttons.Add(self.profile_open_dir)
+        self.hbox_profile_buttons.Add(self.profile_delete)
         self.pnl_profile_buttons.SetSizerAndFit(self.hbox_profile_buttons)
         self.vbox.Add(self.pnl_profile_buttons)
         self.vbox.AddSpacer(12)
@@ -297,7 +313,19 @@ class ConfiguratorApp:
         ## Adding items to Bike page
         self.nb_vbox_bike.AddSpacer(5)
 
-        
+        self.nb_vbox_bike.Add(self.bike_show_handlebar)
+        self.nb_vbox_bike.Add(self.bike_show_hands)
+        self.nb_vbox_bike.AddSpacer(10)
+
+        self.nb_vbox_bike.Add(wx.StaticText(self.nb_pnl_bike, label="In-game Handlebar Height (cm)"))
+        self.nb_vbox_bike.Add(_decrease_font(
+            wx.StaticText(self.nb_pnl_bike, label = "In-game bike model handlebar's height from the floor")))
+        self.nb_vbox_bike.Add(self.bike_handlebar_height)
+        self.nb_vbox_bike.AddSpacer(4)
+
+        self.nb_vbox_bike.Add(wx.StaticText(self.nb_pnl_bike, label="Max Lean Angle"))
+        self.nb_vbox_bike.Add(self.bike_max_lean)
+
         self.nb_vbox_bike.AddSpacer(5)
         self.nb_pnl_bike.SetSizerAndFit(self.nb_vbox_bike)
 
@@ -333,6 +361,22 @@ class ConfiguratorApp:
                 self.config = PadConfig(load_defaults=True)
             else:
                 sys.exit(1)
+
+        #
+        self.profile_combo.Clear()
+        for p in PadConfig.get_profiles():
+            self.profile_combo.Append(p)
+
+        p = self.config.find_current_profile()
+        if p != "":
+            i = self.profile_combo.FindString(p)
+            if i == wx.NOT_FOUND:
+                raise Exception("Config file not loaded")
+            self.profile_combo.SetSelection(i)
+        else:
+            self.profile_combo.SetSelection(wx.NOT_FOUND)
+
+        #
         for key, item in self._config_map.items():
             if type(item) is wx.RadioBox:
                 item.SetSelection(item.FindString(getattr(self.config, key)))
@@ -351,8 +395,8 @@ class ConfiguratorApp:
             self.config.save_to_profile(p)
 
     def profile_change(self, event):
-        v = event.GetEventObject().GetValue()
-        self.config.switch_profile(v)
+        cb = event.GetEventObject()
+        self.config.switch_profile(cb.GetValue())
         self.read_config()
 
     def profile_buttons(self, event):
@@ -370,18 +414,8 @@ class ConfiguratorApp:
             os.startfile(self.config.get_config_dir())
 
     def run(self):
-
-        for p in PadConfig.get_profiles():
-            self.profile_combo.Append(p)
-
-        p = self.config.find_current_profile()
-        if p != "":
-            i = self.profile_combo.FindString(p)
-            if i == wx.NOT_FOUND:
-                raise Exception("Config file not loaded")
-            self.profile_combo.SetSelection(i)
-
         self.app.MainLoop()
+
 
 
 def run():

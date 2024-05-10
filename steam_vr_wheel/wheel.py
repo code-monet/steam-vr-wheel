@@ -6,9 +6,7 @@ import time
 import openvr
 import sys
 
-from steam_vr_wheel._double_joystick import DoubleJoystick
-from steam_vr_wheel._joystick import Joystick
-from steam_vr_wheel._touchwheel import TouchWheel
+from steam_vr_wheel._bike import Bike
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel._wheel import Wheel
 from steam_vr_wheel.vrcontroller import Controller
@@ -22,6 +20,7 @@ if 'DEBUG' in sys.argv:
 else:
     DEBUG = False
 
+
 def do_work(vrsystem, left_controller: Controller, right_controller: Controller, hmd: Controller, wheel: Wheel, poses):
     vrsystem.getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(poses), poses)
     hmd.update(poses[hmd.id.value])
@@ -30,6 +29,20 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
     event = openvr.VREvent_t()
     while vrsystem.pollNextEvent(event):
         hand = None
+
+        if event.eventType == openvr.VREvent_ChaperoneUniverseHasChanged:
+            pass
+            """
+            vrchp_setup = openvr.VRChaperoneSetup()
+            error, chp = vrchp_setup.getWorkingSeatedZeroPoseToRawTrackingPose()
+
+            # no pitch and roll
+            # https://github.com/ValveSoftware/openvr/issues/905
+
+            vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(byref(chp))
+            vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
+            """
+
         if event.trackedDeviceIndex == left_controller.id.value:
 
             if event.eventType == openvr.VREvent_ButtonTouch:
@@ -121,12 +134,8 @@ def main(type='wheel'):
     right_controller = Controller(right, name='right', vrsys=vrsystem)
     if type == 'wheel':
         wheel = Wheel()
-    elif type == 'joystick':
-        wheel = Joystick()
-    elif type == 'doublejoystick':
-        wheel = DoubleJoystick()
-    elif type == 'touchwheel':
-        wheel = TouchWheel()
+    elif type == 'bike':
+        wheel = Bike()
     elif type == 'pad':
         wheel = VirtualPad()
     poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount

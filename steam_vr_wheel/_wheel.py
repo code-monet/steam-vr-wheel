@@ -9,7 +9,7 @@ import time
 import threading
 import queue
 
-from steam_vr_wheel._virtualpad import VirtualPad, RightTrackpadAxisDisablerMixin
+from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
 def check_result(result):
@@ -110,142 +110,6 @@ def matMul33(a, b, result=None):
     result[2][3] = b[2][3]
     return result
 
-
-
-class HandsImage:
-    def __init__(self, left_ctr, right_ctr):
-        self._handl_closed = False
-        self._handr_closed = False
-        self.left_ctr = left_ctr
-        self.right_ctr = right_ctr
-        hand_size = 0.14
-        self.alpha = 0.9
-        self.hand_z_offset = 0.03
-
-        self.vrsys = openvr.VRSystem()
-        self.vroverlay = openvr.IVROverlay()
-
-        result, self.l_ovr = self.vroverlay.createOverlay('left_hand'.encode(), 'left_hand'.encode())
-        result, self.l_ovr2 = self.vroverlay.createOverlay('left_hand_closed'.encode(), 'left_hand_closed'.encode()) #!!
-        result, self.r_ovr = self.vroverlay.createOverlay('right_hand'.encode(), 'right_hand'.encode())
-        result, self.r_ovr2 = self.vroverlay.createOverlay('right_hand_closed'.encode(), 'right_hand_closed'.encode()) #!!
-
-        check_result(self.vroverlay.setOverlayColor(self.l_ovr, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayColor(self.l_ovr2, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayColor(self.r_ovr, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayColor(self.r_ovr2, 1, 1, 1))
-        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr, self.alpha))
-        check_result(self.vroverlay.setOverlayAlpha(self.l_ovr2, 0))
-        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr, self.alpha))
-        check_result(self.vroverlay.setOverlayAlpha(self.r_ovr2, 0))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr, hand_size))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.l_ovr2, hand_size))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
-        check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr2, hand_size))
-        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr, 0))
-        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 1)) # Closed hand always top
-        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 0))
-        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 1))
-
-        this_dir = os.path.abspath(os.path.dirname(__file__))
-
-        self.l_open_png = os.path.join(this_dir, 'media', 'hand_open_l.png')
-        self.r_open_png = os.path.join(this_dir, 'media', 'hand_open_r.png')
-        self.l_close_png = os.path.join(this_dir, 'media', 'hand_closed_l.png')
-        self.r_close_png = os.path.join(this_dir, 'media', 'hand_closed_r.png')
-
-        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr2, self.l_close_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode()))
-
-        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
-        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)
-        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr, self.right_ctr.id)
-        result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.r_ovr2, self.right_ctr.id)
-
-        ctr_tf[0][0] = 1.0
-        ctr_tf[0][1] = 0.0
-        ctr_tf[0][2] = 0.0
-        ctr_tf[0][3] = 0
-
-        ctr_tf[1][0] = 0.0
-        ctr_tf[1][1] = 0.0
-        ctr_tf[1][2] = 1.0
-        ctr_tf[1][3] = 0
-
-        ctr_tf[2][0] = 0.0
-        ctr_tf[2][1] = -1.0
-        ctr_tf[2][2] = 0.0
-        ctr_tf[2][3] = self.hand_z_offset
-
-        self.ctr_tf = ctr_tf
-        self.attach_to_ctr('left')
-        self.attach_to_ctr('right')
-
-        check_result(result)
-        check_result(self.vroverlay.showOverlay(self.l_ovr))
-        check_result(self.vroverlay.showOverlay(self.l_ovr2))
-        check_result(self.vroverlay.showOverlay(self.r_ovr))
-        check_result(self.vroverlay.showOverlay(self.r_ovr2))
-
-    def move(self, hand, tf):
-        fn = self.vroverlay.function_table.setOverlayTransformAbsolute
-        if hand == 'left':
-            check_result(fn(self.l_ovr, openvr.TrackingUniverseSeated, openvr.byref(tf)))
-            check_result(fn(self.l_ovr2, openvr.TrackingUniverseSeated, openvr.byref(tf)))
-        elif hand == 'right':
-            check_result(fn(self.r_ovr, openvr.TrackingUniverseSeated, openvr.byref(tf)))
-            check_result(fn(self.r_ovr2, openvr.TrackingUniverseSeated, openvr.byref(tf)))
-
-    def attach_to_ctr(self, hand):
-        fn = self.vroverlay.function_table.setOverlayTransformTrackedDeviceRelative
-        if hand == 'left':
-            check_result(fn(self.l_ovr, self.left_ctr.id, openvr.byref(self.ctr_tf)))
-            check_result(fn(self.l_ovr2, self.left_ctr.id, openvr.byref(self.ctr_tf)))
-        elif hand == 'right':
-            check_result(fn(self.r_ovr, self.right_ctr.id, openvr.byref(self.ctr_tf)))
-            check_result(fn(self.r_ovr2, self.right_ctr.id, openvr.byref(self.ctr_tf)))
-
-    def left_grab(self):
-        if not self._handl_closed:
-            #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_close_png.encode())
-            self.vroverlay.setOverlayAlpha(self.l_ovr, 0)
-            self.vroverlay.setOverlayAlpha(self.l_ovr2, self.alpha)
-            self._handl_closed = True
-
-    def left_ungrab(self):
-        if self._handl_closed:
-            #self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode())
-            self.vroverlay.setOverlayAlpha(self.l_ovr, self.alpha)
-            self.vroverlay.setOverlayAlpha(self.l_ovr2, 0)
-            self._handl_closed = False
-
-    def right_grab(self):
-        if not self._handr_closed:
-            #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_close_png.encode())
-            self.vroverlay.setOverlayAlpha(self.r_ovr, 0)
-            self.vroverlay.setOverlayAlpha(self.r_ovr2, self.alpha)
-            self._handr_closed = True
-
-    def right_ungrab(self):
-        if self._handr_closed:
-            #self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode())
-            self.vroverlay.setOverlayAlpha(self.r_ovr, self.alpha)
-            self.vroverlay.setOverlayAlpha(self.r_ovr2, 0)
-            self._handr_closed = False
-
-    def hide(self):
-        check_result(self.vroverlay.hideOverlay(self.l_ovr))
-        check_result(self.vroverlay.hideOverlay(self.l_ovr2))
-        check_result(self.vroverlay.hideOverlay(self.r_ovr))
-        check_result(self.vroverlay.hideOverlay(self.r_ovr2))
-
-    def show(self):
-        check_result(self.vroverlay.showOverlay(self.l_ovr))
-        check_result(self.vroverlay.showOverlay(self.l_ovr2))
-        check_result(self.vroverlay.showOverlay(self.r_ovr))
-        check_result(self.vroverlay.showOverlay(self.r_ovr2))
 
 
 class HShifterImage:
@@ -822,7 +686,7 @@ class GrabControllerPoint(Point):
         self.id = id
 
 
-class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
+class Wheel(VirtualPad):
     def __init__(self, inertia=0.95, center_speed=pi/180):
         super().__init__()
         self.vrsys = openvr.VRSystem()
@@ -1469,8 +1333,6 @@ class Wheel(RightTrackpadAxisDisablerMixin, VirtualPad):
         self._wheel_adpative_offset = [0, 0]
 
     def update(self, left_ctr, right_ctr, hmd):
-        if self.hands_overlay is None:
-            self.hands_overlay = HandsImage(left_ctr, right_ctr)
         super().update(left_ctr, right_ctr, hmd)
 
         now = time.time()

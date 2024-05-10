@@ -11,39 +11,46 @@ CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 
 DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False,
-                      multibutton_trackpad=False,
-                      multibutton_trackpad_center_haptic=False,
+                        multibutton_trackpad=False,
+                        multibutton_trackpad_center_haptic=False,
                       
-                      wheel_center=[0, -0.4, -0.35], wheel_size=0.48,
-                      wheel_grabbed_by_grip=True,
-                      wheel_grabbed_by_grip_toggle=True,
-                      wheel_show_wheel=True, wheel_show_hands=True,
-                      wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
-                      wheel_pitch=0, wheel_transparent_center=False,
-                      wheel_adaptive_center=False,
-                      wheel_ffb=False,
+                        # Wheel
+                        wheel_center=[0, -0.4, -0.35], wheel_size=0.48,
+                        wheel_grabbed_by_grip=True,
+                        wheel_grabbed_by_grip_toggle=True,
+                        wheel_show_wheel=True, wheel_show_hands=True,
+                        wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
+                        wheel_pitch=0, wheel_transparent_center=False,
+                        wheel_adaptive_center=False,
+                        wheel_ffb=False,
 
-                    # Shifter
-                      shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
-                      shifter_scale=100,
-                      shifter_adaptive_bounds=False,
-                      shifter_reverse_orientation="Bottom Left",
+                        ## Shifter
+                        shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
+                        shifter_scale=100,
+                        shifter_adaptive_bounds=False,
+                        shifter_reverse_orientation="Bottom Left",
 
-                    # Joystick as button
-                    j_l_left_button=False,
-                    j_l_right_button=False,
-                    j_l_up_button=False,
-                    j_l_down_button=False,
-                    j_r_left_button=False,
-                    j_r_right_button=False,
-                    j_r_up_button=False,
-                    j_r_down_button=False,
+                        ### Joystick as button
+                        j_l_left_button=False,
+                        j_l_right_button=False,
+                        j_l_up_button=False,
+                        j_l_down_button=False,
+                        j_r_left_button=False,
+                        j_r_right_button=False,
+                        j_r_up_button=False,
+                        j_r_down_button=False,
 
-                    # Disabled
-                    touchpad_always_updates=True, vertical_wheel=True,
-                    joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False,
-                    edit_mode=False,
-                    )
+                        ## Bike
+                        bike_show_handlebar=True,
+                        bike_show_hands=True,
+                        bike_handlebar_height=95,
+                        bike_max_lean=60,
+
+                        # Disabled
+                        touchpad_always_updates=True, vertical_wheel=True,
+                        joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False,
+                        edit_mode=False,
+                        )
 
 
 class ConfigException(Exception):
@@ -487,4 +494,41 @@ class PadConfig:
     @j_r_down_button.setter
     def j_r_down_button(self, x: bool):
         self._data['j_r_down_button'] = x
+        self._write()
+
+    # Bike
+    @property
+    def bike_show_handlebar(self):
+        return self._data['bike_show_handlebar']
+
+    @bike_show_handlebar.setter
+    def bike_show_handlebar(self, x: bool):
+        self._data['bike_show_handlebar'] = x
+        self._write()
+
+    @property
+    def bike_show_hands(self):
+        return self._data['bike_show_hands']
+
+    @bike_show_hands.setter
+    def bike_show_hands(self, x: bool):
+        self._data['bike_show_hands'] = x
+        self._write()
+
+    @property
+    def bike_handlebar_height(self):
+        return self._data['bike_handlebar_height']
+
+    @bike_handlebar_height.setter
+    def bike_handlebar_height(self, x: int):
+        self._data['bike_handlebar_height'] = x
+        self._write()
+
+    @property
+    def bike_max_lean(self):
+        return self._data['bike_max_lean']
+
+    @bike_max_lean.setter
+    def bike_max_lean(self, x: int):
+        self._data['bike_max_lean'] = x
         self._write()

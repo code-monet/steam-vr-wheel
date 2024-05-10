@@ -30,7 +30,7 @@ class Controller:
         if len(btns) < btn_id+1 or btns[btn_id] == '0':
             return False
         return True
-
+    
     def update(self, pose):
         vrsys = openvr.VRSystem()
 
