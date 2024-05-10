@@ -9,13 +9,9 @@ import time
 import threading
 import queue
 
+from . import check_result, rotation_matrix
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
-
-def check_result(result):
-    if result:
-        error_name = openvr.VROverlay().getOverlayErrorNameFromEnum(result)
-        raise Exception("OpenVR Error:", error_name)
 
 def print_matrix(matrix):
     l = []
@@ -37,19 +33,6 @@ def rotation_matrix_around_vec(theta, vec):
     return np.array([[c+ux**2*(1-c), ux*uy*(1-c)-uz*s, ux*uz*(1-c)+uy*s],
                     [uy*ux*(1-c)+uz*s, c+uy**2*(1-c), uy*uz*(1-c)-ux*s],
                     [uz*ux*(1-c)-uy*s, uz*uy*(1-c)+ux*s, c+uz**2*(1-c)]])
-
-def rotation_matrix(theta1, theta2, theta3):
-    #https://programming-surgeon.com/en/euler-angle-python-en/
-    c1 = np.cos(theta1 * np.pi / 180)
-    s1 = np.sin(theta1 * np.pi / 180)
-    c2 = np.cos(theta2 * np.pi / 180)
-    s2 = np.sin(theta2 * np.pi / 180)
-    c3 = np.cos(theta3 * np.pi / 180)
-    s3 = np.sin(theta3 * np.pi / 180)
-
-    return np.array([[c2*c3, -c2*s3, s2],
-                         [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
-                         [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
 
 def initRotationMatrix(axis, angle, matrix=None):
     # angle in radians

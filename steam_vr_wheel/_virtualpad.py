@@ -2,11 +2,13 @@ import sys
 
 import openvr
 import time
+import os
 
 from steam_vr_wheel.configurator import ConfiguratorApp
 from steam_vr_wheel.pyvjoy.vjoydevice import VJoyDevice, HID_USAGE_SL0, HID_USAGE_SL1, HID_USAGE_X, HID_USAGE_Y, HID_USAGE_Z, HID_USAGE_RX, HID_USAGE_RY
 from steam_vr_wheel.vrcontroller import Controller
 from . import PadConfig, ConfigException
+from . import check_result, rotation_matrix
 import multiprocessing
 
 BUTTONS = {}
@@ -28,7 +30,6 @@ AXES_BASE_HID['right'] = {'left-right': 38, 'down-up': 40}
 
 DISABLED_BUTTONS = {}
 DISABLED_AXES = {}
-
 
 def run_configurator():
     ConfiguratorApp().run()

@@ -116,7 +116,7 @@ class ConfiguratorApp:
         self.bike_show_handlebar.Disable()
         self.bike_show_hands = wx.CheckBox(self.nb_pnl_bike, label="Show Hands Overlay")
         self.bike_show_hands.Disable()
-        self.bike_handlebar_height = wx.SpinCtrl(self.nb_pnl_bike, name="Handlebar Height (cm)", min=0, max=300)
+        self.bike_handlebar_height = wx.SpinCtrl(self.nb_pnl_bike, name="Handlebar Height (cm)", min=50, max=300)
         self.bike_max_lean = wx.SpinCtrl(self.nb_pnl_bike, name="Lean Angle (Degrees)", min=0, max=90)
 
         # BINDINGS

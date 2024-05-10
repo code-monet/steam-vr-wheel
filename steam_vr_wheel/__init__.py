@@ -5,6 +5,26 @@ import shutil
 import hashlib
 
 import time
+import numpy as np
+
+def check_result(result):
+    if result:
+        error_name = openvr.VROverlay().getOverlayErrorNameFromEnum(result)
+        raise Exception("OpenVR Error:", error_name)
+
+def rotation_matrix(theta1, theta2, theta3):
+    #https://programming-surgeon.com/en/euler-angle-python-en/
+    c1 = np.cos(theta1 * np.pi / 180)
+    s1 = np.sin(theta1 * np.pi / 180)
+    c2 = np.cos(theta2 * np.pi / 180)
+    s2 = np.sin(theta2 * np.pi / 180)
+    c3 = np.cos(theta3 * np.pi / 180)
+    s3 = np.sin(theta3 * np.pi / 180)
+
+    return np.array([[c2*c3, -c2*s3, s2],
+                         [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
+                         [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
+
 
 DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
