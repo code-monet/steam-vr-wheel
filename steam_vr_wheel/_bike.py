@@ -116,12 +116,18 @@ class Bike(VirtualPad):
 
         self.max_lean = self.config.bike_max_lean
         self.handlebar_height = self.config.bike_handlebar_height / 100.0
-        self.handlebar_hand_offset = size/2 - 0.15 # offset of hand from the center; where the hand is placed on
+        self.handlebar_hand_offset = size/2 - 0.16 # offset of hand from the center; where the hand is placed on
         self._handlebar_r = sqrt(self.handlebar_height**2 + self.handlebar_hand_offset**2)
         self._handlebar_a = atan2(self.handlebar_height, self.handlebar_hand_offset)
 
         #
         self.grabbed = dict({"left": False, "right": False})
+
+        # Throttle
+        self.last_throttle_pitch = None
+        self.throttle = 0.0
+        self.throttle_sensitivity = 1.0 # TODO config
+        self.throttle_decrease_per_second = 0.1 # TODO config
 
         # edit mode
         self._edit_mode_last_press = 0.0
@@ -148,6 +154,9 @@ class Bike(VirtualPad):
             self.grabbed[hand] = True
             grabber = self.hands_overlay.left_grab if hand == 'left' else self.hands_overlay.right_grab
             grabber()
+
+            if hand == 'right': # Throttle grab
+                self.last_throttle_pitch = right_ctr.pitch
 
     def _evaluate_lean_angle(self, left_ctr, right_ctr):
 
@@ -183,6 +192,21 @@ class Bike(VirtualPad):
             pos=[self.center[0]+self.x_offset, self.center[1], self.center[2]],
             pitch_roll=[self.pitch, -self.lean])
 
+    def _update_throttle(self, right_ctr):
+
+        if self.last_throttle_pitch and self.grabbed['right']:
+            diff = right_ctr.pitch - self.last_throttle_pitch
+            self.last_throttle_pitch = right_ctr.pitch
+            self.throttle += diff / 100.0
+            self.throttle = min(1.0, max(0.0, self.throttle))
+
+        elif self.throttle > 0.0:
+            ud = self.get_update_delta()
+            self.throttle -= ud * self.throttle_decrease_per_second
+            self.throttle = max(0.0, self.throttle)
+
+        self.device.set_axis(HID_USAGE_RZ, int(self.throttle * 0x8000))
+
     def update(self, left_ctr, right_ctr, hmd):
         super().update(left_ctr, right_ctr, hmd)
 
@@ -191,6 +215,9 @@ class Bike(VirtualPad):
         if lean:
             self.lean = lean
             self.x_offset = x_offset
+
+        # Throttle
+        self._update_throttle(right_ctr)
 
         # vJoy
         axisX = int(((self.lean/self.max_lean)+1)/2.0 * 0x8000)

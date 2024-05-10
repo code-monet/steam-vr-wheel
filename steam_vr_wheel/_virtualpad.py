@@ -194,6 +194,8 @@ class VirtualPad:
         self.previous_left_zone = 0
         self.previous_right_zone = 0
 
+        self._previous_update_time = time.time()
+
     def init_config(self):
         config_loaded = False
         app_ran = False
@@ -377,7 +379,14 @@ class VirtualPad:
                 return True
         return False
 
+    def get_update_delta(self):
+        return self._update_time_delta
+
     def update(self, left_ctr: Controller, right_ctr: Controller, hmd: Controller):
+        now = time.time()
+        self._update_time_delta = now - self._previous_update_time
+        self._previous_update_time = now
+
         if self.hands_overlay is None:
             self.hands_overlay = HandsImage(left_ctr, right_ctr)
 
