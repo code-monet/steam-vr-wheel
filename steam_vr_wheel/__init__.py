@@ -61,10 +61,21 @@ DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False
                         j_r_down_button=False,
 
                         ## Bike
+                        bike_center=[0, -0.4, -0.35],
                         bike_show_handlebar=True,
                         bike_show_hands=True,
-                        bike_handlebar_height=95,
                         bike_max_lean=60,
+                        bike_max_steer=12,
+                        bike_angle_deadzone=5,
+                        bike_throttle_sensitivity=100,
+                        bike_throttle_decrease_per_sec=10,
+                        
+                        bike_mode="Absolute",
+
+                        bike_handlebar_height=95,
+                        bike_bound_hand="Both Hands",
+
+                        bike_relative_sensitivity=100,
 
                         # Disabled
                         touchpad_always_updates=True, vertical_wheel=True,
@@ -551,4 +562,76 @@ class PadConfig:
     @bike_max_lean.setter
     def bike_max_lean(self, x: int):
         self._data['bike_max_lean'] = x
+        self._write()
+
+    @property
+    def bike_max_steer(self):
+        return self._data['bike_max_steer']
+
+    @bike_max_steer.setter
+    def bike_max_steer(self, x: int):
+        self._data['bike_max_steer'] = x
+        self._write()
+
+    @property
+    def bike_angle_deadzone(self):
+        return self._data['bike_angle_deadzone']
+
+    @bike_angle_deadzone.setter
+    def bike_angle_deadzone(self, x: int):
+        self._data['bike_angle_deadzone'] = x
+        self._write()
+
+    @property
+    def bike_center(self):
+        return self._data['bike_center']
+
+    @bike_center.setter
+    def bike_center(self, x: bool):
+        self._data['bike_center'] = x
+        self._write()
+
+    @property
+    def bike_mode(self):
+        return self._data['bike_mode']
+
+    @bike_mode.setter
+    def bike_mode(self, x: bool):
+        self._data['bike_mode'] = x
+        self._write()
+
+    @property
+    def bike_throttle_sensitivity(self):
+        return self._data['bike_throttle_sensitivity']
+
+    @bike_throttle_sensitivity.setter
+    def bike_throttle_sensitivity(self, x: int):
+        self._data['bike_throttle_sensitivity'] = x
+        self._write()
+
+    @property
+    def bike_throttle_decrease_per_sec(self):
+        return self._data['bike_throttle_decrease_per_sec']
+
+    @bike_throttle_decrease_per_sec.setter
+    def bike_throttle_decrease_per_sec(self, x: int):
+        self._data['bike_throttle_decrease_per_sec'] = x
+        self._write()
+
+    @property
+    def bike_bound_hand(self):
+        return self._data['bike_bound_hand']
+
+    @bike_bound_hand.setter
+    def bike_bound_hand(self, x: bool):
+        self._data['bike_bound_hand'] = x
+        self._write()
+
+    @property
+    def bike_relative_sensitivity(self):
+        return self._data['bike_relative_sensitivity']
+
+    @bike_relative_sensitivity.setter
+    def bike_relative_sensitivity(self, x: bool):
+        self._data['bike_relative_sensitivity'] = x
         self._write()

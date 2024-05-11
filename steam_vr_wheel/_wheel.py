@@ -715,13 +715,6 @@ class Wheel(VirtualPad):
         self._last_left_in_holding = False
         self._last_right_in_holding = False
 
-        # for triple grip:
-        self._grip_times = dict({'left': [], 'right': []})
-
-        # edit mode
-        self._edit_mode_last_press = 0.0
-        self._edit_mode_entry = 0.0
-
         # H Shifter
         s_c = self.config.shifter_center
         self.h_shifter_image = HShifterImage(self, x=s_c[0], y=s_c[1], z=s_c[2],
@@ -962,7 +955,7 @@ class Wheel(VirtualPad):
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
         ctr = left_ctr if hand == 'left' else right_ctr
-        super().set_button_press(button, hand)
+        super().set_button_press(button, hand, left_ctr, right_ctr)
 
         if self._hand_snaps[hand] == 'shifter':
             if button == openvr.k_EButton_A: # A
@@ -1156,7 +1149,9 @@ class Wheel(VirtualPad):
         tf[2][3] = ab.z
         self.hands_overlay.move(hand, tf)
 
-    def _reset_hands(self):
+    def pre_edit_mode(self):
+        super().pre_edit_mode()
+
         self._hand_snaps['left'] = ''
         self._hand_snaps['right'] = ''
         self.hands_overlay.attach_to_ctr('left')
@@ -1178,28 +1173,6 @@ class Wheel(VirtualPad):
         grabber = self.hands_overlay.left_grab if hand == 'left' else self.hands_overlay.right_grab
         ungrabber = self.hands_overlay.left_ungrab if hand == 'left' else self.hands_overlay.right_ungrab
         other = 'left' if hand == 'right' else 'right'
-
-        # Handle triple grips for edit mode
-        if grip_info[1] == True and flag == 0:
-            now = time.time()
-            self._grip_times[hand].append(now)
-            self._grip_times[hand] = self._grip_times[hand][-3:]
-
-            if (len(self._grip_times[hand]) >= 3 and
-                len(self._grip_times[other]) >= 3 and
-                self._grip_times[hand][-1] - self._grip_times[hand][-3] <= 1.0 and
-                self._grip_times[other][-1] - self._grip_times[other][-3] <= 1.0):
-
-                self._grip_times[hand] = []
-                self._grip_times[other] = []
-
-                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
-
-                self._reset_hands()
-                self.is_edit_mode = True
-                self._edit_mode_entry = time.time()
-                return
 
         if grip_info[1] == False:
             v = self._hand_snaps[hand]

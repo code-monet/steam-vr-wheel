@@ -66,9 +66,9 @@ class HandsImage:
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr, hand_size))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.r_ovr2, hand_size))
         check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr, 0))
-        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 1)) # Closed hand always top
+        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 0))
         check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 0))
-        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 0))
 
         this_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -111,6 +111,10 @@ class HandsImage:
         check_result(self.vroverlay.showOverlay(self.l_ovr2))
         check_result(self.vroverlay.showOverlay(self.r_ovr))
         check_result(self.vroverlay.showOverlay(self.r_ovr2))
+
+    def closed_hands_always_top(self):
+        check_result(self.vroverlay.setOverlaySortOrder(self.l_ovr2, 1))
+        check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 1))
 
     def move(self, hand, tf):
         fn = self.vroverlay.function_table.setOverlayTransformAbsolute
@@ -195,6 +199,13 @@ class VirtualPad:
         self.previous_right_zone = 0
 
         self._previous_update_time = time.time()
+
+        # for triple grip:
+        self._grip_times = dict({'left': [], 'right': []})
+
+        # edit mode
+        self._edit_mode_last_press = 0.0
+        self._edit_mode_entry = 0.0
 
     def init_config(self):
         config_loaded = False
@@ -316,10 +327,36 @@ class VirtualPad:
             except NameError:
                 pass
 
-    def set_button_press(self, button, hand):
+    def pre_edit_mode(self):
+        pass
+
+    def set_button_press(self, button, hand, left_ctr, right_ctr):
         if button == openvr.k_EButton_SteamVR_Trigger:
             if not self.config.trigger_press_button:
                 return
+
+        if button == openvr.k_EButton_Grip:
+            now = time.time()
+            other = 'left' if hand == 'right' else 'right'
+            self._grip_times[hand].append(now)
+            self._grip_times[hand] = self._grip_times[hand][-3:]
+
+            if (len(self._grip_times[hand]) >= 3 and
+                len(self._grip_times[other]) >= 3 and
+                self._grip_times[hand][-1] - self._grip_times[hand][-3] <= 1.0 and
+                self._grip_times[other][-1] - self._grip_times[other][-3] <= 1.0):
+
+                self._grip_times[hand] = []
+                self._grip_times[other] = []
+
+                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
+                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
+
+                self.pre_edit_mode()
+                self._edit_mode_entry = time.time()
+                self.is_edit_mode = True
+                return
+
         try:
             btn_id = BUTTONS[hand][button]
             if btn_id is None:
