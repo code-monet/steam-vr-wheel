@@ -6,20 +6,29 @@ https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-884
 
 - [Full demo](https://www.youtube.com/watch?v=mNbI7f03d1Y)
 
-## Memo
+```text
+<bike demo>
+```
 
-Quest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all axes enabled; FFB(force feedback) disabled; POV 0
+## Requirements
+
+Check out the release page and refer to the requirements of the very release you download.
+
+## vJoy Mapping
+
+The below table shows **Quest 2 controller** to vJoy mapping
 
 |Key|Button ID|Note|
 |-|-|-|
-|LT|1||
-|LT Touch|31||
-|L Grip|2|Disabled|
-|LS|4 or 4,5,6,7,8||
-|RT|9||
-|RT Touch|32||
-|R Grip|10|Disabled|
-|RS|12 or 12,13,14,15,16||
+|Wheel|X Axis|Configure max angle in configurator|
+|LT|1|Disabled as default|
+|LT Touch|31|Disabled as default|
+|L Grip||No mapping|
+|LS|4 or 4,5,6,7,8|More trackpad direction option enables the other 4 buttons|
+|RT|9|Disabled as default|
+|RT Touch|32|Disabled as default|
+|R Grip||No mapping|
+|RS|12 or 12,13,14,15,16|More trackpad direction option enables the other 4 buttons|
 |A|18||
 |B|11||
 |X|17||
@@ -32,14 +41,17 @@ Quest 2 vJoy mapping, configure vJoy device to have more than 50 buttons and all
 |R Right|39 or RX||
 |R Down|40 or RY||
 |R Up|41 or RY||
-|Shifter Position 1|43||
+|Shifter Position 1|43|When configuring keybind in game, move from N to 1 to N|
 |Shifter Position 2|44||
 |Shifter Position 3|45||
 |Shifter Position 4|46||
 |Shifter Position 5|47||
 |Shifter Position 6|48||
-|Shifter Splitter|49|Grab knob + Trigger(layout 1) or A(layout 2)|
+|Shifter Splitter|49|Grab knob + A|
 |Shifter Range Selector|50|Grab knob + Joystick DOWN or UP|
+|Shifter Position Reverse|51|Grab knob + Trigger and move to the 7th position|
+|Bike Lean Angle|X Axis|Check out all the available bike modes in configurator|
+|Bike Throttle|RZ Axis|Turn right controller while pressing grip<br>When configuring keybind in game, increase the throttle beforehand and assign key while it is decreasing|
 
 ### Troubleshooting
 
@@ -81,31 +93,39 @@ Example bindings
 |A|Cruise Control|
 |B|Next Camera|
 
-- Set **Shifter Toggles Use Switch Mode** to ON
+- Set `Shifter Toggles Use Switch Mode` to *ON*
+- Set `Shifter Layout Behavior` to *Advanced*
+- Set `Shifter fast split` to *Clutch*
 
-## This fork
+## Feature
 
 ### Comaptibility
 
 - Compatibility of devices other than Quest 2 is not tested.
-- Only the wheel mode(wheel.bat) is tested.
 
 ### Edit Mode
 
 Triple grip clicks of both the left and right controllers trigger the edit mode.
 
+#### Wheel
+
 Move your RIGHT controller to the center of the wheel and press the trigger on RIGHT controller; while holding down:
-- Resize: Move RIGHT joystick up and down to resize the wheel.
-- Transparency: Press B button to cycle through the transparency mode.
+- Resize: Move RIGHT joystick Left and Right to resize the wheel.
+- Adjust Pitch: Move RIGHT joystick Up and Down to resize the wheel.
+- Transparency: Press B button to cycle through the transparency mode. It returns to fully opaque after a short preview of the new transparency value.
 - Align Center: Press A button to align the wheel to center.
 
 Move your RIGHT controller to the knob of the shifter to adjust its position.
 
 Pressing the grip on RIGHT exits the edit mode.
 
+#### Bike
+
+To do
+
 ### Quest 2's Joystick to Buttons
 
-You can convert all direcitons of the joysticks to buttons or leave it as axis.
+You can convert all direcitons of the joysticks individually to buttons or leave it as axis.
 
 Example 1, if you choose to convert the Left Joy Down to button, Left Joy Left and Left Joy Right will remain as the same axis; the Left Joy Up will be solely adjusting the axis while the Left Joy Down acts as a button.
 
@@ -126,30 +146,20 @@ Example 2, you can make all 8 directions to buttons; so that you can use them li
 
 https://github.com/hjjg200/steam-vr-wheel/assets/18535223/861de753-93f5-42fb-8022-0ae159620e7e
 
-It is a h-shifter with 6 positions, a splitter(A while grabbing knob), and a range selector(Trigger while grabbing knob).
+It is a h-shifter with 6 positions + reverse, a splitter(A while grabbing knob), and a range selector(Joystick Down or Up while grabbing knob). Press on Trigger to unlock the reverse position
 
+You can select the position of the reverse position in configurator
 ```text
-1 3 5
-2 4 6
+  1 3 5    R 1 3 5    1 3 5      1 3 5 R
+R 2 4 6      2 4 6    2 4 6 R    2 4 6
 ```
-|Key|Button ID|Note|
-|-|-|-|
-|Position 1|43||
-|Position 2|44||
-|Position 3|45||
-|Position 4|46||
-|Position 5|47||
-|Position 6|48||
-|Splitter|49|Grab knob + Trigger or A|
-|Range Selector|50|Grab knob + Joystick down or up|
-
-Buttons for splitter and range selector have two layouts: 1. splitter=trigger range=A 2. splitter=A range=B
 
 ### Todo
 
 - Make shifter rotatable in space
-- Different shifter degrees around x and z axes
 - Easier steering when looking back
+- Sequential shifting mode
+- Self steering using force feedback
 - Code cleanup
 
 ### Config memo
