@@ -8,6 +8,7 @@ import copy
 import time
 import threading
 import queue
+from playsound import playsound
 
 from . import check_result, rotation_matrix
 from steam_vr_wheel._virtualpad import VirtualPad
@@ -138,8 +139,15 @@ class HShifterImage:
         result, self.knob = self.vroverlay.createOverlay('hshifter_knob'.encode(), 'hshifter_knob'.encode())
         check_result(result)
 
-        # Images
+        # Media
         this_dir = os.path.abspath(os.path.dirname(__file__))
+
+        # Sound
+        mp3 = os.path.join(this_dir, 'media', 'shifter_change.mp3')
+        self._change_mp3 = mp3
+        self._last_change_play = 0
+
+        # Images
         slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
         self._stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick_low.png')
         self._stick_img_2 = os.path.join(this_dir, 'media', 'h_shifter_stick_high.png')
@@ -468,6 +476,8 @@ class HShifterImage:
         if self._pressed_button is not None:
             self.wheel.device.set_button(self._pressed_button, True)
 
+        now = time.time()
+
         # Toggles
         self.wheel.device.set_button(49, self._splitter_toggled)
         self.wheel.device.set_button(50, self._range_toggled)
@@ -574,7 +584,17 @@ class HShifterImage:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             if xz_pos_0 != xz_pos_1 and xz_pos_1[1] != 0:
+                # Gear change
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+
+                if now - self._last_change_play > 0.07:
+                    #p = multiprocessing.Process(target=player)
+                    # If ever performance issue, use multiprocessing
+                    def player():
+                        playsound(self._change_mp3, block=False)
+                    t = threading.Thread(target=player)
+                    t.start()
+                    self._last_change_play = now
 
             self._move_stick(xz_1)
             self.set_stick_xz_pos(xz_pos_1)

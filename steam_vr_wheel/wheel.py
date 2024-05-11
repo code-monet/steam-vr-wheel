@@ -118,7 +118,6 @@ def main(type='wheel'):
     vrsystem = openvr.VRSystem()
     hands_got = False
 
-
     while not hands_got:
         try:
             print('Searching for left and right hand controllers')
