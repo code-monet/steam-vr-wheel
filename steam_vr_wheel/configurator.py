@@ -553,9 +553,20 @@ class ConfiguratorApp:
     def profile_buttons(self, event):
         l = event.GetEventObject().GetLabel()
         if l == "New":
-            p = self.config.save_as_new_profile()
+
+            fd = wx.FileDialog(self.pnl, "New Profile",
+                self.config.get_config_dir(), "new-profile.json",
+                "*.json|*.json",
+                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            if fd.ShowModal() == wx.ID_CANCEL:
+                return
+
+            p = os.path.basename(fd.GetPath())
+            self.config.config_name = p
+            self.config.save_as_new_profile(p)
             i = self.profile_combo.Append(p)
             self.profile_combo.SetSelection(i)
+
         elif l == "Delete":
             i = self.profile_combo.GetSelection()
             if i != wx.NOT_FOUND:

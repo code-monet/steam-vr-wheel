@@ -30,7 +30,9 @@ DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 
-DEFAULT_CONFIG = dict(trigger_pre_press_button=False, trigger_press_button=False,
+DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
+
+                        trigger_pre_press_button=False, trigger_press_button=False,
                         multibutton_trackpad=False,
                         multibutton_trackpad_center_haptic=False,
                       
@@ -141,7 +143,11 @@ class PadConfig:
         shutil.copyfile(new_cfg, CONFIG_PATH)
 
     @staticmethod
-    def save_as_new_profile():
+    def save_as_new_profile(p):
+        shutil.copyfile(CONFIG_PATH, os.path.join(CONFIG_DIR, p))
+
+    @staticmethod
+    def __save_as_new_profile():
         profiles = __class__.get_profiles()
         n = "profile-%d.json" % (len(profiles)+1)
 
@@ -200,6 +206,15 @@ class PadConfig:
         except FileExistsError:
             with open(CONFIG_PATH, 'w') as f:
                  json.dump(self._data, f)
+
+    @property
+    def config_name(self):
+        return self._data['config_name']
+
+    @config_name.setter
+    def config_name(self, x: bool):
+        self._data['config_name'] = x
+        self._write()
 
     @property
     def trigger_pre_press_button(self):
