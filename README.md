@@ -89,7 +89,9 @@ Example bindings
 |A|Cruise Control|
 |B|Next Camera|
 
-- Set **Shifter Toggles Use Switch Mode** to ON
+- Set `Shifter Toggles Use Switch Mode` to *ON*
+- Set `Shifter Layout Behavior` to *Advanced*
+- Set `Shifter fast split` to *Clutch*
 
 ## Feature
 
