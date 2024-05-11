@@ -6,6 +6,10 @@ https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-884
 
 - [Full demo](https://www.youtube.com/watch?v=mNbI7f03d1Y)
 
+```text
+<bike demo>
+```
+
 ## Requirements
 
 Check out the release page and refer to the requirements of the very release you download.
