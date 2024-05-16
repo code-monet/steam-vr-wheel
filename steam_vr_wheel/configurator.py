@@ -356,6 +356,7 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Use Joystick as Axis/Button"))
         self.nb_vbox_wheel.Add(_decrease_font(
             wx.StaticText(self.nb_pnl_wheel, label = "Checked joystick acts as button")))
+        self.nb_vbox_wheel.AddSpacer(6)
         self.hbox_joystick.Add(self.j_l_left_button)
         self.hbox_joystick.Add(self.j_l_right_button)
         self.hbox_joystick.Add(self.j_l_up_button)

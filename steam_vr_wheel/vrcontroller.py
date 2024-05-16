@@ -18,6 +18,7 @@ class Controller:
         self.is_controller = is_controller
         if is_controller:
             self.axis = 0
+            self.axis2 = 0
             self.trackpadX = 0
             self.trackpadY = 0
             self.pressed = 0
@@ -60,10 +61,38 @@ class Controller:
 
         if self.is_controller:
             result, pControllerState = vrsys.getControllerState(self.id)
+
+            # rAxis[1] = Trigger for Quest 2
+            # rAxis[2] = Grip for Quest 2
             self.axis = pControllerState.rAxis[1].x
+            self.axis2 = pControllerState.rAxis[2].x
             self.trackpadX = pControllerState.rAxis[0].x
             self.trackpadY = pControllerState.rAxis[0].y
             self.pressed = pControllerState.ulButtonPressed
+
+            '''
+k_EButton_A 7   
+k_EButton_ApplicationMenu   1   
+k_EButton_Axis0 32  
+k_EButton_Axis1 33  
+k_EButton_Axis2 34  
+k_EButton_Axis3 35  
+k_EButton_Axis4 36  
+k_EButton_Dashboard_Back    2   
+k_EButton_DPad_Down 6   
+k_EButton_DPad_Left 3   
+k_EButton_DPad_Right    5   
+k_EButton_DPad_Up   4   
+k_EButton_Grip  2   
+k_EButton_Knuckles_A    2   
+k_EButton_Knuckles_B    1   
+k_EButton_Knuckles_JoyStick 35  
+k_EButton_Max   64  
+k_EButton_ProximitySensor   31  
+k_EButton_SteamVR_Touchpad  32  
+k_EButton_SteamVR_Trigger   33  
+k_EButton_System    0
+            '''
 
         else:
             # Populate normal

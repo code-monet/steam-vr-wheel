@@ -21,6 +21,13 @@ else:
     DEBUG = False
 
 
+def get_chaperone():
+
+    vrchp_setup = openvr.VRChaperoneSetup()
+    _, chp = vrchp_setup.getWorkingSeatedZeroPoseToRawTrackingPose()
+
+    return chp
+
 def do_work(vrsystem, left_controller: Controller, right_controller: Controller, hmd: Controller, wheel: Wheel, poses):
     vrsystem.getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(poses), poses)
     hmd.update(poses[hmd.id.value])
@@ -31,17 +38,13 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
         hand = None
 
         if event.eventType == openvr.VREvent_ChaperoneUniverseHasChanged:
-            pass
-            """
-            vrchp_setup = openvr.VRChaperoneSetup()
-            error, chp = vrchp_setup.getWorkingSeatedZeroPoseToRawTrackingPose()
+            wheel.update_chaperone(get_chaperone())
 
             # no pitch and roll
             # https://github.com/ValveSoftware/openvr/issues/905
 
-            vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(byref(chp))
-            vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
-            """
+            #vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(byref(chp))
+            #vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
 
         if event.trackedDeviceIndex == left_controller.id.value:
 
@@ -137,8 +140,14 @@ def main(type='wheel'):
         wheel = Bike()
     elif type == 'pad':
         wheel = VirtualPad()
+
+    # Pre loop
+    wheel.update_chaperone(get_chaperone())
+
     poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
     poses = poses_t()
+
+    # Loop
     while True:
         before_work = time.time()
         do_work(vrsystem, left_controller, right_controller, hmd_device, wheel, poses)

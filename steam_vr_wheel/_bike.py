@@ -9,7 +9,7 @@ import time
 import threading
 import queue
 
-from . import check_result, rotation_matrix
+from . import check_result, rotation_matrix, bezier_curve
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
 
@@ -105,13 +105,17 @@ class Bike(VirtualPad):
 
         x, y, z = [0, -0.4, -0.35]#self.config.bike_handlebar_center
         size = 80 / 100#self.config.bike_handlebar_size
+        # 1800x735
         self.handlebar_image = HandlebarImage(x, y, z, size)
         self.center = np.array([x, y, z])
         self.size = size
+        self.size_height = size / 1800 * 735
 
         self.base_pitch = 20
         self._reset_handlebar()
         self.handlebar_image.move_rotate(pitch_yaw_roll=[self.pitch, self.yaw, 0])
+        self.lean = 0
+        self.roll_lean = 0
 
         self.max_steer = self.config.bike_max_steer
         self.max_lean = self.config.bike_max_lean
@@ -140,6 +144,7 @@ class Bike(VirtualPad):
 
         # Throttle
         self.last_throttle_pitch = None
+        self.throttle_grip_threshold = 0.95
         self.throttle = 0.0
         self.throttle_sensitivity = self.config.bike_throttle_sensitivity / 100.0
         self.throttle_decrease_per_second = self.config.bike_throttle_decrease_per_sec / 100.0
@@ -152,31 +157,6 @@ class Bike(VirtualPad):
         self._edit_mode_last_press = 0.0
         self._edit_mode_entry = 0.0
 
-    def set_button_unpress(self, button, hand):
-        super().set_button_unpress(button, hand)
-
-        if button == openvr.k_EButton_Grip:
-            self.grabbed[hand] = False
-
-    def set_button_press(self, button, hand, left_ctr, right_ctr):
-        super().set_button_press(button, hand, left_ctr, right_ctr)
-        ctr = left_ctr if hand == 'left' else right_ctr
-
-        if button == openvr.k_EButton_Grip:
-            self.grabbed[hand] = True
-
-            if hand == 'right': # Throttle grab
-                self.last_throttle_pitch = right_ctr.yaw
-
-            else:
-                # Change bound hand if it is single-handed mode
-                if self.mode in [self.BIKE_MODE_ABSOLUTE_LEFT_BOUND, self.BIKE_MODE_ABSOLUTE_RIGHT_BOUND]:
-                    is_left = self.mode == self.BIKE_MODE_ABSOLUTE_LEFT_BOUND
-                    mode1 = self.BIKE_MODE_ABSOLUTE_RIGHT_BOUND if is_left else self.BIKE_MODE_ABSOLUTE_LEFT_BOUND
-                    hand1 = "Right" if is_left else "Left"
-
-                    self.mode = mode1
-                    self.config.bike_bound_hand = hand1
 
     BIKE_MODE_ABSOLUTE = 1              # Both the hands affect the lean
     BIKE_MODE_ABSOLUTE_LEFT_BOUND = 2   # Only the left hand affects the lean
@@ -188,36 +168,71 @@ class Bike(VirtualPad):
     def _evaluate_lean_angle(self, left_ctr, right_ctr):
 
         dx = left_ctr.x - right_ctr.x
-        dz = (left_ctr.z - right_ctr.z) * self.relative_sensitivity
+        dy = left_ctr.y - right_ctr.y
+        dz = left_ctr.z - right_ctr.z
+
+        #
+        if self.mode == self.BIKE_MODE_RELATIVE:
+            dy *= self.relative_sensitivity
+            dz *= self.relative_sensitivity
 
         # Steer
         steer = 0
         if self.mode in [self.BIKE_MODE_ABSOLUTE, self.BIKE_MODE_RELATIVE]:
+            
+            if dz > 0:
+                dz = max(0, dz - abs(dy))
+            else:
+                dz = min(0, dz + abs(dy))
+
             steer = atan2(dz, dx)
             steer *= -1
             steer = (pi if steer > 0 else -pi) - steer
 
         # Lean
-        if self.mode == self.BIKE_MODE_ABSOLUTE:
+        if self.mode != self.BIKE_MODE_RELATIVE: # TODO fix
+            if False and self.grabbed['left'] and self.grabbed['right']:
 
-            x_center = (right_ctr.x - left_ctr.x)/2 + left_ctr.x - self.center[0]
-            lean = asin(min(1, max(-1, x_center / self.handlebar_height)))
+                x_center = (right_ctr.x - left_ctr.x)/2 + left_ctr.x - self.center[0]
+                lean = asin(min(1, max(-1, x_center / self.handlebar_height)))
 
-        elif self.mode == self.BIKE_MODE_ABSOLUTE_LEFT_BOUND:
-            # based on left hand's location
-            x_hand = left_ctr.x - self.center[0]
-            lean = acos(min(1, max(-1, x_hand / self._handlebar_r))) + self._handlebar_a
-            lean -= pi
-            lean *= -1
+                # Mix with relative position about the center
+                x_max = self.handlebar_height*sin(self.max_lean/180*pi)
+                x_percent = abs(x_center/x_max)
 
-        elif self.mode == self.BIKE_MODE_ABSOLUTE_RIGHT_BOUND:
-            # based on right hand's location
-            x_hand = right_ctr.x - self.center[0]
-            lean = acos(min(1, max(-1, x_hand / self._handlebar_r))) - self._handlebar_a
-            lean *= -1
+                relative_lean = atan2(dy, dx)
+                relative_lean = (pi if relative_lean > 0 else -pi) - relative_lean
+
+                lean += relative_lean * (1-x_percent) * 1.0 # TODO config relative angle percentage
+
+            elif self.grabbed['left']:
+                # based on left hand's location
+                x_hand = left_ctr.x - self.center[0]
+
+                x_max = self.handlebar_height * sin(self.max_lean/180*pi)
+                x_middle = x_hand + self.handlebar_hand_offset
+
+                lean = acos(min(1, max(-1, x_hand / self._handlebar_r))) + self._handlebar_a
+                lean -= pi
+                lean *= -1
+
+                steer = atan2(left_ctr.z - self.center[2], -self.handlebar_hand_offset)
+                steer *= -1
+                steer = (pi if steer > 0 else -pi) - steer
+
+            elif False and self.grabbed['right']:
+                # based on right hand's location
+                x_hand = right_ctr.x - self.center[0]
+                lean = acos(min(1, max(-1, x_hand / self._handlebar_r))) - self._handlebar_a
+                lean *= -1
+
+                steer = 0
+
+            else:
+
+                return
 
         elif self.mode == self.BIKE_MODE_RELATIVE:
-            dy = (left_ctr.y - right_ctr.y) * self.relative_sensitivity
 
             lean = atan2(dy, dx)
             lean = (pi if lean > 0 else -pi) - lean
@@ -227,9 +242,13 @@ class Bike(VirtualPad):
         steer = min(max(steer, -self.max_steer), self.max_steer)
 
         lean = lean/pi*180
+        roll_lean = lean
+
+        # Less steer effect at high lean
+        steer *= max(0, (self.max_steer-abs(lean))/self.max_steer)
+        lean += steer
 
         # Clamp
-        lean += steer
         lean = min(max(lean, -self.max_lean), self.max_lean)
 
         # Deadzone
@@ -241,21 +260,20 @@ class Bike(VirtualPad):
                 lean -= lower
             else:
                 lean += lower
+
             lean *= 100/(100-self.angle_deadzone)
 
         #
         self.lean = lean
-        self.pitch = self.base_pitch + abs(lean) / 2
+        self.roll_lean = roll_lean
+        self.pitch = self.base_pitch + abs(lean)
 
-        # Offset
-        if self.mode == self.BIKE_MODE_RELATIVE:
-            self.yaw = lean / 2
-        else:
-            self.yaw = steer
+        # Yaw
+        self.yaw = steer + lean
 
-            self.x_offset = self.handlebar_height*sin(lean/180*pi)
-            self.y_offset = self.handlebar_height*cos(lean/180*pi) - self.handlebar_height
-            self.z_offset = -15 * (cos(lean/3 /180*pi) - 1) # *1 = 1 meter
+        self.x_offset = self.handlebar_height*sin(roll_lean/180*pi)
+        self.y_offset = self.handlebar_height*cos(roll_lean/180*pi) - self.handlebar_height
+        self.z_offset = -1 * (cos(roll_lean /180*pi) - 1)
 
         # right hand
         # sin(lean) * hh + cos(lean) * o = x
@@ -269,14 +287,25 @@ class Bike(VirtualPad):
                 pos=[hmd.x+self.center[0],
                     hmd.y+self.center[1],
                     hmd.z+self.center[2]],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
+
+            vrchp_setup = openvr.VRChaperoneSetup()
+            chp = openvr.HmdMatrix34_t()
+            for i in range(3):
+                for j in range(4):
+                    chp[i][j] = self.original_chaperone[i][j]
+            chp[0][3] = chp[0][3] - self.x_offset - (hmd.x + self.current_chaperone[0][3])
+            #print((hmd.x + self.current_chaperone[0][3]))
+            self.current_chaperone = chp
+            vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(openvr.byref(chp))
+            vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
 
         else:
             self.handlebar_image.move_rotate(
                 pos=[self.center[0]+self.x_offset,
                     self.center[1]+self.y_offset,
                     self.center[2]+self.z_offset],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
 
         if self.config.bike_show_hands:
             self.hands_overlay.show()
@@ -292,7 +321,7 @@ class Bike(VirtualPad):
 
         now = time.time()
 
-        if self.last_throttle_pitch and self.grabbed['right']:
+        if self.last_throttle_pitch and right_ctr.axis2 >= self.throttle_grip_threshold:
             diff = right_ctr.yaw - self.last_throttle_pitch
             diff = (diff+180) % 360 - 180
 
@@ -303,13 +332,19 @@ class Bike(VirtualPad):
             if diff > 0:
                 pass
             else:
-                diff *= 2
+                diff *= 3 # TODO throttle decrease sensitivity
 
             self.throttle += diff
             self.throttle = min(1.0, max(0.0, self.throttle))
 
             if now - self.throttle_last_haptic > 0.06:
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(self.throttle**1.5*3000))
+                if self.throttle > 0.05:
+                    amount = bezier_curve(self.throttle,
+                        np.array([0, 0]),
+                        np.array([0.6, 0]),
+                        np.array([0, 1]),
+                        np.array([1, 1]))[1] * 5000
+                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(amount))
                 self.throttle_last_haptic = now
 
             self.last_throttle_pitch = right_ctr.yaw
@@ -320,12 +355,35 @@ class Bike(VirtualPad):
 
         self.device.set_axis(HID_USAGE_RZ, int(self.throttle * 0x8000))
 
+    def update_chaperone(self, chp):
+        self.original_chaperone = chp
+        self.current_chaperone = chp
+
+    def update_grip(self, hand, ctr):
+
+        grabber = self.hands_overlay.left_grab if hand == 'left' else self.hands_overlay.right_grab
+        ungrabber = self.hands_overlay.left_ungrab if hand == 'left' else self.hands_overlay.right_ungrab
+
+        if hand == 'left': # TEST
+            self.grabbed[hand] = True
+            grabber()
+
+        if ctr.axis2 > 0:
+            if hand == 'right' and self.grabbed['right'] == False:
+                self.last_throttle_pitch = ctr.yaw
+
+            self.grabbed[hand] = True
+            grabber()
+        else:
+            self.grabbed[hand] = False
+            ungrabber()
+
     def update(self, left_ctr, right_ctr, hmd):
         super().update(left_ctr, right_ctr, hmd)
-        if self.run_alway_grab == False:
-            self.hands_overlay.left_grab()
-            self.hands_overlay.right_grab()
-            self.run_alway_grab = True
+
+        # Update grip
+        self.update_grip('left', left_ctr)
+        self.update_grip('right', right_ctr)
 
         # Update lean
         self._evaluate_lean_angle(left_ctr, right_ctr)

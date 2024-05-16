@@ -3,6 +3,7 @@ import os, sys
 import threading
 import shutil
 import hashlib
+import openvr
 
 import time
 import numpy as np
@@ -25,6 +26,51 @@ def rotation_matrix(theta1, theta2, theta3):
                          [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
                          [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
 
+
+def playsound(sound, block = True, volume=1.0):
+    # Copied from playsound==1.2.2 in order to add volume parameter
+    # only the windows version
+    '''
+    Utilizes windll.winmm. Tested and known to work with MP3 and WAVE on
+    Windows 7 with Python 2.7. Probably works with more file formats.
+    Probably works on Windows XP thru Windows 10. Probably works with all
+    versions of Python.
+
+    Inspired by (but not copied from) Michael Gundlach <gundlach@gmail.com>'s mp3play:
+    https://github.com/michaelgundlach/mp3play
+
+    I never would have tried using windll.winmm without seeing his code.
+    '''
+    from ctypes import c_buffer, windll
+    from random import random
+    from time   import sleep
+    from sys    import getfilesystemencoding
+
+    def winCommand(*command):
+        buf = c_buffer(255)
+        command = ' '.join(command).encode(getfilesystemencoding())
+        errorCode = int(windll.winmm.mciSendStringA(command, buf, 254, 0))
+        if errorCode:
+            errorBuffer = c_buffer(255)
+            windll.winmm.mciGetErrorStringA(errorCode, errorBuffer, 254)
+            exceptionMessage = ('\n    Error ' + str(errorCode) + ' for command:'
+                                '\n        ' + command.decode() +
+                                '\n    ' + errorBuffer.value.decode())
+            raise Exception(exceptionMessage)
+        return buf.value
+
+    alias = 'playsound_' + str(random())
+    winCommand('open "' + sound + '" alias', alias)
+    winCommand('set', alias, 'time format milliseconds')
+    winCommand('setaudio', alias, 'volume to', str(int(volume * 1000)))
+    durationInMS = winCommand('status', alias, 'length')
+    winCommand('play', alias, 'from 0 to', durationInMS.decode())
+
+    if block:
+        sleep(float(durationInMS) / 1000.0)
+
+def bezier_curve(t, P0, P1, P2, P3):
+    return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
 
 DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))

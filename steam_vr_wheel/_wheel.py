@@ -8,9 +8,8 @@ import copy
 import time
 import threading
 import queue
-from playsound import playsound
 
-from . import check_result, rotation_matrix
+from . import check_result, rotation_matrix, playsound
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
@@ -124,7 +123,7 @@ class HShifterImage:
         self._range_toggled = False
         self._reverse_locked = True
 
-        self._pos_to_button = dict({-1: 51  ,   1: 43,     3: 45,     5: 47,     7: 51,
+        self._pos_to_button = dict({-1: 51,     1: 43,     3: 45,     5: 47,     7: 51,
                                     -0.5: None, 1.5: None, 3.5: None, 5.5: None, 7.5: None,
                                     0: 51,      2: 44,     4: 46,     6: 48,     8: 51})
         self._pressed_button = None
@@ -143,8 +142,8 @@ class HShifterImage:
         this_dir = os.path.abspath(os.path.dirname(__file__))
 
         # Sound
-        mp3 = os.path.join(this_dir, 'media', 'shifter_change.mp3')
-        self._change_mp3 = mp3
+        self._change_mp3_1 = os.path.join(this_dir, 'media', 'shifter_change_1.mp3')
+        self._change_mp3_2 = os.path.join(this_dir, 'media', 'shifter_change_2.mp3')
         self._last_change_play = 0
 
         # Images
@@ -364,8 +363,8 @@ class HShifterImage:
         z_deg = self.degree * abs(xz[1])
         x_sin = sin(x_deg*pi/180) * self.stick_height
         z_sin = sin(z_deg*pi/180) * self.stick_height
-        x_knob = self.x + xz[0] * (x_sin + unit)
-        z_knob = self.z + xz[1] * (z_sin + unit)
+        x_knob = self.x + xz[0] * unit + x_sin * (-1 if xz[0] < 0 else 1)
+        z_knob = self.z + xz[1] * unit + z_sin * (-1 if xz[1] < 0 else 1)
         x_stick = self.x + xz[0] * unit
         z_stick = self.z + xz[1] * unit
 
@@ -374,7 +373,7 @@ class HShifterImage:
         yaw = a / pi * 180 + 180
         
         rot_knob = rotation_matrix(0, yaw, 0)
-        rot_stick = rotation_matrix(xz[1] * z_deg, 0, xz[0] * -x_deg)
+        rot_stick = rotation_matrix(z_deg * (-1 if xz[1] < 0 else 1), 0, -x_deg * (-1 if xz[0] < 0 else 1))
 
         y_knob = (self.y + self.stick_height - 
             (abs(xz[1])*((1-cos((z_deg)*pi/180))*self.stick_height)) -
@@ -589,9 +588,11 @@ class HShifterImage:
 
                 if now - self._last_change_play > 0.07:
                     #p = multiprocessing.Process(target=player)
-                    # If ever performance issue, use multiprocessing
+                    # If ever block issue, use multiprocessing
                     def player():
-                        playsound(self._change_mp3, block=False)
+                        # TODO maybe add volume to configurator
+                        playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
+                            block=False, volume=0.65)
                     t = threading.Thread(target=player)
                     t.start()
                     self._last_change_play = now

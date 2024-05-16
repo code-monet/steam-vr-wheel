@@ -330,6 +330,9 @@ class VirtualPad:
     def pre_edit_mode(self):
         pass
 
+    def update_chaperone(self, chp):
+        pass
+
     def set_button_press(self, button, hand, left_ctr, right_ctr):
         if button == openvr.k_EButton_SteamVR_Trigger:
             if not self.config.trigger_press_button:
