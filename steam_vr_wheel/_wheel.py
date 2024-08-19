@@ -93,7 +93,10 @@ def matMul33(a, b, result=None):
     result[2][3] = b[2][3]
     return result
 
-
+def set_transform(tf, mat):
+    for i in range(0, 3):
+        for j in range(0, 4):
+            tf[i][j] = mat[i][j]
 
 class HShifterImage:
     def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, degree=15, scale=100, alpha=100):
@@ -162,12 +165,12 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayAlpha(self.slot, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 14cm
         
-        stick_width = 0.02
-        self.stick_width = stick_width
-        txw, txh = 40, 633
-        stick_height = txh / (txw / stick_width)
-        stick_scale = scale / 100 # 1.0 => 31.65cm
-        stick_height *= stick_scale
+        # Scale
+        self.rescale(scale / 100)
+        stick_width = self.stick_width
+        stick_height = self.stick_height
+        stick_scale = self.stick_scale
+
         check_result(self.vroverlay.setOverlayColor(self.stick, 1, 1, 1))
         check_result(self.vroverlay.setOverlayAlpha(self.stick, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.stick, stick_width))
@@ -175,11 +178,6 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayColor(self.knob, 1, 1, 1))
         check_result(self.vroverlay.setOverlayAlpha(self.knob, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.knob, 0.05))
-
-        def set_transform(tf, mat):
-            for i in range(0, 3):
-                for j in range(0, 4):
-                    tf[i][j] = mat[i][j]
 
         # Position
         ## Slot
@@ -210,19 +208,6 @@ class HShifterImage:
 
         check_result(self.vroverlay.function_table.setOverlayTextureBounds(self.slot, openvr.byref(self.slot_uv)))
 
-        ## Stick
-        result, self.stick_tf = self.vroverlay.setOverlayTransformAbsolute(self.stick, openvr.TrackingUniverseSeated)
-        check_result(result)
-        result, self.stick_uv = self.vroverlay.getOverlayTextureBounds(self.stick)
-        check_result(result)
-        set_transform(self.stick_tf, [[1.0, 0.0, 0.0, x],
-                                    [0.0, stick_scale, 0.0, y+stick_height/2],
-                                    [0.0, 0.0, 1.0, z]])
-        self.stick_uv.vMax = stick_scale
-        self.stick_height = stick_height
-        self.stick_scale = stick_scale
-        check_result(self.vroverlay.function_table.setOverlayTextureBounds(self.stick, openvr.byref(self.stick_uv)))
-
         ## Knob
         result, self.knob_tf = self.vroverlay.setOverlayTransformAbsolute(self.knob, openvr.TrackingUniverseSeated)
         check_result(result)
@@ -240,6 +225,35 @@ class HShifterImage:
         check_result(self.vroverlay.showOverlay(self.knob))
 
         self.last_pos = 3.5
+
+    def rescale_delta(self, delta):
+        scale1 = self.stick_scale + delta
+        scale1 = max(min(1.0, scale1), 0.1)
+        self.rescale(scale1)
+
+    def rescale(self, scale):
+        stick_width = 0.02
+        self.stick_width = stick_width
+
+        txw, txh = 40, 633
+        stick_height = txh / (txw / stick_width)
+        stick_scale = scale # 1.0 => 31.65cm
+        stick_height *= stick_scale
+
+        self.stick_height = stick_height
+        self.stick_scale = stick_scale
+
+        ## Stick
+        result, self.stick_tf = self.vroverlay.setOverlayTransformAbsolute(self.stick, openvr.TrackingUniverseSeated)
+        check_result(result)
+        result, self.stick_uv = self.vroverlay.getOverlayTextureBounds(self.stick)
+        check_result(result)
+
+        set_transform(self.stick_tf, [[1.0, 0.0, 0.0, self.x],
+                                    [0.0, stick_scale, 0.0, self.y+stick_height/2],
+                                    [0.0, 0.0, 1.0, self.z]])
+        self.stick_uv.vMax = stick_scale
+        check_result(self.vroverlay.function_table.setOverlayTextureBounds(self.stick, openvr.byref(self.stick_uv)))
 
     def check_collision(self, ctr):
         if self.wheel.config.shifter_adaptive_bounds:
@@ -296,8 +310,8 @@ class HShifterImage:
             self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
 
         def haptic():
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-            time.sleep(0.11)
+            #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000) 
+            time.sleep(0.05) # Sleep so that it won't overlap with the knob haptic pulse
             openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
         t = threading.Thread(target=haptic)
         t.start()
@@ -315,8 +329,8 @@ class HShifterImage:
             self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
 
         def haptic():
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-            time.sleep(0.11)
+            #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+            time.sleep(0.05) # Sleep so that it won't overlap with the knob haptic pulse
             openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
         t = threading.Thread(target=haptic)
         t.start()
@@ -326,6 +340,14 @@ class HShifterImage:
         self._snap_ctr = ctr
         self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
+
+         # Check double tap
+        self._snap_times.append(now)
+        self._snap_times = self._snap_times[-2:]
+
+        if len(self._snap_times) >= 2 and self._snap_times[-1] - self._snap_times[-2] <= 0.5:
+            self._reset_double_tap()
+            self.toggle_splitter(ctr)
 
     def unsnap(self):
         self._snapped = False
@@ -419,21 +441,29 @@ class HShifterImage:
         self.slot_tf[2][3] = self.z
 
         # Bounds
+        coll_margin = 0.05
+        coll_radius = 0.07 # just bigger margin
         if self.wheel.config.shifter_adaptive_bounds:
-            self.collision_radius = 0.07
+            self.collision_radius = coll_radius
         else:
             x_sin_full = sin(self.degree*pi/180) * self.stick_height
             z_sin_full = sin(self.degree*pi/180) * self.stick_height
-            margin = 0.05
+            margin = coll_margin
 
             if self._xz_rev[0] == -2:
                 self.bounds = [
-                    [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
-                    [self.x + x_sin_full+unit     + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
+                    [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, z_knob - coll_radius], 
+                    [self.x + x_sin_full+unit     + margin, y_knob+0.1     , z_knob + coll_radius]]
+                #self.bounds = [
+                #    [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
+                #    [self.x + x_sin_full+unit     + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
             else:
                 self.bounds = [
-                    [self.x - x_sin_full-unit     - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
-                    [self.x + (x_sin_full+unit)*2 + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
+                    [self.x - x_sin_full-unit     - margin, y_knob+0.1-0.15, z_knob - coll_radius], 
+                    [self.x + (x_sin_full+unit)*2 + margin, y_knob+0.1     , z_knob + coll_radius]]
+                #self.bounds = [
+                #    [self.x - x_sin_full-unit     - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
+                #    [self.x + (x_sin_full+unit)*2 + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
 
         self.x_knob = x_knob
         self.y_knob = y_knob
@@ -583,22 +613,31 @@ class HShifterImage:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             if xz_pos_0 != xz_pos_1 and xz_pos_1[1] != 0:
-                # Gear change
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                # Position changed
+                # Reset double tap in order to prevent triggering splitter during fast gear change
+                self._reset_double_tap()
 
-                if now - self._last_change_play > 0.07:
-                    #p = multiprocessing.Process(target=player)
-                    # If ever block issue, use multiprocessing
-                    def player():
-                        # TODO maybe add volume to configurator
-                        playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
-                            block=False, volume=0.65)
-                    t = threading.Thread(target=player)
-                    t.start()
-                    self._last_change_play = now
+                # Gear changed
+                if xz_pos_1[1] != 0:
+                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+
+                    if now - self._last_change_play > 0.07:
+                        #p = multiprocessing.Process(target=player)
+                        # If ever block issue, use multiprocessing
+                        def player():
+                            # TODO maybe add volume to configurator
+                            playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
+                                block=False, volume=0.65)
+                        t = threading.Thread(target=player)
+                        t.start()
+                        self._last_change_play = now
 
             self._move_stick(xz_1)
             self.set_stick_xz_pos(xz_pos_1)
+
+    def _reset_double_tap(self):
+        self._snap_times = []
+
 
 
 class SteeringWheelImage:
@@ -1187,6 +1226,7 @@ class Wheel(VirtualPad):
     GRIP_FLAG_AUTO_GRAB = 0x1
 
     def _update_hands(self, grip_info, left_ctr, right_ctr):
+        now = time.time()
         hand = grip_info[0]
         flag = 0 if len(grip_info) < 3 else grip_info[2]
 
@@ -1203,6 +1243,9 @@ class Wheel(VirtualPad):
                 self._snapped = False
             elif v == 'shifter':
                 self.h_shifter_image.unsnap()
+
+                # Disable knob haptic for 1 second
+                self._last_knob_haptic = now + 1
 
                 def enabler():
                     # Enable splitter/range related buttons back
@@ -1365,12 +1408,12 @@ class Wheel(VirtualPad):
 
         # Slight haptic when touching knob
         if self._hand_snaps['left'] != 'shifter' and self._hand_snaps['right'] != 'shifter':
-            if now - self._last_knob_haptic > 0.12:
+            if now - self._last_knob_haptic > 0.08:
                 self._last_knob_haptic = now
                 if self._hand_snaps['left'] == '' and self.h_shifter_image.check_collision(left_ctr):
-                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 100)
+                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 330)
                 if self._hand_snaps['right'] == '' and self.h_shifter_image.check_collision(right_ctr):
-                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 100)
+                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 330)
 
         # Up down joystick for Range
         shifter_hand = ''
@@ -1474,17 +1517,22 @@ class Wheel(VirtualPad):
         #  k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
         # rAxis
         if state_r.rAxis:
+            def dead_and_stretch(v, d):
+                if abs(v) < d:
+                    return 0.0
+                else:
+                    s = v / abs(v)
+                    return (v - s*d)/(1-d)
+            
             x = state_r.rAxis[0].x # quest 2 joystick
             y = state_r.rAxis[0].y
             if self._edit_move_wheel:
-                def dead_and_stretch(v, d):
-                    if abs(v) < d:
-                        return 0.0
-                    else:
-                        s = v / abs(v)
-                        return (v - s*d)/(1-d)
                 self.resize_delta(dead_and_stretch(x, 0.3) / 240)
                 self.pitch_delta(dead_and_stretch(y, 0.75) * 2)
+
+            elif self._edit_move_shifter:
+                self.h_shifter_image.rescale_delta(dead_and_stretch(y, 0.5) / 100)
+                self.config.shifter_scale = int(self.h_shifter_image.stick_scale * 100)
 
         if state_r.ulButtonPressed:
             btns = list(reversed(bin(state_r.ulButtonPressed)[2:]))

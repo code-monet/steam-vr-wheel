@@ -116,6 +116,10 @@ class Bike(VirtualPad):
         self.handlebar_image.move_rotate(pitch_yaw_roll=[self.pitch, self.yaw, 0])
         self.lean = 0
         self.roll_lean = 0
+        self.steer = 0
+        self.dampered_lean = 0
+        self.dampered_roll_lean = 0
+        self.dampered_steer = 0
 
         self.max_steer = self.config.bike_max_steer
         self.max_lean = self.config.bike_max_lean
@@ -266,19 +270,47 @@ class Bike(VirtualPad):
         #
         self.lean = lean
         self.roll_lean = roll_lean
-        self.pitch = self.base_pitch + abs(lean)
+        self.steer = steer
 
-        # Yaw
-        self.yaw = steer + lean
-
-        self.x_offset = self.handlebar_height*sin(roll_lean/180*pi)
-        self.y_offset = self.handlebar_height*cos(roll_lean/180*pi) - self.handlebar_height
-        self.z_offset = -1 * (cos(roll_lean /180*pi) - 1)
+        #
+        self.central_stablize()
+        self.damper()
 
         # right hand
         # sin(lean) * hh + cos(lean) * o = x
         # left hand
         # sin(lean) * hh - cos(lean) * o = x
+
+    def central_stablize(self):
+        stablizer_curve = [np.array([0, 0]),
+                            np.array([0.75, 0]),
+                            np.array([0.25, 0.9]),
+                            np.array([1, 1])]
+        s = 1
+        if self.lean < 0:
+            s = -1
+        self.lean = bezier_curve(abs(self.lean)/self.max_lean,
+            *stablizer_curve)[1] * self.max_lean * s
+        self.roll_lean = bezier_curve(abs(self.roll_lean)/self.max_lean,
+            *stablizer_curve)[1] * self.max_lean * s
+        
+    def damper(self):
+        DAMPER = 10 / (60 * self.get_update_delta())
+        DAMPER = max(1, DAMPER)
+        self.dampered_lean += (self.lean - self.dampered_lean) / DAMPER # TODO config dampering factor
+        self.dampered_roll_lean += (self.roll_lean - self.dampered_roll_lean) / DAMPER
+        self.dampered_steer += (self.steer - self.dampered_steer) / DAMPER
+        
+        self.pitch = self.base_pitch + abs(self.dampered_lean)
+
+        if self.mode == self.BIKE_MODE_RELATIVE:
+            self.yaw = self.dampered_roll_lean / 2
+        else:
+            self.yaw = self.dampered_steer + self.dampered_lean
+
+        self.x_offset = self.handlebar_height*sin(self.dampered_roll_lean/180*pi)
+        self.y_offset = self.handlebar_height*cos(self.dampered_roll_lean/180*pi) - self.handlebar_height
+        self.z_offset = -1 * (cos(self.dampered_roll_lean /180*pi) - 1)
 
     def render(self, hmd):
 
@@ -287,8 +319,9 @@ class Bike(VirtualPad):
                 pos=[hmd.x+self.center[0],
                     hmd.y+self.center[1],
                     hmd.z+self.center[2]],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.dampered_roll_lean])
 
+            """
             vrchp_setup = openvr.VRChaperoneSetup()
             chp = openvr.HmdMatrix34_t()
             for i in range(3):
@@ -299,13 +332,14 @@ class Bike(VirtualPad):
             self.current_chaperone = chp
             vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(openvr.byref(chp))
             vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
+            """
 
         else:
             self.handlebar_image.move_rotate(
                 pos=[self.center[0]+self.x_offset,
                     self.center[1]+self.y_offset,
                     self.center[2]+self.z_offset],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.dampered_roll_lean])
 
         if self.config.bike_show_hands:
             self.hands_overlay.show()
@@ -392,7 +426,7 @@ class Bike(VirtualPad):
         self._update_throttle(right_ctr)
 
         # vJoy
-        axisX = int(((self.lean/self.max_lean)+1)/2.0 * 0x8000)
+        axisX = int(((self.dampered_lean/self.max_lean)+1)/2.0 * 0x8000)
         self.device.set_axis(HID_USAGE_X, axisX)
 
         self.render(hmd)
