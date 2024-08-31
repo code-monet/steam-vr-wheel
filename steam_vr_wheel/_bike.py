@@ -9,7 +9,11 @@ import time
 import threading
 import queue
 
+import socket
+import struct
+
 from . import check_result, rotation_matrix, bezier_curve
+from steam_vr_wheel.wheel import wheel_main_done
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
 
@@ -19,6 +23,88 @@ from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
 # https://github.com/OpenVR-Advanced-Settings/OpenVR-AdvancedSettings/blob/72e91e91165fff97df09c0a24464bc9856fe387c/src/tabcontrollers/MoveCenterTabController.cpp#L2509
 # https://www.youtube.com/watch?v=cS3DTWq0QV8
 
+def ac_telemetry_loop(speed_callback):
+
+    ac_server_ip = '127.0.0.1'  # Replace with the actual IP address of the ACServer
+    ac_server_port = 9996
+
+    def decode_utf_16_le(p):
+        # 0x2500 = % = end of string
+        for i in range(len(p)):
+            c = p[i]
+
+            if c == 0 and i > 1 and p[i-1] == 0x25:
+                return p[:i-1].decode('utf-16-le').strip('\x00')
+
+        raise Exception("Wrong data given for utf 16 string")
+    
+    # Create the UDP socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(3)
+    sock.connect((ac_server_ip, ac_server_port))
+
+    while not wheel_main_done():
+        
+        ### Handshake 1
+        print("Attempt new handshake with AC server")
+        # Pack the data according to the specified structure
+        packet = struct.pack('<3i', 1, 1, 0)
+        # Send the packet to the specified IP and port
+        sock.send(packet)
+        
+        ### Handshake recv 1
+        try:
+            data, addr = sock.recvfrom(2048)  # Buffer size is 2048 bytes
+            unpacked_data = struct.unpack('<100s 100s 2i 100s 100s', data)
+
+            car_name = decode_utf_16_le(unpacked_data[0])
+            driver_name = decode_utf_16_le(unpacked_data[1])
+            identifier = unpacked_data[2]
+            version = unpacked_data[3]
+            track_name = decode_utf_16_le(unpacked_data[4])
+            track_config = decode_utf_16_le(unpacked_data[5])
+
+            print(car_name, "CAR")
+
+        except socket.timeout:
+            continue
+        
+        except ConnectionResetError:
+            time.sleep(6)
+            continue
+
+        ### Handshake 2
+        # Pack the data according to the specified structure
+        packet = struct.pack('<3i', identifier, version, 1) # 1 for Subscription
+        # Send the packet to the specified IP and port
+        sock.send(packet)
+
+        # https://github.com/rickwest/ac-remote-telemetry-client/blob/master/src/parsers/RTCarInfoParser.js
+        format_string = '''<4s i
+                        3f 6? 2? 3f 4i
+                        5f i f
+                        4f 4f 4f 4f 4f 4f 4f 4f 4f 4f
+                        4f 4f 4f
+                        4f f f 3f'''
+        while not wheel_main_done():
+            try:
+                data, addr = sock.recvfrom(2048)  # Buffer size is 2048 bytes
+                unpacked_data = struct.unpack(format_string, data)
+
+                speed_Kmh = unpacked_data[2]
+                speed_callback(speed_Kmh)
+
+            except socket.timeout:
+                break
+
+    ### Handshake 2
+    # Pack the data according to the specified structure
+    packet = struct.pack('<3i', identifier, version, 3) # 3 for dismiss
+    # Send the packet to the specified IP and port
+    sock.send(packet)
+
+    print("Dismissed ac telemetry")
+    sock.close()
 
 class HandlebarImage():
     def __init__(self, x=0, y=-0.4, z=-0.35, size=0.80, alpha=1):
@@ -97,6 +183,12 @@ class HandlebarImage():
 
 
 class Bike(VirtualPad):
+
+    # Calibrated for personal use: bmw_s_1000_rr_by_bodysut_swapped_spec in Assetto corsa
+    DEFAULT_AC_SPEED = 60
+    #AC_SPEED_MAX_LEAN = 60
+    AC_SPEED_AXIS_THRESHOLD = 125
+
     def __init__(self):
         super().__init__()
         self.vrsys = openvr.VRSystem()
@@ -160,6 +252,16 @@ class Bike(VirtualPad):
         # edit mode
         self._edit_mode_last_press = 0.0
         self._edit_mode_entry = 0.0
+
+        # Assetto Corsa telemetry
+        if self.config.bike_use_ac_server:
+            self.ac_speed = self.DEFAULT_AC_SPEED
+            def speed_callback(spd):
+                self.ac_speed = spd
+
+            thread = threading.Thread(target=ac_telemetry_loop, args=(speed_callback,))
+            thread.start()
+
 
 
     BIKE_MODE_ABSOLUTE = 1              # Both the hands affect the lean
@@ -248,14 +350,16 @@ class Bike(VirtualPad):
         lean = lean/pi*180
         roll_lean = lean
 
+        # Clamp
+        lean = min(max(lean, -self.max_lean), self.max_lean)
+        roll_lean = min(max(roll_lean, -self.max_lean), self.max_lean)
+
         # Less steer effect at high lean
         steer *= max(0, (self.max_steer-abs(lean))/self.max_steer)
         lean += steer
 
-        # Clamp
-        lean = min(max(lean, -self.max_lean), self.max_lean)
-
         # Deadzone
+        """
         lower = self.max_lean * (self.angle_deadzone / 100.0)
         if abs(lean) < lower:
             lean = 0
@@ -265,7 +369,7 @@ class Bike(VirtualPad):
             else:
                 lean += lower
 
-            lean *= 100/(100-self.angle_deadzone)
+            lean *= 100/(100-self.angle_deadzone)"""
 
         #
         self.lean = lean
@@ -273,8 +377,8 @@ class Bike(VirtualPad):
         self.steer = steer
 
         #
-        self.central_stablize()
-        self.damper()
+        #self.central_stablize()
+        #self.damper()
 
         # right hand
         # sin(lean) * hh + cos(lean) * o = x
@@ -319,7 +423,7 @@ class Bike(VirtualPad):
                 pos=[hmd.x+self.center[0],
                     hmd.y+self.center[1],
                     hmd.z+self.center[2]],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.dampered_roll_lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
 
             """
             vrchp_setup = openvr.VRChaperoneSetup()
@@ -339,7 +443,7 @@ class Bike(VirtualPad):
                 pos=[self.center[0]+self.x_offset,
                     self.center[1]+self.y_offset,
                     self.center[2]+self.z_offset],
-                pitch_yaw_roll=[self.pitch, self.yaw, -self.dampered_roll_lean])
+                pitch_yaw_roll=[self.pitch, self.yaw, -self.roll_lean])
 
         if self.config.bike_show_hands:
             self.hands_overlay.show()
@@ -419,6 +523,10 @@ class Bike(VirtualPad):
         self.update_grip('left', left_ctr)
         self.update_grip('right', right_ctr)
 
+        # Update max lean
+        if self.config.bike_use_ac_server:
+            self.max_lean = self.config.bike_max_lean * max(0.2, min(1.0, self.ac_speed/self.DEFAULT_AC_SPEED))
+
         # Update lean
         self._evaluate_lean_angle(left_ctr, right_ctr)
 
@@ -426,7 +534,12 @@ class Bike(VirtualPad):
         self._update_throttle(right_ctr)
 
         # vJoy
-        axisX = int(((self.dampered_lean/self.max_lean)+1)/2.0 * 0x8000)
+        lean_to_axis_curve = [np.array([0, 0]),
+                            np.array([0.5 + min(1.0, self.ac_speed/self.AC_SPEED_AXIS_THRESHOLD)/2, 0]),
+                            np.array([0.5 + min(1.0, self.ac_speed/self.AC_SPEED_AXIS_THRESHOLD)/2, 0]),
+                            np.array([1, 1])]
+        lean_axis = bezier_curve(self.lean/self.max_lean, *lean_to_axis_curve)[1]
+        axisX = int((lean_axis+1)/2.0 * 0x8000)
         self.device.set_axis(HID_USAGE_X, axisX)
 
         self.render(hmd)

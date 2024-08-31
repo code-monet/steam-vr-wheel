@@ -117,6 +117,7 @@ class ConfiguratorApp:
 
         self.bike_show_handlebar = wx.CheckBox(self.nb_pnl_bike, label="Show Handlebar Overlay")
         self.bike_show_hands = wx.CheckBox(self.nb_pnl_bike, label="Show Hands Overlay")
+        self.bike_use_ac_server = wx.CheckBox(self.nb_pnl_bike, label="Use Assetto Corsa telemetry to calibrate max lean")
 
         # -
         self.pnl_bike_angle = wx.Panel(self.nb_pnl_bike)
@@ -212,6 +213,8 @@ class ConfiguratorApp:
 
         self.bike_show_handlebar.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.bike_show_hands.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.bike_use_ac_server.Bind(wx.EVT_CHECKBOX, self.config_change)
+
         self.bike_throttle_sensitivity.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_throttle_decrease_per_sec.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_max_lean.Bind(wx.EVT_SPINCTRL, self.config_change)
@@ -264,6 +267,7 @@ class ConfiguratorApp:
 
                                 bike_show_handlebar=self.bike_show_handlebar,
                                 bike_show_hands=self.bike_show_hands,
+                                bike_use_ac_server=self.bike_use_ac_server,
                                 bike_handlebar_height=self.bike_handlebar_height,
                                 bike_max_lean=self.bike_max_lean,
                                 bike_max_steer=self.bike_max_steer,
@@ -384,6 +388,7 @@ class ConfiguratorApp:
 
         self.nb_vbox_bike.Add(self.bike_show_handlebar)
         self.nb_vbox_bike.Add(self.bike_show_hands)
+        self.nb_vbox_bike.Add(self.bike_use_ac_server)
 
         self.nb_vbox_bike.AddSpacer(4)
 

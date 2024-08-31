@@ -112,6 +112,7 @@ DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
                         bike_center=[0, -0.4, -0.35],
                         bike_show_handlebar=True,
                         bike_show_hands=True,
+                        bike_use_ac_server=False,
                         bike_max_lean=60,
                         bike_max_steer=12,
                         bike_angle_deadzone=5,
@@ -605,6 +606,15 @@ class PadConfig:
     @bike_show_hands.setter
     def bike_show_hands(self, x: bool):
         self._data['bike_show_hands'] = x
+        self._write()
+
+    @property
+    def bike_use_ac_server(self):
+        return self._data['bike_use_ac_server']
+
+    @bike_use_ac_server.setter
+    def bike_use_ac_server(self, x: bool):
+        self._data['bike_use_ac_server'] = x
         self._write()
 
     @property

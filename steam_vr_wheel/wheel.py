@@ -6,6 +6,12 @@ import time
 import openvr
 import sys
 
+main_done = False
+
+def wheel_main_done():
+    global main_done
+    return main_done
+
 from steam_vr_wheel._bike import Bike
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel._wheel import Wheel
@@ -19,6 +25,7 @@ if 'DEBUG' in sys.argv:
     FREQUENCY = 1
 else:
     DEBUG = False
+
 
 
 def get_chaperone():
@@ -159,4 +166,7 @@ def main(type='wheel'):
             print("Task took too long +", -left, "seconds")
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        main_done = True
