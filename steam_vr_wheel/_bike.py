@@ -89,6 +89,9 @@ def ac_telemetry_loop(speed_callback):
         while not wheel_main_done():
             try:
                 data, addr = sock.recvfrom(2048)  # Buffer size is 2048 bytes
+                if len(data) != 328:
+                    time.sleep(0.1)
+                    continue
                 unpacked_data = struct.unpack(format_string, data)
 
                 speed_Kmh = unpacked_data[2]
@@ -105,6 +108,24 @@ def ac_telemetry_loop(speed_callback):
 
     print("Dismissed ac telemetry")
     sock.close()
+
+
+class AC_Calibration():
+    def __init__(self, spd_max_lean=60, spd_max_axis_sensitivity=125, curve_curvature=0.0):
+        self.spd_max_lean = spd_max_lean
+        self.spd_max_axis_sensitivity = spd_max_axis_sensitivity
+        self.curve_curvature = min(max(0.0, curve_curvature), 1.0)
+
+    def to_axis(self, lean_axis, spd):
+        y = 0.5 - self.curve_curvature * 0.5
+        lean_to_axis_curve = [np.array([0, 0]),
+                            np.array([0.5 + min(1.0, spd/self.spd_max_axis_sensitivity)/2, y]),
+                            np.array([0.5 + min(1.0, spd/self.spd_max_axis_sensitivity)/2, y]),
+                            np.array([1, 1])]
+        return bezier_curve(lean_axis, *lean_to_axis_curve)[1]
+
+    def max_lean_multiplier(self, spd):
+        return max(0.2, min(1.0, spd/self.spd_max_lean))
 
 class HandlebarImage():
     def __init__(self, x=0, y=-0.4, z=-0.35, size=0.80, alpha=1):
@@ -185,9 +206,8 @@ class HandlebarImage():
 class Bike(VirtualPad):
 
     # Calibrated for personal use: bmw_s_1000_rr_by_bodysut_swapped_spec in Assetto corsa
-    DEFAULT_AC_SPEED = 60
-    #AC_SPEED_MAX_LEAN = 60
-    AC_SPEED_AXIS_THRESHOLD = 125
+    AC_CAL_BMWS1000RR = AC_Calibration(60, 125, 1.0)
+    AC_CAL = AC_CAL_BMWS1000RR
 
     def __init__(self):
         super().__init__()
@@ -255,7 +275,7 @@ class Bike(VirtualPad):
 
         # Assetto Corsa telemetry
         if self.config.bike_use_ac_server:
-            self.ac_speed = self.DEFAULT_AC_SPEED
+            self.ac_speed = self.AC_CAL.spd_max_lean
             def speed_callback(spd):
                 self.ac_speed = spd
 
@@ -385,7 +405,7 @@ class Bike(VirtualPad):
         # left hand
         # sin(lean) * hh - cos(lean) * o = x
 
-    def central_stablize(self):
+    def central_stablize(self): ## not used
         stablizer_curve = [np.array([0, 0]),
                             np.array([0.75, 0]),
                             np.array([0.25, 0.9]),
@@ -398,7 +418,7 @@ class Bike(VirtualPad):
         self.roll_lean = bezier_curve(abs(self.roll_lean)/self.max_lean,
             *stablizer_curve)[1] * self.max_lean * s
         
-    def damper(self):
+    def damper(self): ## not used 
         DAMPER = 10 / (60 * self.get_update_delta())
         DAMPER = max(1, DAMPER)
         self.dampered_lean += (self.lean - self.dampered_lean) / DAMPER # TODO config dampering factor
@@ -525,7 +545,7 @@ class Bike(VirtualPad):
 
         # Update max lean
         if self.config.bike_use_ac_server:
-            self.max_lean = self.config.bike_max_lean * max(0.2, min(1.0, self.ac_speed/self.DEFAULT_AC_SPEED))
+            self.max_lean = self.config.bike_max_lean * self.AC_CAL.max_lean_multiplier(self.ac_speed)
 
         # Update lean
         self._evaluate_lean_angle(left_ctr, right_ctr)
@@ -534,11 +554,10 @@ class Bike(VirtualPad):
         self._update_throttle(right_ctr)
 
         # vJoy
-        lean_to_axis_curve = [np.array([0, 0]),
-                            np.array([0.5 + min(1.0, self.ac_speed/self.AC_SPEED_AXIS_THRESHOLD)/2, 0]),
-                            np.array([0.5 + min(1.0, self.ac_speed/self.AC_SPEED_AXIS_THRESHOLD)/2, 0]),
-                            np.array([1, 1])]
-        lean_axis = bezier_curve(self.lean/self.max_lean, *lean_to_axis_curve)[1]
+        lean_axis = self.lean/self.max_lean
+        if self.config.bike_use_ac_server:
+            lean_axis = self.AC_CAL.to_axis(lean_axis, self.ac_speed)
+        
         axisX = int((lean_axis+1)/2.0 * 0x8000)
         self.device.set_axis(HID_USAGE_X, axisX)
 
