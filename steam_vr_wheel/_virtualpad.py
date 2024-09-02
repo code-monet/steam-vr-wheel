@@ -428,7 +428,9 @@ class VirtualPad:
         self._previous_update_time = now
 
         if self.hands_overlay is None:
+            # HandsImage created here because controllers can be accessed here
             self.hands_overlay = HandsImage(left_ctr, right_ctr)
+            self.hands_overlay.closed_hands_always_top()
 
         self.set_axis(HID_USAGE_SL0, int(left_ctr.axis * 0x8000))
         self.set_axis(HID_USAGE_SL1, int(right_ctr.axis * 0x8000))

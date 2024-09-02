@@ -75,7 +75,6 @@ class ConfiguratorApp:
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100)
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
-        self.wheel_adaptive_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel moves in order to prevent abrupt turn')
 
         ### Shifter
         self.pnl_shifter = wx.Panel(self.nb_pnl_wheel)
@@ -93,8 +92,6 @@ class ConfiguratorApp:
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
         
-        self.shifter_adaptive_bounds_box = wx.CheckBox(self.nb_pnl_wheel, label='You need to grab where the shifter exactly is')
-
         self.shifter_reverse_orientation = wx.RadioBox(self.nb_pnl_wheel, label="Reverse Position",
             choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
             majorDimension=1, style=wx.RA_SPECIFY_ROWS)
@@ -190,13 +187,11 @@ class ConfiguratorApp:
         self.wheel_pitch.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_transparent_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.wheel_adaptive_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
 
         ## Shifter
         self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.shifter_adaptive_bounds_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
         ## Joystick button or axis
@@ -248,12 +243,10 @@ class ConfiguratorApp:
                                 wheel_pitch=self.wheel_pitch,
                                 wheel_alpha=self.wheel_alpha,
                                 wheel_transparent_center=self.wheel_transparent_center_box,
-                                wheel_adaptive_center=self.wheel_adaptive_center_box,
 
                                 shifter_degree=self.shifter_degree,
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_scale=self.shifter_scale,
-                                shifter_adaptive_bounds=self.shifter_adaptive_bounds_box,
                                 shifter_reverse_orientation=self.shifter_reverse_orientation,
 
                                 j_l_left_button=self.j_l_left_button,
@@ -330,7 +323,6 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Alpha"))
         self.nb_vbox_wheel.Add(self.wheel_alpha)
         self.nb_vbox_wheel.Add(self.wheel_transparent_center_box)
-        self.nb_vbox_wheel.Add(self.wheel_adaptive_center_box)
 
         self.nb_vbox_wheel.AddSpacer(10)
         self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Degree"))
@@ -353,7 +345,6 @@ class ConfiguratorApp:
             wx.StaticText(self.nb_pnl_wheel, label = "Height 100%=Truck 30%=General")))
 
         self.nb_vbox_wheel.AddSpacer(4)
-        self.nb_vbox_wheel.Add(self.shifter_adaptive_bounds_box)
         self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)
 
         self.nb_vbox_wheel.AddSpacer(10)

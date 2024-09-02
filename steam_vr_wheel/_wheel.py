@@ -256,29 +256,22 @@ class HShifterImage:
         check_result(self.vroverlay.function_table.setOverlayTextureBounds(self.stick, openvr.byref(self.stick_uv)))
 
     def check_collision(self, ctr):
-        if self.wheel.config.shifter_adaptive_bounds:
-            r = self.collision_radius
-            p = np.array([ctr.x, ctr.y, ctr.z])
-            a = np.array([self.x_stick, self.y, self.z_stick])
-            b = np.array([self.x_knob, self.y_knob, self.z_knob])
 
-            ap = p - a
-            ab = b - a
+        r = self.collision_radius
+        p = np.array([ctr.x, ctr.y, ctr.z])
+        a = np.array([self.x_stick, self.y, self.z_stick])
+        b = np.array([self.x_knob, self.y_knob, self.z_knob])
 
-            l = np.dot(ap, ab) / np.dot(ab, ab)
-            l = max(0, min(1, l))
-            c = a + ab * l
-            cp = p - c
+        ap = p - a
+        ab = b - a
 
-            d = np.sqrt(np.dot(cp, cp))
-            return d <= r
-        else:
-            x, y, z = ctr.x, ctr.y, ctr.z
-            pm, pM = self.bounds
-            x0, y0, z0 = pm
-            x2, y2, z2 = pM
-            
-            return x0<=x<=x2 and y0<=y<=y2 and z0<=z<=z2
+        l = np.dot(ap, ab) / np.dot(ab, ab)
+        l = max(0, min(1, l))
+        c = a + ab * l
+        cp = p - c
+
+        d = np.sqrt(np.dot(cp, cp))
+        return d <= r
 
     def set_stick_xz_pos(self, xz_pos, ctr=None):
         
@@ -441,29 +434,8 @@ class HShifterImage:
         self.slot_tf[2][3] = self.z
 
         # Bounds
-        coll_margin = 0.05
-        coll_radius = 0.07 # just bigger margin
-        if self.wheel.config.shifter_adaptive_bounds:
-            self.collision_radius = coll_radius
-        else:
-            x_sin_full = sin(self.degree*pi/180) * self.stick_height
-            z_sin_full = sin(self.degree*pi/180) * self.stick_height
-            margin = coll_margin
-
-            if self._xz_rev[0] == -2:
-                self.bounds = [
-                    [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, z_knob - coll_radius], 
-                    [self.x + x_sin_full+unit     + margin, y_knob+0.1     , z_knob + coll_radius]]
-                #self.bounds = [
-                #    [self.x - (x_sin_full+unit)*2 - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
-                #    [self.x + x_sin_full+unit     + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
-            else:
-                self.bounds = [
-                    [self.x - x_sin_full-unit     - margin, y_knob+0.1-0.15, z_knob - coll_radius], 
-                    [self.x + (x_sin_full+unit)*2 + margin, y_knob+0.1     , z_knob + coll_radius]]
-                #self.bounds = [
-                #    [self.x - x_sin_full-unit     - margin, y_knob+0.1-0.15, self.z -z_sin_full-unit - margin], 
-                #    [self.x + (x_sin_full+unit)*2 + margin, y_knob+0.1     , self.z +z_sin_full+unit + margin]]
+        coll_radius = 0.07
+        self.collision_radius = coll_radius
 
         self.x_knob = x_knob
         self.y_knob = y_knob
@@ -755,8 +727,8 @@ class Wheel(VirtualPad):
         self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
         self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
 
-        # Adaptive wheel centering
-        self._wheel_adpative_offset = [0, 0]
+        # Center crossing smoothing
+        self._last_non_centerlimit_pos = None
 
         # radians per frame last turn speed when wheel was being held, gradually decreases after wheel is released
         self._turn_speed = 0
@@ -911,13 +883,9 @@ class Wheel(VirtualPad):
         a = self.size/2 + 0.06
         b = self.size/2 - 0.10
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
-        x = point.x - adapt_center.x
-        y = point.y - adapt_center.y
-        z = point.z - adapt_center.z
+        x = point.x - self.center.x
+        y = point.y - self.center.y
+        z = point.z - self.center.z
 
         if abs(z) < 0.075:
             distance = sqrt(x**2+y**2)
@@ -930,17 +898,13 @@ class Wheel(VirtualPad):
 
     def _subtract_and_rotate(self, point, mat):
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
-        diff = np.array([point.x-adapt_center.x,
-                        point.y-adapt_center.y,
-                        point.z-adapt_center.z])
+        diff = np.array([point.x-self.center.x,
+                        point.y-self.center.y,
+                        point.z-self.center.z])
         l = np.dot(mat, diff)
-        l[0] += adapt_center.x
-        l[1] += adapt_center.y
-        l[2] += adapt_center.z
+        l[0] += self.center.x
+        l[1] += self.center.y
+        l[2] += self.center.z
         return Point(l[0], l[1], l[2])
 
     def to_wheel_space(self, point):
@@ -960,13 +924,9 @@ class Wheel(VirtualPad):
 
     def wheel_raw_angle(self, point):
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
         point = self.to_wheel_space(point)
-        a = float(point.y) - adapt_center.y
-        b = float(point.x) - adapt_center.x
+        a = float(point.y) - self.center.y
+        b = float(point.x) - self.center.x
 
         angle = atan2(a, b)
         return angle
@@ -988,13 +948,9 @@ class Wheel(VirtualPad):
         if d > self.size**2:
             return True
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
-        dc = ((adapt_center.x - (l.x+r.x)/2)**2
-              + (adapt_center.y - (l.y+r.y)/2)**2
-              + (adapt_center.z - (l.z+r.z)/2)**2
+        dc = ((self.center.x - (l.x+r.x)/2)**2
+              + (self.center.y - (l.y+r.y)/2)**2
+              + (self.center.z - (l.z+r.z)/2)**2
               )
         if dc > self.size**2:
             return True
@@ -1054,7 +1010,24 @@ class Wheel(VirtualPad):
         else:
             self.is_not_held()
             return None
-        angle = self.wheel_raw_angle(controller) + self._wheel_grab_offset
+        
+        # TODO: this is test
+        raw_angle = self.wheel_raw_angle(controller)
+        ctr_wheel = self.to_wheel_space(controller)
+        l = sqrt((self.center.x-ctr_wheel.x)**2+
+                (self.center.y-ctr_wheel.y)**2)
+        limit = 0.065
+        if l <= limit:
+            if self._last_non_centerlimit_pos is None:
+                self._last_non_centerlimit_pos = Point(controller.x, controller.y, controller.z)
+
+            pivot_angle = self.wheel_raw_angle(self._last_non_centerlimit_pos)
+            raw_angle = pivot_angle + (raw_angle - pivot_angle) * l/limit
+        else:
+            self._last_non_centerlimit_pos = Point(controller.x, controller.y, controller.z)
+
+        angle = raw_angle + self._wheel_grab_offset
+        #print(angle/pi*180, self._wheel_angles[-1]/pi*180)
         return angle
 
     def calculate_grab_offset(self, raw_angle=None):
@@ -1117,12 +1090,8 @@ class Wheel(VirtualPad):
 
     def render(self, hmd):
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
         self.wheel_image.move_rotate(
-            pos=adapt_center,
+            pos=self.center,
             pitch_roll=[
             self.config.wheel_pitch,
             self._wheel_angles[-1]/pi*180
@@ -1130,13 +1099,13 @@ class Wheel(VirtualPad):
 
         alpha = self.config.wheel_alpha / 100.0
 
-        d = sqrt((adapt_center.x-hmd.x)**2+
-                    (adapt_center.y-hmd.y)**2+
-                    (adapt_center.z-hmd.z)**2)
+        d = sqrt((self.center.x-hmd.x)**2+
+                    (self.center.y-hmd.y)**2+
+                    (self.center.z-hmd.z)**2)
         p2 = hmd.normal.copy() * d
-        pc_d = sqrt((adapt_center.x-p2[0])**2+
-                    (adapt_center.y-p2[1])**2+
-                    (adapt_center.z-p2[2])**2)
+        pc_d = sqrt((self.center.x-p2[0])**2+
+                    (self.center.y-p2[1])**2+
+                    (self.center.z-p2[2])**2)
         a = min(1.0, max(-1.0, -((pc_d/d)**2/2-1)))
         th = acos(a)
 
@@ -1149,10 +1118,6 @@ class Wheel(VirtualPad):
                     alpha = 0.0
                 elif a <= t1:
                     alpha *= (a-t0)/(t1-t0)
-
-        if (self._hand_snaps['left'][:5] != 'wheel' and
-            self._hand_snaps['right'][:5] != 'wheel'):
-            self.reset_adapt_center()
 
         self.wheel_image.set_alpha(alpha)
 
@@ -1184,12 +1149,8 @@ class Wheel(VirtualPad):
         left_ctr = self.to_wheel_space(left_ctr)
         right_ctr = self.to_wheel_space(right_ctr)
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
         ctr = left_ctr if hand == 'left' else right_ctr
-        offset = [ctr.x - adapt_center.x, ctr.y - adapt_center.y]
+        offset = [ctr.x - self.center.x, ctr.y - self.center.y]
         a = sqrt(offset[0]**2 + offset[1]**2)/(self.size/2)
         offset[0] /= a
         offset[1] /= a
@@ -1198,9 +1159,9 @@ class Wheel(VirtualPad):
             for j in range(3):
                 tf[i][j] = self._rot[i][j]
 
-        tf[0][3] = adapt_center.x + offset[0]
-        tf[1][3] = adapt_center.y + offset[1] - self.hands_overlay.hand_z_offset
-        tf[2][3] = adapt_center.z + 0.005
+        tf[0][3] = self.center.x + offset[0]
+        tf[1][3] = self.center.y + offset[1] - self.hands_overlay.hand_z_offset
+        tf[2][3] = self.center.z + 0.005
 
         ab = self.to_absolute_space(Point(tf[0][3], tf[1][3], tf[2][3]))
 
@@ -1302,7 +1263,7 @@ class Wheel(VirtualPad):
                 return
 
             grabber()
-            if self.h_shifter_image.check_collision(ctr) and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
+            if self.check_colliding_object(ctr) == 'shifter' and (flag & self.GRIP_FLAG_AUTO_GRAB == 0):
 
                 self._shifter_button_lock.acquire()
                 self._hand_snaps[hand] = 'shifter'
@@ -1320,37 +1281,18 @@ class Wheel(VirtualPad):
             else:
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
 
-    def adapt_center(self, left_ctr, right_ctr):
-        limit_radius = 0.045
-        ctr = None
-        if self._hand_snaps['left'][:5] == 'wheel':
-            ctr = left_ctr
-        if self._hand_snaps['right'][:5] == 'wheel':
-            if ctr is not None:
-                return
-            ctr = right_ctr
+    def check_colliding_object(self, ctr):
+        # Exact knob collision takes top priority
+        if self.h_shifter_image.check_collision(ctr):
+            return 'shifter'
 
-        if ctr is None:
-            return
+        # Wheel takes 2nd priority
+        margin = 0.075
+        if (ctr.x < self.center.x + self.size / 2 + margin and
+            ctr.x > self.center.x - self.size / 2 - margin):
+            return 'wheel'
 
-        adapt_center = Point(self.center.x+self._wheel_adpative_offset[0],
-            self.center.y+self._wheel_adpative_offset[1],
-            self.center.z)
-
-        ctr_wheel = self.to_wheel_space(ctr)
-        l = sqrt((adapt_center.x-ctr_wheel.x)**2+
-                (adapt_center.y-ctr_wheel.y)**2)
-
-        if l < limit_radius:
-            off = [ctr_wheel.x-adapt_center.x, ctr_wheel.y-adapt_center.y]
-            c = (limit_radius-l) / l
-            off[0] *= c
-            off[1] *= c
-            self._wheel_adpative_offset[0] -= off[0]
-            self._wheel_adpative_offset[1] -= off[1]
-
-    def reset_adapt_center(self):
-        self._wheel_adpative_offset = [0, 0]
+        return 'shifter'
 
     def update(self, left_ctr, right_ctr, hmd):
         super().update(left_ctr, right_ctr, hmd)
@@ -1396,8 +1338,6 @@ class Wheel(VirtualPad):
                 self.h_shifter_image.attach_hand(hand)
 
         # Wheel angle
-        if self.config.wheel_adaptive_center:
-            self.adapt_center(left_ctr, right_ctr)
         angle = self._wheel_update(left_ctr, right_ctr)
 
         self._wheel_update_common(angle, left_ctr, right_ctr)
@@ -1407,6 +1347,7 @@ class Wheel(VirtualPad):
         self.h_shifter_image.update()
 
         # Slight haptic when touching knob
+        """
         if self._hand_snaps['left'] != 'shifter' and self._hand_snaps['right'] != 'shifter':
             if now - self._last_knob_haptic > 0.08:
                 self._last_knob_haptic = now
@@ -1414,6 +1355,7 @@ class Wheel(VirtualPad):
                     openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 330)
                 if self._hand_snaps['right'] == '' and self.h_shifter_image.check_collision(right_ctr):
                     openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 330)
+        """
 
         # Up down joystick for Range
         shifter_hand = ''

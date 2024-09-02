@@ -89,13 +89,11 @@ DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
                         wheel_show_wheel=True, wheel_show_hands=True,
                         wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
                         wheel_pitch=0, wheel_transparent_center=False,
-                        wheel_adaptive_center=False,
                         wheel_ffb=False,
 
                         ## Shifter
                         shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
                         shifter_scale=100,
-                        shifter_adaptive_bounds=False,
                         shifter_reverse_orientation="Bottom Left",
 
                         ### Joystick as button
@@ -426,15 +424,6 @@ class PadConfig:
         self._write()
 
     @property
-    def wheel_adaptive_center(self):
-        return self._data['wheel_adaptive_center']
-
-    @wheel_adaptive_center.setter
-    def wheel_adaptive_center(self, x: bool):
-        self._data['wheel_adaptive_center'] = x
-        self._write()
-
-    @property
     def wheel_ffb(self):
         return self._data['wheel_ffb']
 
@@ -496,15 +485,6 @@ class PadConfig:
     @shifter_scale.setter
     def shifter_scale(self, x: int):
         self._data['shifter_scale'] = x
-        self._write()
-
-    @property
-    def shifter_adaptive_bounds(self):
-        return self._data['shifter_adaptive_bounds']
-
-    @shifter_adaptive_bounds.setter
-    def shifter_adaptive_bounds(self, x: bool):
-        self._data['shifter_adaptive_bounds'] = x
         self._write()
 
     @property

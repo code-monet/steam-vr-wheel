@@ -43,7 +43,19 @@ def ac_telemetry_loop(speed_callback):
     sock.settimeout(3)
     sock.connect((ac_server_ip, ac_server_port))
 
+    sock_used = False
+
     while not wheel_main_done():
+
+        if sock_used:
+            sock_used = False
+
+            # Pack the data according to the specified structure
+            packet = struct.pack('<3i', identifier, version, 3) # 3 for dismiss
+            # Send the packet to the specified IP and port
+            sock.send(packet)
+
+            print("Dismissed previous ac telemetry subscription")
         
         ### Handshake 1
         print("Attempt new handshake with AC server")
@@ -86,6 +98,8 @@ def ac_telemetry_loop(speed_callback):
                         4f 4f 4f 4f 4f 4f 4f 4f 4f 4f
                         4f 4f 4f
                         4f f f 3f'''
+        sock_used = True
+
         while not wheel_main_done():
             try:
                 data, addr = sock.recvfrom(2048)  # Buffer size is 2048 bytes
@@ -100,13 +114,6 @@ def ac_telemetry_loop(speed_callback):
             except socket.timeout:
                 break
 
-    ### Handshake 2
-    # Pack the data according to the specified structure
-    packet = struct.pack('<3i', identifier, version, 3) # 3 for dismiss
-    # Send the packet to the specified IP and port
-    sock.send(packet)
-
-    print("Dismissed ac telemetry")
     sock.close()
 
 
@@ -206,7 +213,16 @@ class HandlebarImage():
 class Bike(VirtualPad):
 
     # Calibrated for personal use: bmw_s_1000_rr_by_bodysut_swapped_spec in Assetto corsa
-    AC_CAL_BMWS1000RR = AC_Calibration(60, 125, 1.0)
+    AC_CAL_BMWS1000RR = AC_Calibration(115, 160, 1.0) # add max lean angle
+    ### 115 160
+    """
+    at 0 - too much lean angle, maybe 5 deg at max
+
+    up to 60 - too sensitive
+    60 - balanced sensitivity
+    from 60 - gets less sensitive
+    """
+    
     AC_CAL = AC_CAL_BMWS1000RR
 
     def __init__(self):
@@ -395,6 +411,11 @@ class Bike(VirtualPad):
         self.lean = lean
         self.roll_lean = roll_lean
         self.steer = steer
+
+        #
+        self.x_offset = self.handlebar_height*sin(self.roll_lean/180*pi)
+        self.y_offset = self.handlebar_height*cos(self.roll_lean/180*pi) - self.handlebar_height
+        self.z_offset = -1 * (cos(self.roll_lean /180*pi) - 1)
 
         #
         #self.central_stablize()
