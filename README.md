@@ -157,11 +157,9 @@ R 2 4 6      2 4 6    2 4 6 R    2 4 6
 ### Todo
 
 - Make shifter rotatable in space
-- Make shifter's height adjustable in edit mode, change scale var
-- Easier steering when looking back
+- Clean up the edit mode code's mess
 - Sequential shifting mode
   - Assign button for trigger on knob for handbrake
-- Self steering using force feedback
 - Code cleanup
 
 ### Config memo

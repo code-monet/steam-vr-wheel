@@ -8,6 +8,13 @@ import openvr
 import time
 import numpy as np
 
+
+class Point:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+
 def check_result(result):
     if result:
         error_name = openvr.VROverlay().getOverlayErrorNameFromEnum(result)
@@ -27,7 +34,7 @@ def rotation_matrix(theta1, theta2, theta3):
                          [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
 
 
-def playsound(sound, block = True, volume=1.0):
+def playsound(sound, block=True, volume=1.0, stop_alias=None):
     # Copied from playsound==1.2.2 in order to add volume parameter
     # only the windows version
     '''
@@ -59,6 +66,10 @@ def playsound(sound, block = True, volume=1.0):
             raise Exception(exceptionMessage)
         return buf.value
 
+    if stop_alias is not None:
+        winCommand('stop "' + stop_alias + '"')
+        return
+
     alias = 'playsound_' + str(random())
     winCommand('open "' + sound + '" alias', alias)
     winCommand('set', alias, 'time format milliseconds')
@@ -68,6 +79,8 @@ def playsound(sound, block = True, volume=1.0):
 
     if block:
         sleep(float(durationInMS) / 1000.0)
+    else:
+        return alias
 
 def bezier_curve(t, P0, P1, P2, P3):
     return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
@@ -92,7 +105,7 @@ DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
                         wheel_ffb=False,
 
                         ## Shifter
-                        shifter_center=[0.25, -0.57, -0.15], shifter_degree=8, shifter_alpha=100,
+                        shifter_center=[0.25, -0.57, -0.15], shifter_degree=80, shifter_alpha=100,
                         shifter_scale=100,
                         shifter_reverse_orientation="Bottom Left",
 

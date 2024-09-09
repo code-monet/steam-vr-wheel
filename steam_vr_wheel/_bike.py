@@ -12,7 +12,7 @@ import queue
 import socket
 import struct
 
-from . import check_result, rotation_matrix, bezier_curve
+from . import check_result, rotation_matrix, bezier_curve, Point
 from steam_vr_wheel.wheel import wheel_main_done
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
@@ -129,10 +129,15 @@ class AC_Calibration():
                             np.array([0.5 + min(1.0, spd/self.spd_max_axis_sensitivity)/2, y]),
                             np.array([0.5 + min(1.0, spd/self.spd_max_axis_sensitivity)/2, y]),
                             np.array([1, 1])]
-        return bezier_curve(lean_axis, *lean_to_axis_curve)[1]
+
+        s = 1
+        if lean_axis < 0:
+            s = -1
+        a = bezier_curve(abs(lean_axis), *lean_to_axis_curve)[1]
+        return a * s
 
     def max_lean_multiplier(self, spd):
-        return max(0.2, min(1.0, spd/self.spd_max_lean))
+        return max(0.1, min(1.0, spd/self.spd_max_lean))
 
 class HandlebarImage():
     def __init__(self, x=0, y=-0.4, z=-0.35, size=0.80, alpha=1):
@@ -213,7 +218,7 @@ class HandlebarImage():
 class Bike(VirtualPad):
 
     # Calibrated for personal use: bmw_s_1000_rr_by_bodysut_swapped_spec in Assetto corsa
-    AC_CAL_BMWS1000RR = AC_Calibration(115, 160, 1.0) # add max lean angle
+    AC_CAL_BMWS1000RR = AC_Calibration(115, 160, 0.8) # add max lean angle
     ### 115 160
     """
     at 0 - too much lean angle, maybe 5 deg at max
@@ -245,9 +250,8 @@ class Bike(VirtualPad):
         self.lean = 0
         self.roll_lean = 0
         self.steer = 0
-        self.dampered_lean = 0
-        self.dampered_roll_lean = 0
-        self.dampered_steer = 0
+
+        self._last_left_ctr_pos = None
 
         self.max_steer = self.config.bike_max_steer
         self.max_lean = self.config.bike_max_lean
@@ -318,6 +322,9 @@ class Bike(VirtualPad):
             dy *= self.relative_sensitivity
             dz *= self.relative_sensitivity
 
+        if self._last_left_ctr_pos is None:
+            self._last_left_ctr_pos = Point(left_ctr.x, left_ctr.y, left_ctr.z)
+
         # Steer
         steer = 0
         if self.mode in [self.BIKE_MODE_ABSOLUTE, self.BIKE_MODE_RELATIVE]:
@@ -330,6 +337,10 @@ class Bike(VirtualPad):
             steer = atan2(dz, dx)
             steer *= -1
             steer = (pi if steer > 0 else -pi) - steer
+
+
+        ####### TEST
+        steer = 0
 
         # Lean
         if self.mode != self.BIKE_MODE_RELATIVE: # TODO fix
@@ -370,7 +381,15 @@ class Bike(VirtualPad):
 
                 steer = 0
 
+            elif False and self.grabbed['left']:
+
+
+                x = self.roll_lean
+
+
             else:
+
+
 
                 return
 
@@ -413,9 +432,19 @@ class Bike(VirtualPad):
         self.steer = steer
 
         #
+        self.pitch = self.base_pitch + abs(self.lean)
+
+        if self.mode == self.BIKE_MODE_RELATIVE:
+            self.yaw = self.roll_lean / 2
+        else:
+            self.yaw = self.steer + self.lean
+
+        #
         self.x_offset = self.handlebar_height*sin(self.roll_lean/180*pi)
         self.y_offset = self.handlebar_height*cos(self.roll_lean/180*pi) - self.handlebar_height
         self.z_offset = -1 * (cos(self.roll_lean /180*pi) - 1)
+
+        # TODO use hmd x to adjust steering axis; body's center of mass
 
         #
         #self.central_stablize()
@@ -506,7 +535,7 @@ class Bike(VirtualPad):
 
             #print(right_ctr.pitch, right_ctr.yaw, right_ctr.roll)
 
-            diff = -(diff / (100.0 / self.throttle_sensitivity))
+            diff = -(diff / (50.0 / self.throttle_sensitivity))
 
             if diff > 0:
                 pass

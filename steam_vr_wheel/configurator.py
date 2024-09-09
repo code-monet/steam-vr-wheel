@@ -70,8 +70,7 @@ class ConfiguratorApp:
         self.wheel_show_hands.Disable()
         self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000)
         self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000)
-        self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Enable Force Feedback (test)")
-        self.wheel_ffb.Disable()
+        self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback instead (tested working on ETS2 only)")
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100)
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
@@ -82,7 +81,7 @@ class ConfiguratorApp:
 
         self.pnl_shifter_degree = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_degree = wx.BoxSizer(wx.VERTICAL)
-        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 15deg", min=0, max=90)
+        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 80=8 degrees", min=0, max=300)
 
         self.pnl_shifter_alpha = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_alpha = wx.BoxSizer(wx.VERTICAL)
@@ -343,6 +342,8 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(self.pnl_shifter)
         self.nb_vbox_wheel.Add(_decrease_font(
             wx.StaticText(self.nb_pnl_wheel, label = "Height 100%=Truck 30%=General")))
+        self.nb_vbox_wheel.Add(_decrease_font(
+            wx.StaticText(self.nb_pnl_wheel, label = "Degree 80=8 degrees 151=15.1 degrees")))
 
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)

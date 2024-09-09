@@ -174,6 +174,13 @@ class HandsImage:
         check_result(self.vroverlay.showOverlay(self.r_ovr))
         check_result(self.vroverlay.showOverlay(self.r_ovr2))
 
+    def set_color(self, cl):
+        check_result(self.vroverlay.setOverlayColor(self.l_ovr, *cl))
+        check_result(self.vroverlay.setOverlayColor(self.l_ovr2, *cl))
+        check_result(self.vroverlay.setOverlayColor(self.r_ovr, *cl))
+        check_result(self.vroverlay.setOverlayColor(self.r_ovr2, *cl))
+
+
 
 class VirtualPad:
 
