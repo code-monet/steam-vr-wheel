@@ -124,6 +124,8 @@ class HShifterImage:
         self._snap_tf = None
 
         self._knob_pos = [0,0,0]
+        
+        self._last_haptic_xz = [0,0]
 
         self._one_tick_reset_pulse = False
         self._splitter_toggled = False
@@ -357,7 +359,10 @@ class HShifterImage:
         self._snap_ctr_offset = [ctr.x - self._knob_pos[0], ctr.y - self._knob_pos[1], ctr.z - self._knob_pos[2]]
         self._snapped = True
 
-         # Check double tap
+        # Reset 
+        self._last_haptic_xz = [0,0]
+
+        # Check double tap
         self._snap_times.append(now)
         self._snap_times = self._snap_times[-2:]
 
@@ -533,6 +538,8 @@ class HShifterImage:
             #p1[1] -= self._snap_ctr_offset[1]
             p1[2] -= self._snap_ctr_offset[2]
 
+            #
+
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
             dp_unsafe = [dp_unsafe[0] / (u_sin + unit),
                         0,
@@ -550,7 +557,7 @@ class HShifterImage:
             xz_rev_z_clamper = max if self._xz_rev[1] == 1 else min
 
             x_mid_margin = 0.55
-            z_end_margin = 0.6
+            z_end_margin = 0.8
             z_mid_margin = 0.55
 
             in_middle = abs(xz_ctr[1]) <= z_mid_margin
@@ -604,12 +611,14 @@ class HShifterImage:
                         if xz_ctr[1] > z_end_margin:
                             xz_pos_1[1] = 1
                         else:
-                            xz_pos_1[1] = 0
+                            pass
+                            #xz_pos_1[1] = 0
                     else:
                         if xz_ctr[1] < -z_end_margin:
                             xz_pos_1[1] = -1
                         else:
-                            xz_pos_1[1] = 0
+                            pass
+                            #xz_pos_1[1] = 0
 
                 else:
                     xz_1[1] = xz_ctr[1]
@@ -618,12 +627,19 @@ class HShifterImage:
                     elif xz_ctr[1] > z_end_margin:
                         xz_pos_1[1] = 1
                     else:
-                        xz_pos_1[1] = 0
+                        pass
+                        #xz_pos_1[1] = 0
 
+            # Restrain haptic
+            """
             restrained_margin = 1.5
             if abs(dp_unsafe[0]-xz_pos_1[0]) > restrained_margin or abs(dp_unsafe[2]-xz_pos_1[1]) > restrained_margin:
                 openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
+            """
 
+            hpt_xz = self._last_haptic_xz
+
+            # Check gear changed or else check hapitc
             if xz_pos_0 != xz_pos_1:
                 # Position changed
                 # Reset double tap in order to prevent triggering splitter during fast gear change
@@ -657,7 +673,7 @@ class HShifterImage:
 
                 elif xz_pos_1[1] == 0: # Move to the middle row
 
-                    if now - self._last_neutral_play > 0.2:
+                    if now - self._last_neutral_play > 0.16:
                         self._neutral_instances.append(playsound(self._neutral_mp3, block=False, volume=0.65))
 
                     self._last_neutral_play = now
@@ -670,9 +686,14 @@ class HShifterImage:
                         self._last_netural_play = now
                     """
 
+            elif abs(hpt_xz[0] - xz_1[0]) > 0.35 or abs(hpt_xz[1] - xz_1[1]) > 0.35: # Check haptic
+                self._last_haptic_xz = xz_1.copy()
+
+                #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             self._move_stick(xz_1)
             self.set_stick_xz_pos(xz_pos_1)
+
 
     def _reset_double_tap(self):
         self._snap_times = []
@@ -775,6 +796,7 @@ class Wheel(VirtualPad):
         self._center_speed_ffb = 0
         self._center_speed_ffb_mag_0 = 0
         self._center_speed_ffb_mag_1 = 0 # Magnitude without time factor
+        self._center_speed_ffb_mags = np.zeros(60)
         # FFB
         if self.config.wheel_ffb:
             self.device.ffb_callback(self.ffb_callback)
@@ -896,9 +918,16 @@ class Wheel(VirtualPad):
 
         #FFBPType.PT_CONSTREP
         if "Eff_Constant" in data:
+            m = data['Eff_Constant']['Magnitude'] / 10000.0
+
+            """
             self._center_speed_ffb_mag_0 = self._center_speed_ffb_mag_1
-            self._center_speed_ffb_mag_1 = data['Eff_Constant']['Magnitude'] / 10000.0
-            self._center_speed_ffb = self._center_speed_ffb_mag_1
+            self._center_speed_ffb_mag_1 = m
+            """
+            self._center_speed_ffb_mags[1:] = self._center_speed_ffb_mags[:-1]
+            self._center_speed_ffb_mags[0] = m
+
+            self._center_speed_ffb = m
             if elapsed != 0:
                 self._center_speed_ffb *= elapsed * 200
 
@@ -911,8 +940,11 @@ class Wheel(VirtualPad):
         #FFBPType.PT_CTRLREP
         if "DevCtrl" in data:
             if data['DevCtrl'] in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
+                """
                 self._center_speed_ffb_mag_0 = 0
                 self._center_speed_ffb_mag_1 = 0
+                """
+                self._center_speed_ffb_mags[:] = 0
                 self._center_speed_ffb = 0
                 _ffb_test_f(True, FFBPType.PT_CTRLREP, data['DevCtrl'])
             else:
@@ -1169,6 +1201,7 @@ class Wheel(VirtualPad):
 
     def render(self, hmd):
 
+        """
         #
         vibrating_center = self.center
 
@@ -1188,9 +1221,10 @@ class Wheel(VirtualPad):
                 vibrating_center.x + v_x * v_m * 0.02, # 2cm
                 vibrating_center.y + v_y * v_m * 0.02,
                 vibrating_center.z)
+        """
 
         self.wheel_image.move_rotate(
-            pos=vibrating_center,
+            pos=self.center,
             pitch_roll=[
             self.config.wheel_pitch,
             self._wheel_angles[-1]/pi*180
@@ -1243,6 +1277,35 @@ class Wheel(VirtualPad):
             self.center_force()
         self.limiter(left_ctr, right_ctr)
         self.send_to_vjoy()
+
+        #
+        left_bound = self._hand_snaps['left'][:5] == 'wheel'
+        right_bound = self._hand_snaps['right'][:5] == 'wheel'
+
+        """
+        # Turn speed haptic
+        if len(self._wheel_angles) >= 2:
+            ang_d = abs(self._wheel_angles[-1] - self._wheel_angles[-2])
+            if ang_d > 1/180*pi:
+                m = min(150, abs(ang_d) * 300)
+                if left_bound: 
+                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, int(m))
+                if right_bound: 
+                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(m))
+
+        # FFB haptic
+        m_arr = self._center_speed_ffb_mags[:10]
+        m_M = np.max(m_arr)
+        m_m = np.min(m_arr)
+        m_d = m_M - m_m
+        
+        if m_M*m_m < 0 and m_d > 50/10000:
+            if left_bound: 
+                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, int(m_d*1500))
+            if right_bound: 
+                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(m_d*1500))
+        """
+
 
     def attach_hand(self, hand, left_ctr, right_ctr):
         left_ctr = self.to_wheel_space(left_ctr)
