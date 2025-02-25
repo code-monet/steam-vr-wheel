@@ -1,0 +1,3 @@
+numpy==2.2.3
+openvr==1.3.2201
+wxPython==4.2.2

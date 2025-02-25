@@ -35,19 +35,11 @@ class ConfiguratorApp:
         self.multibutton_trackpad_box = wx.CheckBox(self.pnl, label='(VIVE) Trackpad clicks has 4 additional zones')
         self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl,
                                                                   label='(VIVE) Haptic feedback for trackpad button zones')
-        
-        ### hidden
+
+        ## Hidden
         self.touchpad_always_updates_box = wx.CheckBox(self.pnl, label='Touchpad mapping to axis while untouched (axis move to center when released)')
         self.touchpad_always_updates_box.Hide()
-        self.vertical_wheel_box = wx.CheckBox(self.pnl, label='Steering wheel is vertical')
-        self.vertical_wheel_box.Hide()
-        self.joystick_updates_only_when_grabbed_box = wx.CheckBox(self.pnl, label='Joystick moves only when grabbed (by right grip)')
-        self.joystick_updates_only_when_grabbed_box.Hide()
-        self.joystick_grabbing_switch_box = wx.CheckBox(self.pnl, label='Joystick grab is a switch')
-        self.joystick_grabbing_switch_box.Hide()
-        self.edit_mode_box = wx.CheckBox(self.pnl, label='Layout edit mode')
-        self.edit_mode_box.Hide()
-        ###
+        ##
 
         self.nb = wx.Notebook(self.pnl)
 
@@ -74,6 +66,17 @@ class ConfiguratorApp:
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100)
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
+
+        ### hidden
+        self.vertical_wheel_box = wx.CheckBox(self.nb_pnl_wheel, label='Steering wheel is vertical')
+        self.vertical_wheel_box.Hide()
+        self.joystick_updates_only_when_grabbed_box = wx.CheckBox(self.nb_pnl_wheel, label='Joystick moves only when grabbed (by right grip)')
+        self.joystick_updates_only_when_grabbed_box.Hide()
+        self.joystick_grabbing_switch_box = wx.CheckBox(self.nb_pnl_wheel, label='Joystick grab is a switch')
+        self.joystick_grabbing_switch_box.Hide()
+        self.edit_mode_box = wx.CheckBox(self.nb_pnl_wheel, label='Layout edit mode')
+        self.edit_mode_box.Hide()
+        ###
 
         ### Shifter
         self.pnl_shifter = wx.Panel(self.nb_pnl_wheel)
