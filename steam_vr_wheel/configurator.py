@@ -9,6 +9,7 @@ def _decrease_font(w):
     p = f.GetPointSize()
     f.SetPointSize(p-1)
     w.SetFont(f)
+    w.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT))
     return w
 
 class ConfiguratorApp:
@@ -60,11 +61,11 @@ class ConfiguratorApp:
         self.wheel_show_wheel.Disable()
         self.wheel_show_hands = wx.CheckBox(self.nb_pnl_wheel, label="Show Hands Overlay")
         self.wheel_show_hands.Disable()
-        self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000)
-        self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000)
+        self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000, size=(120,-1))
+        self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000, size=(120,-1))
         self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback instead (tested working on ETS2 only)")
-        self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120)
-        self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100)
+        self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120, size=(120,-1))
+        self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100, size=(120,-1))
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
 
         ### hidden
@@ -84,15 +85,15 @@ class ConfiguratorApp:
 
         self.pnl_shifter_degree = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_degree = wx.BoxSizer(wx.VERTICAL)
-        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 80=8 degrees", min=0, max=300)
+        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 80=8 degrees", min=0, max=300, size=(120,-1))
 
         self.pnl_shifter_alpha = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_alpha = wx.BoxSizer(wx.VERTICAL)
-        self.shifter_alpha = wx.SpinCtrl(self.pnl_shifter_alpha, name = "Shifter Alpha (%), 100%", min=0, max=100)
+        self.shifter_alpha = wx.SpinCtrl(self.pnl_shifter_alpha, name = "Shifter Alpha (%), 100%", min=0, max=100, size=(120,-1))
         
         self.pnl_shifter_scale = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
-        self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100)
+        self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100, size=(120,-1))
         
         self.shifter_reverse_orientation = wx.RadioBox(self.nb_pnl_wheel, label="Reverse Position",
             choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
@@ -124,20 +125,20 @@ class ConfiguratorApp:
         
         self.pnl_bike_max_lean = wx.Panel(self.pnl_bike_angle)
         self.vbox_bike_max_lean = wx.BoxSizer(wx.VERTICAL)
-        self.bike_max_lean = wx.SpinCtrl(self.pnl_bike_max_lean, name="Lean Angle (Degrees)", min=0, max=90)
+        self.bike_max_lean = wx.SpinCtrl(self.pnl_bike_max_lean, name="Lean Angle (Degrees)", min=0, max=90, size=(120,-1))
 
         self.pnl_bike_max_steer = wx.Panel(self.pnl_bike_angle)
         self.vbox_bike_max_steer = wx.BoxSizer(wx.VERTICAL)
-        self.bike_max_steer = wx.SpinCtrl(self.pnl_bike_max_steer, name="Max Steer (Degrees)", min=0, max=90)
+        self.bike_max_steer = wx.SpinCtrl(self.pnl_bike_max_steer, name="Max Steer (Degrees)", min=0, max=90, size=(120,-1))
 
         self.pnl_bike_angle_deadzone = wx.Panel(self.pnl_bike_angle)
         self.vbox_bike_angle_deadzone = wx.BoxSizer(wx.VERTICAL)
-        self.bike_angle_deadzone = wx.SpinCtrl(self.pnl_bike_angle_deadzone, name="Deadzone (%)", min=0, max=100)
+        self.bike_angle_deadzone = wx.SpinCtrl(self.pnl_bike_angle_deadzone, name="Deadzone (%)", min=0, max=100, size=(120,-1))
 
 
         # -
-        self.bike_throttle_sensitivity = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Sensitivity (%)", min=1, max=10000)
-        self.bike_throttle_decrease_per_sec = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Decrease per Second (%)", min=0, max=10000)
+        self.bike_throttle_sensitivity = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Sensitivity (%)", min=1, max=10000, size=(120,-1))
+        self.bike_throttle_decrease_per_sec = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Decrease per Second (%)", min=0, max=10000, size=(120,-1))
 
 
         ### Absolute box
@@ -146,7 +147,7 @@ class ConfiguratorApp:
 
         self.bike_absolute_box_inner_pnl = wx.Panel(self.bike_absolute_box)
         self.bike_absolute_box_inner_vbox = wx.BoxSizer(wx.VERTICAL)
-        self.bike_handlebar_height = wx.SpinCtrl(self.bike_absolute_box_inner_pnl, name="Handlebar Height (cm)", min=50, max=300)
+        self.bike_handlebar_height = wx.SpinCtrl(self.bike_absolute_box_inner_pnl, name="Handlebar Height (cm)", min=50, max=300, size=(120,-1))
         self.bike_bound_hand_both = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Both Hands", label="Both Hands", style=wx.RB_GROUP)
         self.bike_bound_hand_left = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Left", label="Left")
         self.bike_bound_hand_right = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Right", label="Right")
@@ -159,7 +160,7 @@ class ConfiguratorApp:
         self.bike_relative_box_inner_pnl = wx.Panel(self.bike_relative_box)
         self.bike_relative_box_inner_vbox = wx.BoxSizer(wx.VERTICAL)
 
-        self.bike_relative_sensitivity = wx.SpinCtrl(self.bike_relative_box_inner_pnl, name="Relative Sensitivity (%)", min=1, max=10000)
+        self.bike_relative_sensitivity = wx.SpinCtrl(self.bike_relative_box_inner_pnl, name="Relative Sensitivity (%)", min=1, max=10000, size=(120,-1))
 
 
         # BINDINGS
@@ -327,7 +328,7 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(self.wheel_transparent_center_box)
 
         self.nb_vbox_wheel.AddSpacer(10)
-        self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Degree"))
+        self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Tilt"))
         self.vbox_shifter_degree.Add(self.shifter_degree)
         self.vbox_shifter_alpha.Add(wx.StaticText(self.pnl_shifter_alpha, label = "Shifter Alpha"))
         self.vbox_shifter_alpha.Add(self.shifter_alpha)
@@ -344,9 +345,9 @@ class ConfiguratorApp:
         self.pnl_shifter.SetSizerAndFit(self.hbox_shifter)
         self.nb_vbox_wheel.Add(self.pnl_shifter)
         self.nb_vbox_wheel.Add(_decrease_font(
-            wx.StaticText(self.nb_pnl_wheel, label = "Height 100%=Truck 30%=General")))
+            wx.StaticText(self.nb_pnl_wheel, label = "Height Scale 100%=Truck Height Scale 30%=General")))
         self.nb_vbox_wheel.Add(_decrease_font(
-            wx.StaticText(self.nb_pnl_wheel, label = "Degree 80=8 degrees 151=15.1 degrees")))
+            wx.StaticText(self.nb_pnl_wheel, label = "Tilt 80=8 degrees Tilt 151=15.1 degrees")))
 
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)
