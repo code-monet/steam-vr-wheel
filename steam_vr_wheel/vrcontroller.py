@@ -15,7 +15,24 @@ class Controller:
 
     _haptic_dict = dict()
     @staticmethod 
-    def update_haptic():
+    def update_haptic(frames):
+
+        def process_strength(strength, t, f):
+            ret = strength
+            if callable(strength):
+                argc = strength.__code__.co_argcount
+                if argc == 1:
+                    # Lambda that accepts t 0 to 1
+                    ret = strength(t)
+                elif argc == 2:
+                    # f is total frames count up until now
+                    # for frame based pulses
+                    ret = strength(t, f)
+                else:
+                    raise Exception(f"Wrong argc for strength lambda: {argc}")
+            elif strength is None:
+                ret = 0
+            return ret
 
         now = time.time()
 
@@ -30,22 +47,19 @@ class Controller:
                 ended = True
                 for duration, strength in ds:
                     start_at = start + d_sum
-                    if duration is None:
+                    if duration is None or duration == 0:
                         # Single frame haptic
-                        strength_sum += strength
+                        strength_sum += process_strength(strength, start_at, frames)
                         single_pulse = True
                         break
 
+                    # if duration is not None:
                     d_sum += duration
                     if start_at + duration > now:
                         # Still playing haptic
-                        if callable(strength):
-                            # Lambda that accepts t 0 to 1
-                            t = (now-start_at) / duration
-                            strength = strength(t)
-                        elif strength is None:
-                            strength = 0
-                        strength_sum += strength
+                        t = (now-start_at) / duration
+                        
+                        strength_sum += process_strength(strength, t, frames)
                         ended = False
                         break
 
@@ -60,15 +74,30 @@ class Controller:
             Controller._haptic_dict[py_ctr_id] = new_ary
 
             # Finally play haptic
-            # Use 3000 (3ms or 3000µs) as max strength set here
-            # Since frequency is 60hz, 3ms can fit in each frame
             strength_sum = min(1, strength_sum)
-            strength_sum *= 3000
+            # Convert the strength to make it feel linear to human
+            strength_sum = ((math.exp(strength_sum) - 1) / (math.e - 1))
             if strength_sum > 0:
                 openvr.VRSystem().triggerHapticPulse( \
                     openvr.TrackedDeviceIndex_t(py_ctr_id),
                     0,
-                    int(strength_sum))
+                    # Use 3000 (3ms or 3000µs) as max strength set here
+                    # Since frequency is 60hz, 3ms can fit in each frame
+                    int(strength_sum * 3000)) # 3ms
+
+    # Valid ds arguments
+    # [1.0, 1.0]
+    #     => pulse with strength of 1.0 EVERY FRAME for 1 second
+    # [None, 1.0] == [0.0, 1.0]
+    #     => SINGLE PULSE with strength of 1.0 SINGLE PULSE means it is for just ONE FRAME
+    # [1.0, None] == [1.0, 0.0]
+    #     => no haptic for 1 second
+    # [2.0, lambda t: t]
+    #     => for 2 seconds, pulse increasing from 0 to 1 (t is relative to the total duration)
+    # [2.0, lambda t,f: 1 if f%10 == 0 else 0]
+    #     => for 2 seconds, pulse of strength 1 every 10 frames
+    # [None, lambda t,f: 1 if f%10 == 0 else 0]
+    #     => pulse of strength 1 if the current frame is every 10th frame
 
     def haptic(self, *ds):
         if self.id.value not in Controller._haptic_dict:

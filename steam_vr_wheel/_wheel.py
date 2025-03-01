@@ -160,7 +160,6 @@ class HShifterImage:
         self._last_change_play = 0
         self._last_neutral_play = 0
         self._neutral_instances = []
-        self._neutral_lock = threading.Lock()
 
         # Images
         slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
@@ -325,6 +324,7 @@ class HShifterImage:
     def toggle_splitter(self, ctr):
 
         self._splitter_toggled = not self._splitter_toggled
+        
         check_result(self.vroverlay.setOverlayFromFile(self.knob, 
             self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
         
@@ -340,11 +340,14 @@ class HShifterImage:
         else:
             self._range_toggled = not self._range_toggled
         
-        check_result(self.vroverlay.setOverlayFromFile(self.stick,
-            self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
-        
         playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
-        ctr.haptic([0.3, lambda t: t if self._range_toggled else lambda t: 1-t])
+
+        if self._range_toggled:
+            check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img_2.encode()))
+            ctr.haptic([0.3, lambda t: t**3])
+        else:
+            check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img.encode()))
+            ctr.haptic([0.3, lambda t: 0.2 * (1-t**2)])
 
     def snap_ctr(self, ctr):
         now = time.time()
@@ -446,7 +449,7 @@ class HShifterImage:
         self.slot_tf[2][3] = self.z
 
         # Bounds
-        coll_radius = 0.06 # 4.5cm radius for collision; collision shape is capsule
+        coll_radius = 0.06 # 6cm radius for collision; collision shape is capsule
         self.collision_radius = coll_radius
 
         self.x_knob = x_knob
@@ -612,11 +615,15 @@ class HShifterImage:
                         #xz_pos_1[1] = 0
 
             # Restrain haptic
-            """
-            restrained_margin = 1.5
-            if abs(dp_unsafe[0]-xz_pos_1[0]) > restrained_margin or abs(dp_unsafe[2]-xz_pos_1[1]) > restrained_margin:
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
-            """
+            restrained_margin = 2 # note that this is proportional value not 2 meters
+            r_var1 = abs(dp_unsafe[0]-xz_pos_1[0])
+            r_var2 = abs(dp_unsafe[2]-xz_pos_1[1])
+            for rv in (r_var1, r_var2):
+                if rv > restrained_margin:
+                    h = (rv-restrained_margin) / 1.5
+                    h = min(1, h)
+                    ctr.haptic([None, h])
+                    break
 
             hpt_xz = self._last_haptic_xz
 
@@ -629,7 +636,7 @@ class HShifterImage:
                 # Gear changed
                 if xz_pos_1[1] != 0:
                     #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-                    ctr.haptic([0.3, lambda t: 1.0 if t < 0.1 else math.exp(-10*(t-0.1)) if t < 1 else 0.0])
+                    #ctr.haptic([0.3, lambda t: 1.0 if t < 0.1 else math.exp(-10*(t-0.1)) if t < 1 else 0.0])
 
                     # TODO: this part is in the test phase
                     #       this is to counteract the issue where you alt-tab or do something to lose focus from ETS2,
@@ -638,40 +645,29 @@ class HShifterImage:
 
                     if now - self._last_change_play > 0.07:
 
-                        #p = multiprocessing.Process(target=player)
-                        # If ever block issue, use multiprocessing
-                        def player():
+                        # Cancel playing of neutral instances so that the user won't hear it
+                        for i in self._neutral_instances:
+                            playsound(None, stop_alias=i)
+                        self._neutral_instances = []
 
-                            self._neutral_lock.acquire()
-                            for i in self._neutral_instances:
-                                playsound(None, stop_alias=i)
-                            self._neutral_instances = []
-                            self._neutral_lock.release()
+                        playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
+                            block=False,
+                            volume=self.config.sfx_volume/100)
 
-                            playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
-                                block=False,
-                                volume=self.config.sfx_volume/100)
-
-                        t = threading.Thread(target=player)
-                        t.start()
                         self._last_change_play = now
 
                 elif xz_pos_1[1] == 0: # Move to the middle row
 
                     if now - self._last_neutral_play > 0.16:
-                        def player():
-                            self._neutral_lock.acquire()
-                            self._neutral_instances.append(playsound(self._neutral_mp3,
-                                block=False,
-                                volume=self.config.sfx_volume/100))
-                            self._neutral_lock.release()
-
-                        t = threading.Thread(target=player)
-                        t.start()
+                        self._neutral_instances.append(playsound(self._neutral_mp3,
+                            block=False,
+                            volume=self.config.sfx_volume/100))
 
                     self._last_neutral_play = now
 
             elif abs(hpt_xz[0] - xz_1[0]) > 0.35 or abs(hpt_xz[1] - xz_1[1]) > 0.35: # Check haptic
+
+                # Play haptic when the stick is moving in the slot
                 self._last_haptic_xz = xz_1.copy()
 
                 #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
@@ -1028,8 +1024,13 @@ class Wheel(VirtualPad):
                     sum_m = m
                     solo = True
 
+            # Make value smooth overall
+            prev_m = self._center_speed_ffb_mags[0]
+            alpha = 0.3
+            smoothed_m = alpha * sum_m + (1 - alpha) * prev_m
+
             self._center_speed_ffb_mags[1:] = self._center_speed_ffb_mags[:-1]
-            self._center_speed_ffb_mags[0] = sum_m
+            self._center_speed_ffb_mags[0] = smoothed_m
 
 
     def point_in_holding_bounds(self, point):
@@ -1259,7 +1260,7 @@ class Wheel(VirtualPad):
         else:
             # NO ffb
             epsilon = self._center_speed * self.config.wheel_centerforce
-            epsilon /= 10 # roughly 20 times difference between FFB and non FFB to make it kind of similar
+            epsilon /= 10 # roughly 20 times difference between FFB and non FFB to make it kind of similar for same center force value
 
             angle = self._wheel_angles[-1]
             if abs(angle) < epsilon:
@@ -1289,6 +1290,9 @@ class Wheel(VirtualPad):
         d = sqrt((self.center.x-hmd.x)**2+
                     (self.center.y-hmd.y)**2+
                     (self.center.z-hmd.z)**2)
+        if d == 0: # Prevent div by 0
+            d = 0.001
+
         p2 = hmd.normal.copy() * d
         pc_d = sqrt((self.center.x-p2[0])**2+
                     (self.center.y-p2[1])**2+
@@ -1323,8 +1327,6 @@ class Wheel(VirtualPad):
                 left_ctr.haptic([None, 1])
             if right_bound:
                 right_ctr.haptic([None, 1])
-            #openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
-            #openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
     def _wheel_update_common(self, angle, left_ctr, right_ctr):
         if angle:
@@ -1338,53 +1340,46 @@ class Wheel(VirtualPad):
         self.limiter(left_ctr, right_ctr)
         self.send_to_vjoy()
 
-        #
-        left_bound = self._hand_snaps['left'][:5] == 'wheel'
-        right_bound = self._hand_snaps['right'][:5] == 'wheel'
+    def ffb_haptic(self, left_ctr, right_ctr):
+        left_bound = self._hand_snaps['left'] != ''
+        right_bound = self._hand_snaps['right'] != ''
 
         # FFB haptic
         if self.config.wheel_ffb and \
             self.config.wheel_ffb_haptic and \
             self.ffb_paused == False:
-            def compute_haptic_intensity(m_arr, scaling_factor):
+            def compute_haptic_intensity(m_arr):
+
+                window_size = 30
+                m_arr = m_arr[:window_size]
 
                 # Set thresholds for triggering haptics
-                rms_threshold = 250 / 10000    # Minimum RMS value to consider
-                zc_threshold = 4                # Minimum number of zero crossings
+                rms_threshold = 100 / 10000               # Minimum RMS value to consider
 
                 # Calculate the first derivative of the magnitude array
                 diffs = np.diff(m_arr)
-
-                # Count the number of zero crossings in the derivative
-                zero_crossings = np.sum(np.diff(np.sign(diffs)) != 0)
-
-                if zero_crossings < zc_threshold:
-                    return 0
                 
                 # Compute the RMS (root-mean-square) of the derivative
                 rms_deriv = np.sqrt(np.mean(np.square(diffs)))
                 
                 if rms_deriv > rms_threshold:
-                    # Use the number of zero crossings above threshold as a bonus factor.
-                    # For example, each extra zero crossing beyond the threshold increases the intensity by 10%
-                    extra_zc = zero_crossings - zc_threshold
-                    composite_factor = 1 + (extra_zc * 0.1)
-                    rms_factor = rms_deriv # - rms_threshold
+                    rms_factor = min(2.0, rms_deriv / rms_threshold) / 2
 
                     # Scale intensity continuously based on both the RMS value and the composite factor.
-                    pulse_intensity = rms_factor * scaling_factor * composite_factor
+                    pulse_intensity = rms_factor
                     return pulse_intensity
                 return 0
 
-            # In your main update function:
-            window_size = 10
-            m_arr = self._center_speed_ffb_mags[:window_size]
-            intensity = compute_haptic_intensity(m_arr, 0.35)
+            intensity = 0.5 * compute_haptic_intensity(self._center_speed_ffb_mags)
             if intensity > 0:
+                def f(t, f):
+                    if f%5 != 0:
+                        return 0
+                    return intensity
                 if left_bound:
-                    left_ctr.haptic([None, intensity])
+                    left_ctr.haptic([None, f])
                 if right_bound:
-                    right_ctr.haptic([None, intensity])
+                    right_ctr.haptic([None, f])
 
     def attach_hand(self, hand, left_ctr, right_ctr):
         left_ctr = self.to_wheel_space(left_ctr)
@@ -1531,7 +1526,8 @@ class Wheel(VirtualPad):
                 self._shifter_button_lock.release()
 
                 self.h_shifter_image.snap_ctr(ctr)
-                ctr.haptic([0.3, lambda t: math.exp(-8 * t)])
+                ctr.haptic(*[(None, 0.5)]*3)
+                #ctr.haptic([0.08, lambda t: min(1.0, 0.6 + math.exp(-8 * t))])
                 #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
@@ -1596,9 +1592,12 @@ class Wheel(VirtualPad):
 
         # Wheel angle
         angle = self._wheel_update(left_ctr, right_ctr)
-
         self._wheel_update_common(angle, left_ctr, right_ctr)
 
+        # FFB haptic
+        self.ffb_haptic(left_ctr, right_ctr)
+
+        # render
         self.render(hmd)
         self.h_shifter_image.render(hmd)
         self.h_shifter_image.update()
