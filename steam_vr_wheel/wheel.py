@@ -158,6 +158,7 @@ def main(type='wheel'):
     while True:
         before_work = time.time()
         do_work(vrsystem, left_controller, right_controller, hmd_device, wheel, poses)
+        Controller.update_haptic()
         after_work = time.time()
         left = 1/FREQUENCY - (after_work - before_work)
         if left>0:

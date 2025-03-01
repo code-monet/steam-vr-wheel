@@ -1,9 +1,12 @@
 import json
 import os, sys
 import threading
+import queue
 import shutil
 import hashlib
 import openvr
+import copy
+from collections import OrderedDict
 
 import time
 import numpy as np
@@ -31,25 +34,22 @@ def rotation_matrix(theta1, theta2, theta3):
     return np.array([[c2*c3, -c2*s3, s2],
                          [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
                          [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
+                         
+def deep_get(dictionary, keys, default=None):
+    """Safely get a nested value from a dictionary."""
+    for key in keys:
+        if isinstance(dictionary, dict):
+            dictionary = dictionary.get(key, default)
+        else:
+            return default
+    return dictionary
 
-
-def playsound(sound, block=True, volume=1.0, stop_alias=None):
-    # Copied from playsound==1.2.2 in order to add volume parameter
-    # only the windows version
-    '''
-    Utilizes windll.winmm. Tested and known to work with MP3 and WAVE on
-    Windows 7 with Python 2.7. Probably works with more file formats.
-    Probably works on Windows XP thru Windows 10. Probably works with all
-    versions of Python.
-
-    Inspired by (but not copied from) Michael Gundlach <gundlach@gmail.com>'s mp3play:
-    https://github.com/michaelgundlach/mp3play
-
-    I never would have tried using windll.winmm without seeing his code.
-    '''
+# Separate MCI worker into its own thread to ensure all the sounds
+# share the same thread context
+_mci_command_queue = queue.Queue()
+def _mci_worker():
+    
     from ctypes import c_buffer, windll
-    from random import random
-    from time   import sleep
     from sys    import getfilesystemencoding
 
     def winCommand(*command):
@@ -65,8 +65,48 @@ def playsound(sound, block=True, volume=1.0, stop_alias=None):
             raise Exception(exceptionMessage)
         return buf.value
 
+    while True:
+        command, result_queue = _mci_command_queue.get()
+        if command == "quit":
+            break
+        try:
+            result = winCommand(*command)
+            result_queue.put([result, None])
+        except Exception as e:
+            result_queue.put([None, e])
+
+        _mci_command_queue.task_done()
+mci_thread = threading.Thread(target=_mci_worker, daemon=True)
+mci_thread.start()
+#_mci_command_queue.put(("quit", None))
+#mci_thread.join()
+def playsound(sound, block=True, volume=1.0, stop_alias=None):
+    # Copied from playsound==1.2.2 in order to add volume parameter
+    # only the windows version
+    '''
+    Utilizes windll.winmm. Tested and known to work with MP3 and WAVE on
+    Windows 7 with Python 2.7. Probably works with more file formats.
+    Probably works on Windows XP thru Windows 10. Probably works with all
+    versions of Python.
+
+    Inspired by (but not copied from) Michael Gundlach <gundlach@gmail.com>'s mp3play:
+    https://github.com/michaelgundlach/mp3play
+
+    I never would have tried using windll.winmm without seeing his code.
+    '''
+    from random import random
+    from time   import sleep
+
+    def winCommand(*command):
+        result_queue = queue.Queue()
+        _mci_command_queue.put((command, result_queue))
+        result, e = result_queue.get()
+        if e is not None:
+            raise e
+        return result
+
     if stop_alias is not None:
-        winCommand('stop "' + stop_alias + '"')
+        winCommand('stop', stop_alias)
         return
 
     alias = 'playsound_' + str(random())
@@ -88,20 +128,23 @@ DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 
+"""
 DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
 
                         trigger_pre_press_button=False, trigger_press_button=False,
                         multibutton_trackpad=False,
                         multibutton_trackpad_center_haptic=False,
+                        sfx_volume=65,
                       
                         # Wheel
                         wheel_center=[0, -0.4, -0.35], wheel_size=0.48,
                         wheel_grabbed_by_grip=True,
                         wheel_grabbed_by_grip_toggle=True,
                         wheel_show_wheel=True, wheel_show_hands=True,
-                        wheel_degrees=1440, wheel_centerforce=3, wheel_alpha=100,
+                        wheel_degrees=1440, wheel_centerforce=30, wheel_alpha=100,
                         wheel_pitch=0, wheel_transparent_center=False,
-                        wheel_ffb=False,
+                        wheel_ffb=True,
+                        wheel_ffb_haptic=False,
 
                         ## Shifter
                         shifter_center=[0.25, -0.57, -0.15], shifter_degree=80, shifter_alpha=100,
@@ -141,6 +184,71 @@ DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
                         joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False,
                         edit_mode=False,
                         )
+"""
+from collections import OrderedDict
+
+DEFAULT_CONFIG = OrderedDict([
+    ('config_name', DEFAULT_CONFIG_NAME),
+    ('trigger_pre_press_button', False),
+    ('trigger_press_button', False),
+    ('multibutton_trackpad', False),
+    ('multibutton_trackpad_center_haptic', False),
+    ('sfx_volume', 65),
+    
+    # Wheel
+    ('wheel_center', [0, -0.4, -0.35]),
+    ('wheel_size', 0.48),
+    ('wheel_grabbed_by_grip', True),
+    ('wheel_grabbed_by_grip_toggle', True),
+    ('wheel_show_wheel', True),
+    ('wheel_show_hands', True),
+    ('wheel_degrees', 1440),
+    ('wheel_centerforce', 30),
+    ('wheel_alpha', 100),
+    ('wheel_pitch', 0),
+    ('wheel_transparent_center', False),
+    ('wheel_ffb', True),
+    ('wheel_ffb_haptic', False),
+
+    ## Shifter
+    ('shifter_center', [0.25, -0.57, -0.15]),
+    ('shifter_degree', 60),
+    ('shifter_alpha', 100),
+    ('shifter_scale', 100),
+    ('shifter_reverse_orientation', "Bottom Left"),
+
+    ### Joystick as button
+    ('j_l_left_button', False),
+    ('j_l_right_button', False),
+    ('j_l_up_button', False),
+    ('j_l_down_button', False),
+    ('j_r_left_button', False),
+    ('j_r_right_button', False),
+    ('j_r_up_button', False),
+    ('j_r_down_button', False),
+
+    ## Bike
+    ('bike_center', [0, -0.4, -0.35]),
+    ('bike_show_handlebar', True),
+    ('bike_show_hands', True),
+    ('bike_use_ac_server', False),
+    ('bike_max_lean', 60),
+    ('bike_max_steer', 12),
+    ('bike_angle_deadzone', 5),
+    ('bike_throttle_sensitivity', 100),
+    ('bike_throttle_decrease_per_sec', 10),
+    ('bike_mode', "Absolute"),
+    ('bike_handlebar_height', 95),
+    ('bike_bound_hand', "Both Hands"),
+    ('bike_relative_sensitivity', 100),
+
+    # Disabled
+    ('touchpad_always_updates', True),
+    ('vertical_wheel', True),
+    ('joystick_updates_only_when_grabbed', False),
+    ('joystick_grabbing_switch', False),
+    ('edit_mode', False),
+])
 
 
 class ConfigException(Exception):
@@ -238,7 +346,10 @@ class PadConfig:
             try:
                 with open(CONFIG_PATH) as f:
                     try:
-                        self._data = json.load(f)
+                        deep_copied = copy.deepcopy(DEFAULT_CONFIG)
+                        data = json.load(f)
+                        deep_copied.update(data)
+                        self._data = deep_copied
                     except json.decoder.JSONDecodeError as e:
                         raise ConfigException(str(e))
                     self.validate_config()
@@ -259,10 +370,10 @@ class PadConfig:
     def _write(self):
         try:
             with open(CONFIG_PATH, 'x') as f:
-                 json.dump(self._data, f)
+                 json.dump(self._data, f, indent=2, sort_keys=False)
         except FileExistsError:
             with open(CONFIG_PATH, 'w') as f:
-                 json.dump(self._data, f)
+                 json.dump(self._data, f, indent=2, sort_keys=False)
 
     @property
     def config_name(self):
@@ -307,6 +418,15 @@ class PadConfig:
     @multibutton_trackpad_center_haptic.setter
     def multibutton_trackpad_center_haptic(self, x: bool):
         self._data['multibutton_trackpad_center_haptic'] = x
+        self._write()
+
+    @property
+    def sfx_volume(self):
+        return self._data['sfx_volume']
+
+    @sfx_volume.setter
+    def sfx_volume(self, x: int):
+        self._data['sfx_volume'] = x
         self._write()
 
     @property
@@ -442,6 +562,15 @@ class PadConfig:
     @wheel_ffb.setter
     def wheel_ffb(self, x: bool):
         self._data['wheel_ffb'] = x
+        self._write()
+
+    @property
+    def wheel_ffb_haptic(self):
+        return self._data['wheel_ffb_haptic']
+
+    @wheel_ffb_haptic.setter
+    def wheel_ffb_haptic(self, x: bool):
+        self._data['wheel_ffb_haptic'] = x
         self._write()
 
     @property

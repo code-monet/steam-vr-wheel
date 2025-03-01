@@ -62,20 +62,21 @@ HID_ID_NEWEFREP = 0x01 # Usage Create New Effect Report
 HID_ID_BLKLDREP = 0x02 # Usage Block Load Report
 HID_ID_POOLREP = 0x03 # Usage PID Pool Report
 
+# https://github.com/jshafer817/vJoy/blob/v2.1.9.1/apps/common/vJoyInterfaceCS/vJoyInterfaceWrap/Wrapper.cs#L57
 class FFBEType:
-	ET_NONE = 0
-	ET_CONST = 1
-	ET_RAMP = 2
-	ET_SQR = 3
-	ET_SINE = 4
-	ET_TRNGL = 5
-	ET_STUP = 6
-	ET_STDN = 7
-	ET_SPRNG = 8
-	ET_DMPR = 9
-	ET_INRT = 10
-	ET_FRCTN = 11
-	ET_CSTM = 12
+	ET_NONE		=	0,	  # No Force
+	ET_CONST	=	1,    # Constant Force
+	ET_RAMP		=	2,    # Ramp
+	ET_SQR		=	3,    # Square
+	ET_SINE		=	4,    # Sine
+	ET_TRNGL	=	5,    # Triangle
+	ET_STUP		=	6,    # Sawtooth Up
+	ET_STDN		=	7,    # Sawtooth Down
+	ET_SPRNG	=	8,    # Spring
+	ET_DMPR		=	9,    # Damper
+	ET_INRT		=	10,   # Inertia
+	ET_FRCTN	=	11,   # Friction
+	ET_CSTM		=	12,   # Custom Force Data
 
 class FFBPType:
 	# Write
@@ -100,16 +101,16 @@ class FFBPType:
 
 class FFBOP:
 	EFF_START = 1
-	EFF_SOLO = 2
-	EFF_STOP = 3
+	EFF_SOLO  = 2 # EFFECT SOLO START
+	EFF_STOP  = 3
 
 class FFB_CTRL:
-	CTRL_ENACT = 1
-	CTRL_DISACT = 2
-	CTRL_STOPALL = 3
-	CTRL_DEVRST = 4
-	CTRL_DEVPAUSE = 5
-	CTRL_DEVCONT = 6
+	CTRL_ENACT		= 1	# Enable all device actuators.
+	CTRL_DISACT		= 2	# Disable all the device actuators.
+	CTRL_STOPALL	= 3	# Stop All Effects­ Issues a stop on every running effect.
+	CTRL_DEVRST		= 4	# Device Reset– Clears any device paused condition, enables all actuators and clears all effects from memory.
+	CTRL_DEVPAUSE	= 5	# Device Pause– The all effects on the device are paused at the current time step.
+	CTRL_DEVCONT	= 6	# Device Continue– The all effects that running when the device was paused are restarted from their last time step.
 
 class FFB_EFFECTS:
 	Constant	= 0x0001

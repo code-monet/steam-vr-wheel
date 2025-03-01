@@ -1,6 +1,7 @@
 import math
 from math import pi, atan2, sin, cos, ceil, sqrt
 
+import time
 import openvr
 import sys
 import numpy as np
@@ -11,6 +12,71 @@ else:
     DEBUG = False
 
 class Controller:
+
+    _haptic_dict = dict()
+    @staticmethod 
+    def update_haptic():
+
+        now = time.time()
+
+        for py_ctr_id in Controller._haptic_dict:
+            start_ds_ary = Controller._haptic_dict[py_ctr_id]
+            new_ary = []
+            strength_sum = 0
+            for start_ds in start_ds_ary:
+                start, ds = start_ds
+                single_pulse = False
+                d_sum = 0 # Duration sum
+                ended = True
+                for duration, strength in ds:
+                    start_at = start + d_sum
+                    if duration is None:
+                        # Single frame haptic
+                        strength_sum += strength
+                        single_pulse = True
+                        break
+
+                    d_sum += duration
+                    if start_at + duration > now:
+                        # Still playing haptic
+                        if callable(strength):
+                            # Lambda that accepts t 0 to 1
+                            t = (now-start_at) / duration
+                            strength = strength(t)
+                        elif strength is None:
+                            strength = 0
+                        strength_sum += strength
+                        ended = False
+                        break
+
+                #
+                if single_pulse == True:
+                    ds.pop(0)
+                    ended = len(ds) == 0
+                    
+                if ended == False:
+                    new_ary.append(start_ds)
+            # Remove ended start_ds entries
+            Controller._haptic_dict[py_ctr_id] = new_ary
+
+            # Finally play haptic
+            # Use 3000 (3ms or 3000µs) as max strength set here
+            # Since frequency is 60hz, 3ms can fit in each frame
+            strength_sum = min(1, strength_sum)
+            strength_sum *= 3000
+            if strength_sum > 0:
+                openvr.VRSystem().triggerHapticPulse( \
+                    openvr.TrackedDeviceIndex_t(py_ctr_id),
+                    0,
+                    int(strength_sum))
+
+    def haptic(self, *ds):
+        if self.id.value not in Controller._haptic_dict:
+            Controller._haptic_dict[self.id.value] = []
+        arr = Controller._haptic_dict[self.id.value]
+        start = time.time()
+        arr.append([start, list(ds)])
+
     def __init__(self, id, name='', vrsys = None, is_controller=True):
 
         self.id = openvr.TrackedDeviceIndex_t(id)

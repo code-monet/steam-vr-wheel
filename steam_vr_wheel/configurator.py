@@ -36,6 +36,7 @@ class ConfiguratorApp:
         self.multibutton_trackpad_box = wx.CheckBox(self.pnl, label='(VIVE) Trackpad clicks has 4 additional zones')
         self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl,
                                                                   label='(VIVE) Haptic feedback for trackpad button zones')
+        self.sfx_volume = wx.SpinCtrl(self.pnl, name = "SFX Volume", min=0, max=100, size=(120,-1))
 
         ## Hidden
         self.touchpad_always_updates_box = wx.CheckBox(self.pnl, label='Touchpad mapping to axis while untouched (axis move to center when released)')
@@ -63,7 +64,8 @@ class ConfiguratorApp:
         self.wheel_show_hands.Disable()
         self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000, size=(120,-1))
         self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000, size=(120,-1))
-        self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback instead (tested working on ETS2 only)")
+        self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback to center the wheel (tested on ETS2 only)")
+        self.wheel_ffb_haptic = wx.CheckBox(self.nb_pnl_wheel, label="Force Feedback haptic on bumpy roads")
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120, size=(120,-1))
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100, size=(120,-1))
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
@@ -171,11 +173,14 @@ class ConfiguratorApp:
         self.profile_delete.Bind(wx.EVT_BUTTON, self.profile_buttons)
         self.profile_open_dir.Bind(wx.EVT_BUTTON, self.profile_buttons)
 
-        # Wheel
+        # General
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_center_haptic_box.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.sfx_volume.Bind(wx.EVT_SPINCTRL, self.config_change)
+        
+        # Wheel
         self.touchpad_always_updates_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.vertical_wheel_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.joystick_updates_only_when_grabbed_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -231,6 +236,7 @@ class ConfiguratorApp:
                                 trigger_press_button=self.trigger_btn_box,
                                 multibutton_trackpad=self.multibutton_trackpad_box,
                                 multibutton_trackpad_center_haptic=self.multibutton_trackpad_center_haptic_box,
+                                sfx_volume=self.sfx_volume,
                                 touchpad_always_updates=self.touchpad_always_updates_box,
                                 vertical_wheel=self.vertical_wheel_box,
                                 joystick_updates_only_when_grabbed=self.joystick_updates_only_when_grabbed_box,
@@ -243,6 +249,7 @@ class ConfiguratorApp:
                                 wheel_degrees=self.wheel_degrees,
                                 wheel_centerforce=self.wheel_centerforce,
                                 wheel_ffb=self.wheel_ffb,
+                                wheel_ffb_haptic=self.wheel_ffb_haptic,
                                 wheel_pitch=self.wheel_pitch,
                                 wheel_alpha=self.wheel_alpha,
                                 wheel_transparent_center=self.wheel_transparent_center_box,
@@ -299,6 +306,8 @@ class ConfiguratorApp:
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.touchpad_always_updates_box)
+        self.vbox.Add(wx.StaticText(self.pnl, label = "SFX Volume"))
+        self.vbox.Add(self.sfx_volume)
 
         ## Adding items to Wheel page
         self.nb_vbox_wheel.AddSpacer(5)
@@ -319,6 +328,7 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Center Force"))
         self.nb_vbox_wheel.Add(self.wheel_centerforce)
         self.nb_vbox_wheel.Add(self.wheel_ffb)
+        self.nb_vbox_wheel.Add(self.wheel_ffb_haptic)
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Pitch"))
         self.nb_vbox_wheel.Add(self.wheel_pitch)

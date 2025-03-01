@@ -193,55 +193,63 @@ class _JOYSTICK_POSITION_V2(Structure):
 # FFB
 
 class FFB_DATA(Structure):
-	_fields_ = [("size", c_ulong),
-				("cmd", c_ulong),
+	_fields_ = [("size", c_uint32),
+				("cmd", c_uint32),
 				("data", POINTER(c_ubyte))]
 
 class FFB_DIR_UNION(Union):
-	_fields_ = [("Direction", c_char),
-				("DirX", c_char)]
+	_fields_ = [("Direction", c_ubyte),
+				("DirX", c_ubyte)]
 
-# cf. https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416616(v=vs.85)
+# cf https://github.com/jshafer817/vJoy/blob/v2.1.9.1/apps/common/vJoyInterface/vjoyinterface.h
 class FFB_EFF_REPORT(Structure):
 	_anonymous_ = ("FFB_DIR_UNION",)
-	_fields_ = [("EffectBlockIndex", c_char),
-				("EffectType", c_uint),
-				("Duration", c_ushort),
-				("TrigerRpt", c_ushort),
-				("SamplePrd", c_ushort),
-				("Gain", c_char),
-				("TrigerBtn", c_char),
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("EffectType", c_uint32),
+				("Duration", c_uint16),
+				("TrigerRpt", c_uint16),
+				("SamplePrd", c_uint16),
+				("Gain", c_ubyte),
+				("TrigerBtn", c_ubyte),
 				("Polar", c_bool),
+				("_pad1_", c_ubyte * 3),
 				("FFB_DIR_UNION", FFB_DIR_UNION),
-				("DirY", c_char)]
+				("DirY", c_ubyte)]
+#for field in FFB_EFF_REPORT._fields_:
+#    print(field[0], getattr(FFB_EFF_REPORT, field[0]))
 
 class FFB_EFF_OP(Structure):
-	_fields_ = [("EffectBlockIndex", c_char),
-				("EffectOp", c_uint),
-				("LoopCount", c_char)]
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("EffectOp", c_uint32),
+				("LoopCount", c_ubyte)]
 
 class FFB_EFF_CONSTANT(Structure):
-	_fields_ = [("EffectBlockIndex", c_char),
-				("Magnitude", c_long)]
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("_pad1_", c_ubyte * 2),
+				("Magnitude", c_int16)]
 
 class FFB_EFF_RAMP(Structure):
-	_fields_ = [("EffectBlockIndex", c_char),
-				("Start", c_long),
-				("End", c_long)]
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("Start", c_int16),
+				("_pad1_", c_ubyte * 2),
+				("End", c_int16)]
 
 class FFB_EFF_PERIOD(Structure):
-	_fields_ = [("EffectBlockIndex", c_char),
-				("Magnitude", c_ulong),
-				("Offset", c_long),
-				("Phase", c_ulong),
-				("Period", c_ulong)]
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("Magnitude", c_uint32),
+				("Offset", c_int16),
+				("_pad1_", c_ubyte * 2),
+				("Phase", c_uint32),
+				("Period", c_uint32)]
 
 class FFB_EFF_ENVLP(Structure):
-	_fields_ = [("EffectBlockIndex", c_char),
-				("AttackLevel", c_ulong),
-				("FadeLevel", c_ulong),
-				("AttackTime", c_ulong),
-				("FadeTime", c_ulong)]
+	_fields_ = [("EffectBlockIndex", c_ubyte),
+				("AttackLevel", c_uint16),
+				("_pad1_", c_ubyte * 2),
+				("FadeLevel", c_uint16),
+				("_pad2_", c_ubyte * 2),
+				("AttackTime", c_uint32),
+				("FadeTime", c_uint32)]
 
 def IsDeviceFfb(rID):
 	return _vj.IsDeviceFfb(rID)
@@ -251,14 +259,29 @@ def _twos_comp(val, bits):
 		val = val - (1 << bits) 
 	return val
 
+def debug_structure_hex(struct):
+    # Get the size of the structure and read its raw bytes
+    size = sizeof(struct)
+    raw_bytes = string_at(byref(struct), size)
+    
+    # Group the bytes into chunks of 4 (adjust the group size as needed)
+    group_size = 4
+    groups = [raw_bytes[i:i+group_size] for i in range(0, size, group_size)]
+    
+    # Format each group as 8 hex digits
+    formatted_groups = ["".join("{:02X}".format(b) for b in group) for group in groups]
+    
+    # Print the groups separated by a space
+    print(" ".join(formatted_groups))
+
 FFB_GEN_CB = WINFUNCTYPE(None, c_void_p, c_void_p)
 
-# cf https://github.com/jshafer817/vJoy/blob/v2.1.9.1/apps/common/vJoyInterface/vjoyinterface.h
 class FfbGenCB:
 
 	def __init__(self, pyfunc):
 		self.pyfunc = pyfunc
 		def f(data, userData):
+			# cf https://github.com/jshafer817/vJoy/blob/v2.1.9.1/apps/common/vJoyInterface.cpp
 			fData = cast(data, POINTER(FFB_DATA))
 
 			pydata = dict()
@@ -271,43 +294,86 @@ class FfbGenCB:
 				pydata['Type'] = i.value
 
 			if ERROR_SUCCESS == _vj.Ffb_h_DevCtrl(fData, byref(i)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_CTRLREP
 				pydata['DevCtrl'] = i.value
+
+			if ERROR_SUCCESS == _vj.Ffb_h_EffNew(fData, byref(i)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_NEWEFREP
+				pydata['EffNew'] = i.value
+
+			if ERROR_SUCCESS == _vj.Ffb_h_EBI(fData, byref(i)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# false == (Type == PT_CTRLREP || Type == PT_SMPLREP || Type == PT_GAINREP || 
+				#           Type == PT_POOLREP || Type == PT_NEWEFREP)
+				pydata['EBI'] = i.value
+
+			b = c_ubyte()
+			if ERROR_SUCCESS == _vj.Ffb_h_DevGain(fData, byref(b)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_GAINREP
+				pydata['Gain'] = b.value
 
 			op = FFB_EFF_OP()
 			if ERROR_SUCCESS == _vj.Ffb_h_EffOp(fData, byref(op)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_EFOPREP
 				pydata['EffOp'] = dict({
+					# EBI is not set here use pydata['EBI'] for shorthand
 					"EffectOp": op.EffectOp,
-					"LoopCount": ord(op.LoopCount),
+					"LoopCount": op.LoopCount,
 					})
 
 			effect = FFB_EFF_REPORT()
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Report(fData, byref(effect)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_EFFREP
 				pydata['Eff_Report'] = dict({
+					# EBI is not set here use pydata['EBI'] for shorthand
 					"EffectType": effect.EffectType,
-					"Duration": effect.Duration,
+					"Duration": effect.Duration, # Value in milliseconds. 0xFFFF means infinite
 					"TriggerRepeatInterval": effect.TrigerRpt,
 					"SamplePeriod": effect.SamplePrd,
-					"Gain": ord(effect.Gain),
-					"TriggerButton": ord(effect.TrigerBtn),
-					"Polar": True if effect.Polar == 1 else False,
-					"Direction": ord(effect.Direction),
-					"DirX": _twos_comp(ord(effect.DirX), 8),
-					"DirY": _twos_comp(ord(effect.DirY), 8),
+					"Gain": effect.Gain,
+					"TriggerButton": effect.TrigerBtn,
+					"Polar": True if effect.Polar == 1 else False, 
+					"Direction": effect.Direction,      # Polar direction: (0x00-0xFF correspond to 0-360°)
+					"DirX": _twos_comp(effect.DirX, 8), # X direction: Positive values are To the right of the center (X); Negative are Two's complement
+					"DirY": _twos_comp(effect.DirY, 8), # Y direction: Positive values are below the center (Y); Negative are Two's complement
 					})
+				#debug_structure_hex(effect)
+
+			# Ffb_h_Eff_Cond
+			# Ffb_h_Eff_Ramp
 
 			cnst = FFB_EFF_CONSTANT()
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Constant(fData, byref(cnst)):
-
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_CONSTREP
 				pydata['Eff_Constant'] = dict({
-					"Magnitude": _twos_comp(cnst.Magnitude, 16)
+					# EBI is not set here use pydata['EBI'] for shorthand
+					"Magnitude": cnst.Magnitude
 					})
+				#debug_structure_hex(cnst)
 
 			prd = FFB_EFF_PERIOD()
 			# cf https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee418719(v=vs.85)
 			if ERROR_SUCCESS == _vj.Ffb_h_Eff_Period(fData, byref(prd)):
+				# This guarantees
+				# Ffb_h_Type(Packet, &Type) == ERROR_SUCCESS
+				# Type == PT_PRIDREP
 				pydata['Eff_Period'] = dict({
+					# EBI is not set here use pydata['EBI'] for shorthand
 					"Magnitude": prd.Magnitude,
-					"Offset": _twos_comp(prd.Offset, 16),
+					"Offset": prd.Offset,
 					"Phase": prd.Phase,
 					"Period": prd.Period
 					})

@@ -1,5 +1,6 @@
 from collections import deque
 from math import pi, atan2, sin, cos, ceil, sqrt, acos, tan
+import math
 
 import numpy as np
 import openvr
@@ -12,7 +13,7 @@ import queue
 import struct
 import mmap
 
-from . import check_result, rotation_matrix, playsound, Point, bezier_curve
+from . import check_result, rotation_matrix, playsound, Point, bezier_curve, deep_get
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
@@ -113,6 +114,7 @@ class HShifterImage:
         self.degree = degree / 10
         self.pos = 3.5
         self.wheel = wheel
+        self.config = self.wheel.config
 
         #self._button_queue = []
         self._snap_ctr = None
@@ -132,9 +134,9 @@ class HShifterImage:
         self._range_toggled = False
         self._reverse_locked = True
 
-        self._pos_to_button = dict({-1: 51,     1: 43,     3: 45,     5: 47,     7: 51,
+        self._pos_to_button = dict({-1:   51,   1:   43,   3:   45,   5:   47,   7:   51,
                                     -0.5: None, 1.5: None, 3.5: None, 5.5: None, 7.5: None,
-                                    0: 51,      2: 44,     4: 46,     6: 48,     8: 51})
+                                    0:    51,   2:   44,   4:   46,   6:   48,   8:   51})
         self._pressed_button = None
         self._xz = [0,0]
         self._last_xz_grid = np.array([0,0])
@@ -158,6 +160,7 @@ class HShifterImage:
         self._last_change_play = 0
         self._last_neutral_play = 0
         self._neutral_instances = []
+        self._neutral_lock = threading.Lock()
 
         # Images
         slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
@@ -200,6 +203,8 @@ class HShifterImage:
                                     [0.0, 0.0, 1.0, y],
                                     [0.0, -1.0, 0.0, z]]) # 90deg at X
 
+        # Set reverse orientation and its position
+        # _xz_rev represents where the reverse is in the coordinate system
         if self.wheel.config.shifter_reverse_orientation == "Top Left":
             self.slot_uv.vMax = 0.0
             self.slot_uv.vMin = 1.0
@@ -249,6 +254,7 @@ class HShifterImage:
         stick_width = 0.02
         self.stick_width = stick_width
 
+        # Hardcoded image(texture) dimension
         txw, txh = 40, 633
         stick_height = txh / (txw / stick_width)
         stick_scale = scale # 1.0 => 31.65cm
@@ -290,9 +296,16 @@ class HShifterImage:
     def set_stick_xz_pos(self, xz_pos, ctr=None):
         
         """
-        |1  |3  |5  |  43 45 47
-        |1.5|3.5|5.5|     42
-        |2  |4  |6  |  44 46 48
+        |-1  | 1  | 3  | 5  | 7  |  51 43 45 47 51   R 1 3 5 R
+        |-0.5| 1.5| 3.5| 5.5| 7.5|        42         +-+-N-+-+
+        | 0  | 2  | 4  | 6  | 8  |  51 44 46 48 51   R 2 4 6 R
+
+        odd: towards -z
+        x2 is odd: no rotation
+        even: towards +z
+
+        x = (round(pos/2)-1) * ...
+        z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
         """
         self.pos = xz_pos[0]*2+3 + (xz_pos[1]+1)/2
 
@@ -310,48 +323,28 @@ class HShifterImage:
         self._reverse_locked = False
 
     def toggle_splitter(self, ctr):
-        #self._one_tick_reset_pulse = True
-        # This disables preselecting
 
         self._splitter_toggled = not self._splitter_toggled
         check_result(self.vroverlay.setOverlayFromFile(self.knob, 
             self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
-
-        def haptic():
-            playsound(self._button_mp3, block=False, volume=0.65)
-
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1000) 
-            time.sleep(0.1)
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 2000)
-            time.sleep(0.1)
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-        t = threading.Thread(target=haptic)
-        t.start()
+        
+        playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
+        ctr.haptic([None, 0.6], [0.1, None], [None, 0.6])
 
     def toggle_range(self, ctr, override=None):
-        #self._one_tick_reset_pulse  = True
 
         if override is not None:
             if self._range_toggled == override:
                 return
-            
             self._range_toggled = override
         else:
             self._range_toggled = not self._range_toggled
         
         check_result(self.vroverlay.setOverlayFromFile(self.stick,
             self._stick_img_2.encode() if self._range_toggled else self._stick_img.encode()))
-
-        def haptic():
-            playsound(self._button_mp3, block=False, volume=0.65)
-
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1000) 
-            time.sleep(0.1)
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 2000)
-            time.sleep(0.1)
-            openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
-        t = threading.Thread(target=haptic)
-        t.start()
+        
+        playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
+        ctr.haptic([0.3, lambda t: t if self._range_toggled else lambda t: 1-t])
 
     def snap_ctr(self, ctr):
         now = time.time()
@@ -377,20 +370,8 @@ class HShifterImage:
 
         self._move_stick(self._xz_pos())
 
-        """
-        |1  |3  |5  |  1 3 5
-        |1.5|3.5|5.5|  +-N-+
-        |2  |4  |6  |  2 4 6
-
-        odd: towards -z
-        x2 is odd: no rotation
-        even: towards +z
-
-        x = (round(pos/2)-1) * ...
-        z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
-        """
-
     def _xz_pos(self):
+        # Convert pos to x and z
         return [(ceil(self.pos/2)-2), ((self.pos%2 if self.pos%2 != 0 else 2)-1.5)*2]
 
     def _move_stick(self, xz):
@@ -647,7 +628,8 @@ class HShifterImage:
 
                 # Gear changed
                 if xz_pos_1[1] != 0:
-                    openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                    #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 3000)
+                    ctr.haptic([0.3, lambda t: 1.0 if t < 0.1 else math.exp(-10*(t-0.1)) if t < 1 else 0.0])
 
                     # TODO: this part is in the test phase
                     #       this is to counteract the issue where you alt-tab or do something to lose focus from ETS2,
@@ -656,17 +638,20 @@ class HShifterImage:
 
                     if now - self._last_change_play > 0.07:
 
-                        # TODO fix tick delays
-                        for i in self._neutral_instances:
-                            playsound(None, stop_alias=i)
-                        self._neutral_instances.clear()
-
                         #p = multiprocessing.Process(target=player)
                         # If ever block issue, use multiprocessing
                         def player():
-                            # TODO maybe add volume to configurator
+
+                            self._neutral_lock.acquire()
+                            for i in self._neutral_instances:
+                                playsound(None, stop_alias=i)
+                            self._neutral_instances = []
+                            self._neutral_lock.release()
+
                             playsound(self._change_mp3_2 if xz_pos_1[1] == -1 else self._change_mp3_1,
-                                block=False, volume=0.65)
+                                block=False,
+                                volume=self.config.sfx_volume/100)
+
                         t = threading.Thread(target=player)
                         t.start()
                         self._last_change_play = now
@@ -674,17 +659,17 @@ class HShifterImage:
                 elif xz_pos_1[1] == 0: # Move to the middle row
 
                     if now - self._last_neutral_play > 0.16:
-                        self._neutral_instances.append(playsound(self._neutral_mp3, block=False, volume=0.65))
-
-                    self._last_neutral_play = now
-                    """
-                    if now - self._last_netural_play > 0.07:
                         def player():
-                            playsound(self._neutral_mp3, block=False, volume=0.65)
+                            self._neutral_lock.acquire()
+                            self._neutral_instances.append(playsound(self._neutral_mp3,
+                                block=False,
+                                volume=self.config.sfx_volume/100))
+                            self._neutral_lock.release()
+
                         t = threading.Thread(target=player)
                         t.start()
-                        self._last_netural_play = now
-                    """
+
+                    self._last_neutral_play = now
 
             elif abs(hpt_xz[0] - xz_1[0]) > 0.35 or abs(hpt_xz[1] - xz_1[1]) > 0.35: # Check haptic
                 self._last_haptic_xz = xz_1.copy()
@@ -793,15 +778,11 @@ class Wheel(VirtualPad):
         size = self.config.wheel_size
         self._inertia = inertia
         self._center_speed = center_speed  # radians per frame, force which returns wheel to center when not grabbed
-        self._center_speed_ffb = 0
-        self._center_speed_ffb_mag_0 = 0
-        self._center_speed_ffb_mag_1 = 0 # Magnitude without time factor
         self._center_speed_ffb_mags = np.zeros(60)
         # FFB
         if self.config.wheel_ffb:
+            self.ffb_paused = False
             self.device.ffb_callback(self.ffb_callback)
-            self._ffb_stopped = False
-            self._ffb_end = 0
 
         self.x = 0  # -1 0 1
         self._wheel_angles = deque(maxlen=10)
@@ -847,13 +828,23 @@ class Wheel(VirtualPad):
     def ffb_callback(self, data):
 
         now = time.time()
-        if hasattr(self, "_ffb_test_t") == False:
+        if hasattr(self, "_ffb_last_now") == False:
+            self._ffb_last_now = now
+            self._ffb_gain_coef = 1.0
+            self._ffb_effects = dict()
+
+            self._ffb_test_dir_map = dict()
             self._ffb_test_t = now - 20.0
             self._ffb_test_unhandled = dict()
             self._ffb_test_handled = dict()
 
-            self.last_now = now
-            self._ffb_test_dir_map = dict()
+        class Effect:
+            start = 0
+            data = dict()
+
+        def norm_gain(g):
+            g /= 0xFF
+            return g
 
         def _ffb_test_f(handled, t, sub=None):
             k = str(t)
@@ -865,118 +856,180 @@ class Wheel(VirtualPad):
                 d[k] = 0
             d[k] += 1
 
-        elapsed = now-self.last_now
-
-        # Ignored types
-        typ = data['Type']
-        if typ in [
-            FFBPType.PT_CONDREP, # Ignore condtions
-            ]:
-            _ffb_test_f(True, typ)
-
-        # Gain
-        if typ == FFBPType.PT_GAINREP:
-            _ffb_test_f(False, typ)
-
-        #FFBPType.PT_EFOPREP 10
-        if "EffOp" in data:
-            op = data['EffOp']['EffectOp']
-            if op == FFBOP.EFF_START or op == FFBOP.EFF_SOLO:
-
-                self._ffb_stopped = False
-            
-                loop = data['EffOp']['LoopCount']
-                if loop == 0:
-                    # Indefinite loop
-                    _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
-                else:
-                    # Not handled
-                    _ffb_test_f(False, FFBPType.PT_EFOPREP, "%d-%d" % (op, loop))
-
-            elif op == FFBOP.EFF_STOP:
-                self._ffb_stopped = True
-                _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
-            else:
-                # Not handled
-                _ffb_test_f(False, FFBPType.PT_EFOPREP, op)
-
-        #FFBPType.PT_EFFREP
-        if "Eff_Report" in data:
-
-            rep = data["Eff_Report"]
-            d = rep["Duration"]
-            if d == 0xFFFF:
-                self._ffb_end = now + 86400 * 365
-            else:
-                self._ffb_end = now + d/1000.0
-
-            # Dir map
-            self._ffb_test_dir_map["DirX %d" % rep["DirX"]] = 0
-            self._ffb_test_dir_map["Direction %d" % rep["Direction"]] = 0
-
-            _ffb_test_f(True, FFBPType.PT_EFFREP)
-
-        #FFBPType.PT_CONSTREP
-        if "Eff_Constant" in data:
-            m = data['Eff_Constant']['Magnitude'] / 10000.0
-
-            """
-            self._center_speed_ffb_mag_0 = self._center_speed_ffb_mag_1
-            self._center_speed_ffb_mag_1 = m
-            """
-            self._center_speed_ffb_mags[1:] = self._center_speed_ffb_mags[:-1]
-            self._center_speed_ffb_mags[0] = m
-
-            self._center_speed_ffb = m
-            if elapsed != 0:
-                self._center_speed_ffb *= elapsed * 200
-
-            _ffb_test_f(True, FFBPType.PT_CONSTREP)
+        # Elapsed and frequency
+        elapsed = now-self._ffb_last_now
+        self._ffb_last_now = now
         
-        #FFBPType.PT_PRIDREP
-        if "Eff_Period" in data:
-            _ffb_test_f(False, FFBPType.PT_PRIDREP)
+        # Handle raw data
+        if True:
 
-        #FFBPType.PT_CTRLREP
-        if "DevCtrl" in data:
-            if data['DevCtrl'] in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
-                """
-                self._center_speed_ffb_mag_0 = 0
-                self._center_speed_ffb_mag_1 = 0
-                """
-                self._center_speed_ffb_mags[:] = 0
-                self._center_speed_ffb = 0
-                _ffb_test_f(True, FFBPType.PT_CTRLREP, data['DevCtrl'])
+            typ = data['Type']
+
+            # Effect
+            effect = None
+            ebi = None
+            if "EBI" in data:
+                ebi = data["EBI"]
+                if ebi in self._ffb_effects:
+                    effect = self._ffb_effects[ebi]
+                else:
+                    effect = Effect()
+                    self._ffb_effects[ebi] = effect
+            
+            # Gain
+            if typ == FFBPType.PT_GAINREP:
+                self._ffb_gain_coef = norm_gain(data['Gain'])
+                print(f"New global FFB gain coefficient is {self._ffb_gain_coef} raw gain is {data['Gain']}")
+
+                _ffb_test_f(True, typ)
+
+            #FFBPType.PT_EFOPREP 10
+            elif typ == FFBPType.PT_EFOPREP:
+                op = data['EffOp']['EffectOp']
+                if op == FFBOP.EFF_START or op == FFBOP.EFF_SOLO:
+
+                    effect.start = now
+                    effect.data.update(data)
+                    _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
+
+                elif op == FFBOP.EFF_STOP:
+
+                    del self._ffb_effects[ebi]
+                    _ffb_test_f(True, FFBPType.PT_EFOPREP, op)
+
+            #FFBPType.PT_EFFREP
+            elif typ == FFBPType.PT_EFFREP:
+
+                effect.data.update(data)
+
+                # [TEST] Dir map
+                rep = data["Eff_Report"]
+                self._ffb_test_dir_map["DirX %d" % rep["DirX"]] = 0
+                self._ffb_test_dir_map["Direction %d" % rep["Direction"]] = 0
+
+                _ffb_test_f(True, FFBPType.PT_EFFREP)
+
+            #FFBPType.PT_CONSTREP
+            elif typ == FFBPType.PT_CONSTREP:
+
+                effect.data.update(data)
+                _ffb_test_f(True, FFBPType.PT_CONSTREP)
+            
+            #FFBPType.PT_PRIDREP
+            elif typ == FFBPType.PT_PRIDREP:
+                _ffb_test_f(False, FFBPType.PT_PRIDREP)
+
+            #FFBPType.PT_CTRLREP
+            elif typ == FFBPType.PT_CTRLREP:
+                ctrl = data['DevCtrl']
+                if ctrl in [FFB_CTRL.CTRL_STOPALL, FFB_CTRL.CTRL_DEVRST]:
+
+                    self._center_speed_ffb_mags[:] = 0
+                    self._ffb_effects = dict()
+
+                    _ffb_test_f(True, FFBPType.PT_CTRLREP, ctrl)
+
+                elif ctrl == FFB_CTRL.CTRL_DEVPAUSE:
+
+                    self.ffb_paused = True
+                    self._ffb_pause_start = now
+
+                    _ffb_test_f(True, FFBPType.PT_CTRLREP, ctrl)
+
+                elif ctrl == FFB_CTRL.CTRL_DEVCONT:
+                    self.ffb_paused = False
+
+                    since_pause = now - self._ffb_pause_start
+
+                    for v in self._ffb_effects.values():
+                        v.start += since_pause
+
+                    _ffb_test_f(True, FFBPType.PT_CTRLREP, ctrl)
+                else:
+                    _ffb_test_f(False, FFBPType.PT_CTRLREP, ctrl)
+
             else:
-                _ffb_test_f(False, FFBPType.PT_CTRLREP, data['DevCtrl'])
+                """
+                if typ not in [
+                    FFBPType.PT_CONSTREP,
+                    FFBPType.PT_CTRLREP,
+                    FFBPType.PT_EFOPREP,
+                    FFBPType.PT_CONDREP,
+                    FFBPType.PT_PRIDREP,
+                    FFBPType.PT_EFFREP,
+                    FFBPType.PT_GAINREP,
+                    ]:
+                """
+                _ffb_test_f(False, typ)
 
-        if typ not in [
-            FFBPType.PT_CONSTREP,
-            FFBPType.PT_CTRLREP,
-            FFBPType.PT_EFOPREP,
-            FFBPType.PT_CONDREP,
-            FFBPType.PT_PRIDREP,
-            FFBPType.PT_EFFREP,
-            FFBPType.PT_GAINREP,
-
+        if now - self._ffb_test_t > 30.0:
             # [TEST] FFB behaviors
             # NO  {'13': 2, '11': 1, '10-1-1': 4, '17': 4}
             # YES {'13': 2, '5': 74874, '1': 4, '12-4': 3, '10-3': 2, '12-3': 14, '3': 10060}
             # Dir {'DirX 0': 0, 'Direction 0': 0}
 
             # 17, 11, 1
-
-            ]:
-            _ffb_test_f(False, typ)
-
-        if now - self._ffb_test_t > 30.0:
             print("[TEST] FFB behaviors",
                 "\n  NO ", self._ffb_test_unhandled,
                 "\n  YES", self._ffb_test_handled,
                 "\n  Dir", self._ffb_test_dir_map)
             self._ffb_test_t = now
 
-        self.last_now = now
+        
+        # Calc magnitude
+        sum_m = 0
+        if self.ffb_paused == False:
+            
+            solo = False
+            for k in list(self._ffb_effects.keys()):
+                e = self._ffb_effects[k]
+                d = e.data
+
+                # Check if effect is ended
+                ended = False
+                lc = deep_get(d, ["EffOp", "LoopCount"])
+                if lc == None:
+                    pass
+                elif lc == 0:
+                    pass
+                elif lc > 0:
+                    duration = deep_get(d, ["Eff_Report", "Duration"])
+
+                    if duration == 0xFFFF:
+                        pass
+                    elif duration == None:
+                        pass
+                    else:
+                        ended = now > e.start + lc * duration/1000.0
+
+                if ended:
+                    del self._ffb_effects[k]
+                    continue
+
+                if solo:
+                    continue
+
+                # Get magnitude per effect type
+                m = 0
+                if "Eff_Constant" in d:
+                    m = d['Eff_Constant']['Magnitude'] / 10000.0
+
+                # Get Coef and consider its own gain
+                own_coef = deep_get(d, ["Eff_Report", "Gain"], 0xFF)
+                own_coef = norm_gain(own_coef)
+                coef = self._ffb_gain_coef * own_coef 
+
+                # Sum
+                m *= coef 
+                sum_m += m
+
+                # If solo effect, remove other effects' influence
+                if deep_get(d, ["EffOp", "EffectOp"]) == FFBOP.EFF_SOLO:
+                    sum_m = m
+                    solo = True
+
+            self._center_speed_ffb_mags[1:] = self._center_speed_ffb_mags[:-1]
+            self._center_speed_ffb_mags[0] = sum_m
 
 
     def point_in_holding_bounds(self, point):
@@ -1142,11 +1195,17 @@ class Wheel(VirtualPad):
         return angle
 
     def calculate_grab_offset(self, raw_angle=None):
+
+        # Calculates the angular offset from raw_angle to the most recent angle of wheel
+
         if raw_angle is None:
             raw_angle = self.wheel_raw_angle(self._grab_started_point)
         self._wheel_grab_offset = self._wheel_angles[-1] - raw_angle
 
     def is_held(self, controller):
+
+        # is_held, NOT like its name, puts the passed controllers into "held" state
+        # TODO make this set_held or revise how held state is handled
 
         if isinstance(controller, list):
             self._snapped = True
@@ -1160,9 +1219,18 @@ class Wheel(VirtualPad):
             self.calculate_grab_offset()
 
     def is_not_held(self):
+
+        # is_not_held, NOT like its name, manages "not_held" state
+        # self._grab_started_point = None doesn't mean it is completely not held
+        # it can be either no hands or TWO HANDS all attached to the wheel if you confer the above function 'is_held'
+        # TODO revise how it is handled
+
         self._grab_started_point = None
 
     def inertia(self):
+
+        # inertia simulates inertia done to the wheel
+
         if self._grab_started_point:
             self._turn_speed = self._wheel_angles[-1] - self._wheel_angles[-2]
         else:
@@ -1171,21 +1239,29 @@ class Wheel(VirtualPad):
 
     def center_force(self):
         
+        # center_force handles the centering of the wheel to its center position
+        # user can use FFB to get the actual force done to the wheel
+        # FFB is tested working on Euro Truck Simulator 2 only
+
         now = time.time()
-        epsilon = self._center_speed * self.config.wheel_centerforce
 
         if self.config.wheel_ffb:
-
-            if self._ffb_stopped or now > self._ffb_end:
-                epsilon = 0
-            else:
-                epsilon *= self._center_speed_ffb
+            # FFB
+            epsilon = 0
+            if self.ffb_paused == False:
+                epsilon = self._center_speed * self.config.wheel_centerforce
+                epsilon *= 2 # x2 to make the default value of 30 of wheel_centerforce is
+                             # a moderate value for centering the wheel
+                epsilon *= self._center_speed_ffb_mags[0]
 
             self._wheel_angles.append(self._wheel_angles[-1] + epsilon)
 
         else:
-            angle = self._wheel_angles[-1]
+            # NO ffb
+            epsilon = self._center_speed * self.config.wheel_centerforce
+            epsilon /= 10 # roughly 20 times difference between FFB and non FFB to make it kind of similar
 
+            angle = self._wheel_angles[-1]
             if abs(angle) < epsilon:
                 self._wheel_angles[-1] = 0
                 return
@@ -1200,28 +1276,6 @@ class Wheel(VirtualPad):
         self.device.set_axis(HID_USAGE_X, axisX)
 
     def render(self, hmd):
-
-        """
-        #
-        vibrating_center = self.center
-
-        # Vibrate the image since you can't make the controllers vibrate due to battery consumption
-        v_m0 = self._center_speed_ffb_mag_0
-        v_m1 = self._center_speed_ffb_mag_1
-        v_diff = abs(v_m1 - v_m0) / 20000.0 # 0.0 ~ 1.0
-        if v_diff > 0.05 and v_m0 * v_m1 < 0:
-            v_a = random.uniform(0, 360)
-            v_a = v_a / 180 * pi
-            v_x = cos(v_a) ** 2
-            v_y = sin(v_a) ** 2
-
-            v_m = min(1.0, (v_diff - 0.05)/0.2)
-
-            vibrating_center = Point(
-                vibrating_center.x + v_x * v_m * 0.02, # 2cm
-                vibrating_center.y + v_y * v_m * 0.02,
-                vibrating_center.z)
-        """
 
         self.wheel_image.move_rotate(
             pos=self.center,
@@ -1263,8 +1317,14 @@ class Wheel(VirtualPad):
                 sign = -1
             self._turn_speed = -0.005 * sign
 
-            openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
-            openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
+            left_bound = self._hand_snaps['left'][:5] == 'wheel'
+            right_bound = self._hand_snaps['right'][:5] == 'wheel'
+            if left_bound:
+                left_ctr.haptic([None, 1])
+            if right_bound:
+                right_ctr.haptic([None, 1])
+            #openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
+            #openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
 
     def _wheel_update_common(self, angle, left_ctr, right_ctr):
         if angle:
@@ -1282,30 +1342,49 @@ class Wheel(VirtualPad):
         left_bound = self._hand_snaps['left'][:5] == 'wheel'
         right_bound = self._hand_snaps['right'][:5] == 'wheel'
 
-        """
-        # Turn speed haptic
-        if len(self._wheel_angles) >= 2:
-            ang_d = abs(self._wheel_angles[-1] - self._wheel_angles[-2])
-            if ang_d > 1/180*pi:
-                m = min(150, abs(ang_d) * 300)
-                if left_bound: 
-                    openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, int(m))
-                if right_bound: 
-                    openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(m))
-
         # FFB haptic
-        m_arr = self._center_speed_ffb_mags[:10]
-        m_M = np.max(m_arr)
-        m_m = np.min(m_arr)
-        m_d = m_M - m_m
-        
-        if m_M*m_m < 0 and m_d > 50/10000:
-            if left_bound: 
-                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, int(m_d*1500))
-            if right_bound: 
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, int(m_d*1500))
-        """
+        if self.config.wheel_ffb and \
+            self.config.wheel_ffb_haptic and \
+            self.ffb_paused == False:
+            def compute_haptic_intensity(m_arr, scaling_factor):
 
+                # Set thresholds for triggering haptics
+                rms_threshold = 250 / 10000    # Minimum RMS value to consider
+                zc_threshold = 4                # Minimum number of zero crossings
+
+                # Calculate the first derivative of the magnitude array
+                diffs = np.diff(m_arr)
+
+                # Count the number of zero crossings in the derivative
+                zero_crossings = np.sum(np.diff(np.sign(diffs)) != 0)
+
+                if zero_crossings < zc_threshold:
+                    return 0
+                
+                # Compute the RMS (root-mean-square) of the derivative
+                rms_deriv = np.sqrt(np.mean(np.square(diffs)))
+                
+                if rms_deriv > rms_threshold:
+                    # Use the number of zero crossings above threshold as a bonus factor.
+                    # For example, each extra zero crossing beyond the threshold increases the intensity by 10%
+                    extra_zc = zero_crossings - zc_threshold
+                    composite_factor = 1 + (extra_zc * 0.1)
+                    rms_factor = rms_deriv # - rms_threshold
+
+                    # Scale intensity continuously based on both the RMS value and the composite factor.
+                    pulse_intensity = rms_factor * scaling_factor * composite_factor
+                    return pulse_intensity
+                return 0
+
+            # In your main update function:
+            window_size = 10
+            m_arr = self._center_speed_ffb_mags[:window_size]
+            intensity = compute_haptic_intensity(m_arr, 0.35)
+            if intensity > 0:
+                if left_bound:
+                    left_ctr.haptic([None, intensity])
+                if right_bound:
+                    right_ctr.haptic([None, intensity])
 
     def attach_hand(self, hand, left_ctr, right_ctr):
         left_ctr = self.to_wheel_space(left_ctr)
@@ -1452,8 +1531,8 @@ class Wheel(VirtualPad):
                 self._shifter_button_lock.release()
 
                 self.h_shifter_image.snap_ctr(ctr)
-
-                openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
+                ctr.haptic([0.3, lambda t: math.exp(-8 * t)])
+                #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 300)
             else:
                 self._hand_snaps[hand] = 'wheel' if (flag & self.GRIP_FLAG_AUTO_GRAB == 0) else 'wheel_auto'
             
