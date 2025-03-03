@@ -41,6 +41,8 @@ The below table shows **Quest 2 controller** to vJoy mapping
 |R Right|39 or RX||
 |R Down|40 or RY||
 |R Up|41 or RY||
+|Shifter Sequential Pull|46||
+|Shifter Sequential Push|45||
 |Shifter Position 1|43|When configuring keybind in game, move from N to 1 to N|
 |Shifter Position 2|44||
 |Shifter Position 3|45||

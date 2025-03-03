@@ -12,6 +12,7 @@ def wheel_main_done():
     global main_done
     return main_done
 
+from . import perf_timings, perf_time
 from steam_vr_wheel._bike import Bike
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel._wheel import Wheel
@@ -35,11 +36,14 @@ def get_chaperone():
 
     return chp
 
-def do_work(vrsystem, left_controller: Controller, right_controller: Controller, hmd: Controller, wheel: Wheel, poses):
+def do_work(vrsystem, frames, left_ctr: Controller, right_ctr: Controller, hmd: Controller, wheel: Wheel, poses):
+
     vrsystem.getDeviceToAbsoluteTrackingPose(openvr.TrackingUniverseSeated, 0, len(poses), poses)
+
     hmd.update(poses[hmd.id.value])
-    left_controller.update(poses[left_controller.id.value])
-    right_controller.update(poses[right_controller.id.value])
+    left_ctr.update(poses[left_ctr.id.value])
+    right_ctr.update(poses[right_ctr.id.value])
+
     event = openvr.VREvent_t()
     while vrsystem.pollNextEvent(event):
         hand = None
@@ -53,7 +57,7 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
             #vrchp_setup.function_table.setWorkingSeatedZeroPoseToRawTrackingPose(byref(chp))
             #vrchp_setup.commitWorkingCopy(openvr.EChaperoneConfigFile_Live)
 
-        if event.trackedDeviceIndex == left_controller.id.value:
+        if event.trackedDeviceIndex == left_ctr.id.value:
 
             if event.eventType == openvr.VREvent_ButtonTouch:
                 if DEBUG:
@@ -71,7 +75,7 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
                     wheel.set_trigger_untouch_left()
 
             hand = 'left'
-        if event.trackedDeviceIndex == right_controller.id.value:
+        if event.trackedDeviceIndex == right_ctr.id.value:
 
             if event.eventType == openvr.VREvent_ButtonTouch:
                 if DEBUG:
@@ -95,16 +99,18 @@ def do_work(vrsystem, left_controller: Controller, right_controller: Controller,
                 if DEBUG:
                     print(hand, "HAND EVENT: BUTTON PRESS, BUTTON ID", event.data.controller.button)
                 button = event.data.controller.button
-                wheel.set_button_press(button, hand, left_controller, right_controller)
+                wheel.set_button_press(button, hand, left_ctr, right_ctr)
             if event.eventType == openvr.VREvent_ButtonUnpress:
                 if DEBUG:
                     print(hand, "HAND EVENT: BUTTON UNPRESS, BUTTON ID", event.data.controller.button)
                 button = event.data.controller.button
                 wheel.set_button_unpress(button, hand)
+    perf_time("openvr event poll")
+
     if wheel.is_edit_mode:
-        wheel.edit_mode(left_controller, right_controller, hmd)
+        wheel.edit_mode(frames)
     else:
-        wheel.update(left_controller, right_controller, hmd)
+        wheel.update(left_ctr, right_ctr, hmd)
 
 
 def get_controller_ids():
@@ -131,16 +137,16 @@ def main(type='wheel'):
     while not hands_got:
         try:
             print('Searching for left and right hand controllers')
-            hmd, left, right = get_controller_ids()
+            hmd_id, left_ctr_id, right_ctr_id = get_controller_ids()
             hands_got = True
             print('left and right hands found')
         except NameError:
             pass
         time.sleep(0.2)
 
-    hmd_device = Controller(hmd, name='hmd', vrsys=vrsystem, is_controller=False)
-    left_controller = Controller(left, name='left', vrsys=vrsystem)
-    right_controller = Controller(right, name='right', vrsys=vrsystem)
+    hmd       = Controller(hmd_id, name='hmd', vrsys=vrsystem, is_controller=False)
+    left_ctr  = Controller(left_ctr_id, name='left', vrsys=vrsystem)
+    right_ctr = Controller(right_ctr_id, name='right', vrsys=vrsystem)
     if type == 'wheel':
         wheel = Wheel()
     elif type == 'bike':
@@ -149,7 +155,25 @@ def main(type='wheel'):
         wheel = VirtualPad()
 
     # Pre loop
+    wheel.hmd = hmd
+    wheel.left_ctr = left_ctr
+    wheel.right_ctr = right_ctr
     wheel.update_chaperone(get_chaperone())
+    print("""
+---------------------
+
+Required vJoy version: v2.1.9.1
+Open Configure vJoy
+    - Select vJoy device 1
+    - Number of buttons  :   64
+    - Axes               :   all enabled
+    - POVs               :   Continuous 0
+    - Force Feedback     :   Enable Effects and check all
+
+Triple grips both hands     -     enter edit mode
+
+---------------------
+    """)
 
     poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
     poses = poses_t()
@@ -157,17 +181,26 @@ def main(type='wheel'):
     # Loop
     frames = 0
     while True:
+
         frames += 1
         
         before_work = time.time()
-        do_work(vrsystem, left_controller, right_controller, hmd_device, wheel, poses)
+
+        perf_timings.clear()
+        do_work(vrsystem, frames, left_ctr, right_ctr, hmd, wheel, poses)
         Controller.update_haptic(frames)
+
         after_work = time.time()
+
         left = 1/FREQUENCY - (after_work - before_work)
-        if left>0:
+        if left > 0:
             time.sleep(left)
         else:
-            print("Task took too long +", -left, "seconds")
+            print(f"Task took too long +{round((-left)/(1/FREQUENCY), 1)} frames")
+            for key, t in perf_timings:
+                d = t - before_work
+                print(f"- +{d:.6f}: {key}")
+            print("")
 
 if __name__ == '__main__':
     try:

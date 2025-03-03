@@ -87,7 +87,8 @@ class ConfiguratorApp:
 
         self.pnl_shifter_degree = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_degree = wx.BoxSizer(wx.VERTICAL)
-        self.shifter_degree = wx.SpinCtrl(self.pnl_shifter_degree, name = "Shifter Degree, 80=8 degrees", min=0, max=300, size=(120,-1))
+        self.shifter_degree = wx.SpinCtrlDouble(self.pnl_shifter_degree, name = "Shifter Degree, 80=8 degrees", inc=0.1, min=0.0, max=30.0, size=(120,-1))
+        self.shifter_degree.SetDigits(1)
 
         self.pnl_shifter_alpha = wx.Panel(self.pnl_shifter)
         self.vbox_shifter_alpha = wx.BoxSizer(wx.VERTICAL)
@@ -97,6 +98,8 @@ class ConfiguratorApp:
         self.vbox_shifter_scale = wx.BoxSizer(wx.VERTICAL)
         self.shifter_scale = wx.SpinCtrl(self.pnl_shifter_scale, name = "Shifter Height Scale (%), 100%", min=10, max=100, size=(120,-1))
         
+        self.shifter_sequential = wx.CheckBox(self.nb_pnl_wheel, label="Sequential mode")
+
         self.shifter_reverse_orientation = wx.RadioBox(self.nb_pnl_wheel, label="Reverse Position",
             choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
             majorDimension=1, style=wx.RA_SPECIFY_ROWS)
@@ -192,14 +195,17 @@ class ConfiguratorApp:
         self.wheel_show_hands.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_degrees.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_centerforce.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.wheel_ffb.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.wheel_ffb_haptic.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_pitch.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_transparent_center_box.Bind(wx.EVT_CHECKBOX, self.config_change)
 
         ## Shifter
-        self.shifter_degree.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_degree.Bind(wx.EVT_SPINCTRLDOUBLE, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_sequential.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
         ## Joystick button or axis
@@ -257,6 +263,7 @@ class ConfiguratorApp:
                                 shifter_degree=self.shifter_degree,
                                 shifter_alpha=self.shifter_alpha,
                                 shifter_scale=self.shifter_scale,
+                                shifter_sequential=self.shifter_sequential,
                                 shifter_reverse_orientation=self.shifter_reverse_orientation,
 
                                 j_l_left_button=self.j_l_left_button,
@@ -306,6 +313,7 @@ class ConfiguratorApp:
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.touchpad_always_updates_box)
+        self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "SFX Volume"))
         self.vbox.Add(self.sfx_volume)
 
@@ -321,9 +329,9 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(self.wheel_show_hands)
         self.nb_vbox_wheel.AddSpacer(10)
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Degrees"))
+        self.nb_vbox_wheel.Add(self.wheel_degrees)
         self.nb_vbox_wheel.Add(_decrease_font(
             wx.StaticText(self.nb_pnl_wheel, label = "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck")))
-        self.nb_vbox_wheel.Add(self.wheel_degrees)
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Center Force"))
         self.nb_vbox_wheel.Add(self.wheel_centerforce)
@@ -356,8 +364,8 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(self.pnl_shifter)
         self.nb_vbox_wheel.Add(_decrease_font(
             wx.StaticText(self.nb_pnl_wheel, label = "Height Scale 100%=Truck Height Scale 30%=General")))
-        self.nb_vbox_wheel.Add(_decrease_font(
-            wx.StaticText(self.nb_pnl_wheel, label = "Tilt 80=8 degrees Tilt 151=15.1 degrees")))
+
+        self.nb_vbox_wheel.Add(self.shifter_sequential)
 
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)

@@ -13,7 +13,7 @@ import queue
 import struct
 import mmap
 
-from . import check_result, rotation_matrix, playsound, Point, bezier_curve, deep_get
+from . import check_result, rotation_matrix, playsound, Point, bezier_curve, deep_get, perf_time
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
@@ -103,7 +103,7 @@ def set_transform(tf, mat):
             tf[i][j] = mat[i][j]
 
 class HShifterImage:
-    def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, degree=150, scale=100, alpha=100):
+    def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, degree=6, scale=100, alpha=100):
         self.vrsys = openvr.VRSystem()
         self.vroverlay = openvr.IVROverlay()
 
@@ -111,7 +111,7 @@ class HShifterImage:
         self.y = y
         self.z = z
         self.size = 14 / 100
-        self.degree = degree / 10
+        self.degree = degree
         self.pos = 3.5
         self.wheel = wheel
         self.config = self.wheel.config
@@ -125,21 +125,36 @@ class HShifterImage:
         self._snap_ctr_offset = []
         self._snap_tf = None
 
-        self._knob_pos = [0,0,0]
-        
+        self._xz = [0,0]
         self._last_haptic_xz = [0,0]
+        self._knob_pos = [0,0,0]
 
         self._one_tick_reset_pulse = False
         self._splitter_toggled = False
         self._range_toggled = False
         self._reverse_locked = True
 
+        """
+        |-1  | 1  | 3  | 5  | 7  |  51 43 45 47 51   R 1 3 5 R
+        |-0.5| 1.5| 3.5| 5.5| 7.5|                   +-+-N-+-+
+        | 0  | 2  | 4  | 6  | 8  |  51 44 46 48 51   R 2 4 6 R
+
+        odd: towards -z
+        x2 is odd: no rotation
+        even: towards +z
+
+        x = (round(pos/2)-1) * ...
+        z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
+
+        49 splitter
+        50 range
+        """
+        self._splitter_button = 49
+        self._range_button = 50
         self._pos_to_button = dict({-1:   51,   1:   43,   3:   45,   5:   47,   7:   51,
                                     -0.5: None, 1.5: None, 3.5: None, 5.5: None, 7.5: None,
-                                    0:    51,   2:   44,   4:   46,   6:   48,   8:   51})
+                                     0:   51,   2:   44,   4:   46,   6:   48,   8:   51})
         self._pressed_button = None
-        self._xz = [0,0]
-        self._last_xz_grid = np.array([0,0])
 
         # Create
         result, self.slot = self.vroverlay.createOverlay('hshifter_slot'.encode(), 'hshifter_slot'.encode())
@@ -162,13 +177,13 @@ class HShifterImage:
         self._neutral_instances = []
 
         # Images
-        slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
+        self.slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
+        self.slot_img_seq = os.path.join(this_dir, 'media', 'h_shifter_slot_seq.png')
         self._stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick_low.png')
         self._stick_img_2 = os.path.join(this_dir, 'media', 'h_shifter_stick_high.png')
         self._knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
         self._knob_img_2 = os.path.join(this_dir, 'media', 'h_shifter_knob_over.png')
 
-        check_result(self.vroverlay.setOverlayFromFile(self.slot, slot_img.encode()))
         check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img.encode()))
         check_result(self.vroverlay.setOverlayFromFile(self.knob, self._knob_img.encode()))
 
@@ -178,6 +193,10 @@ class HShifterImage:
         check_result(self.vroverlay.setOverlayAlpha(self.slot, alpha/100))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.slot, self.size)) # default 14cm
         
+        # Set sequential
+        self.sequential = None
+        self.toggle_sequential(self.config.shifter_sequential)
+
         # Scale
         self.rescale(scale / 100)
         stick_width = self.stick_width
@@ -239,8 +258,6 @@ class HShifterImage:
         check_result(self.vroverlay.showOverlay(self.stick))
         check_result(self.vroverlay.showOverlay(self.knob))
 
-        self.last_pos = 3.5
-
     def tilt_delta(self, delta):
         self.degree = max(min(30, self.degree+delta), 0)
 
@@ -294,18 +311,6 @@ class HShifterImage:
 
     def set_stick_xz_pos(self, xz_pos, ctr=None):
         
-        """
-        |-1  | 1  | 3  | 5  | 7  |  51 43 45 47 51   R 1 3 5 R
-        |-0.5| 1.5| 3.5| 5.5| 7.5|        42         +-+-N-+-+
-        | 0  | 2  | 4  | 6  | 8  |  51 44 46 48 51   R 2 4 6 R
-
-        odd: towards -z
-        x2 is odd: no rotation
-        even: towards +z
-
-        x = (round(pos/2)-1) * ...
-        z_rot = ((pos%2 if pos%2 != 0 else 2)-1.5) * ...
-        """
         self.pos = xz_pos[0]*2+3 + (xz_pos[1]+1)/2
 
         is_button = self.pos in self._pos_to_button
@@ -320,6 +325,26 @@ class HShifterImage:
 
     def unlock_reverse(self):
         self._reverse_locked = False
+
+    def toggle_sequential(self, override=None):
+
+        if override is not None:
+            if self.sequential == override:
+                return
+            self.sequential = override
+        else:
+            self.sequential = not self.sequential
+        
+        self.config.shifter_sequential = self.sequential
+
+        # Reset position
+        self.set_stick_xz_pos([0,0])
+
+        if self.sequential:
+            check_result(self.vroverlay.setOverlayFromFile(self.slot, self.slot_img_seq.encode()))
+        else:
+            check_result(self.vroverlay.setOverlayFromFile(self.slot, self.slot_img.encode()))
+
 
     def toggle_splitter(self, ctr):
 
@@ -339,7 +364,7 @@ class HShifterImage:
             self._range_toggled = override
         else:
             self._range_toggled = not self._range_toggled
-        
+            
         playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
 
         if self._range_toggled:
@@ -368,8 +393,17 @@ class HShifterImage:
 
     def unsnap(self):
         self._snapped = False
-        if self._pressed_button is None:
+
+        if self.sequential:
+            if self.pos != 3.5:
+                self._neutral_instances.append(playsound(self._neutral_mp3,
+                    block=False,
+                    volume=self.config.sfx_volume/100))
+
             self.set_stick_xz_pos([0,0])
+        else:
+            if self._pressed_button is None:
+                self.set_stick_xz_pos([0,0])
 
         self._move_stick(self._xz_pos())
 
@@ -481,6 +515,11 @@ class HShifterImage:
         cl_s = [a*self._slot_v for a in cl]
         check_result(self.vroverlay.setOverlayColor(self.slot, *cl_s))
 
+    def set_alpha(self, alpha):
+        check_result(self.vroverlay.setOverlayAlpha(self.knob, alpha))
+        check_result(self.vroverlay.setOverlayAlpha(self.stick, alpha))
+        check_result(self.vroverlay.setOverlayAlpha(self.slot, alpha))
+
     def move_delta(self, d):
         self.x += d[0]
         self.y += d[1]
@@ -495,8 +534,8 @@ class HShifterImage:
                 if v is not None:
                     self.wheel.device.set_button(v, False)
 
-            self.wheel.device.set_button(49, not self._splitter_toggled)
-            self.wheel.device.set_button(50, not self._range_toggled)
+            self.wheel.device.set_button(self._splitter_button, not self._splitter_toggled)
+            self.wheel.device.set_button(self._range_button, not self._range_toggled)
 
             return
 
@@ -509,8 +548,8 @@ class HShifterImage:
         now = time.time()
 
         # Toggles
-        self.wheel.device.set_button(49, self._splitter_toggled)
-        self.wheel.device.set_button(50, self._range_toggled)
+        self.wheel.device.set_button(self._splitter_button, self._splitter_toggled)
+        self.wheel.device.set_button(self._range_button, self._range_toggled)
 
         if self._snapped:
             u_sin = (self.stick_height * sin(self.degree*pi/180))
@@ -522,22 +561,33 @@ class HShifterImage:
             #p1[1] -= self._snap_ctr_offset[1]
             p1[2] -= self._snap_ctr_offset[2]
 
-            #
-
+            # Unsafe position
             dp_unsafe = (p1[0]-self.x, 0, p1[2]-self.z)
             dp_unsafe = [dp_unsafe[0] / (u_sin + unit),
                         0,
                         dp_unsafe[2] / (u_sin + unit)]
 
+            # Sequential
+            if self.sequential:
+                dp_unsafe[0] = 0 # Drop x
+
+            # Consider reverse
             if self._xz_rev[0] == -2:
+                # Left side reverse
+                # clamp x [-2, 1]
                 xz_ctr = np.array([
                     max(min(dp_unsafe[0], 1.0), -2.0),
                     max(min(dp_unsafe[2], 1.0), -1.0)])
             else:
+                # Right side reverse
+                # clamp x [-1, 2]
                 xz_ctr = np.array([
                     max(min(dp_unsafe[0], 2.0), -1.0),
                     max(min(dp_unsafe[2], 1.0), -1.0)])
 
+            # Top-bottom side clamper
+            # Top side = min
+            # Bottom side = max
             xz_rev_z_clamper = max if self._xz_rev[1] == 1 else min
 
             x_mid_margin = 0.55
@@ -658,6 +708,10 @@ class HShifterImage:
 
                 elif xz_pos_1[1] == 0: # Move to the middle row
 
+                    if self.sequential:
+                        # Notify the user of netural when in sequential mode
+                        ctr.haptic([None, 1])
+
                     if now - self._last_neutral_play > 0.16:
                         self._neutral_instances.append(playsound(self._neutral_mp3,
                             block=False,
@@ -667,9 +721,9 @@ class HShifterImage:
 
             elif abs(hpt_xz[0] - xz_1[0]) > 0.35 or abs(hpt_xz[1] - xz_1[1]) > 0.35: # Check haptic
 
-                # Play haptic when the stick is moving in the slot
                 self._last_haptic_xz = xz_1.copy()
 
+                # Play haptic when the stick is moving in the slot
                 #openvr.VRSystem().triggerHapticPulse(ctr.id, 0, 1500)
 
             self._move_stick(xz_1)
@@ -875,7 +929,7 @@ class Wheel(VirtualPad):
             # Gain
             if typ == FFBPType.PT_GAINREP:
                 self._ffb_gain_coef = norm_gain(data['Gain'])
-                print(f"New global FFB gain coefficient is {self._ffb_gain_coef} raw gain is {data['Gain']}")
+                #print(f"New global FFB gain coefficient is {self._ffb_gain_coef} raw gain is {data['Gain']}")
 
                 _ffb_test_f(True, typ)
 
@@ -1117,7 +1171,7 @@ class Wheel(VirtualPad):
     def set_button_unpress(self, button, hand):
         super().set_button_unpress(button, hand)
 
-        if self.config.wheel_grabbed_by_grip_toggle:
+        if self.config.wheel_grabbed_by_grip_toggle: # TODO fix name. True means it is toggle
             if button == openvr.k_EButton_Grip and hand == 'left':
                 self._grip_queue.put(['left', False])
 
@@ -1127,15 +1181,16 @@ class Wheel(VirtualPad):
             pass
 
     def set_button_press(self, button, hand, left_ctr, right_ctr):
-        ctr = left_ctr if hand == 'left' else right_ctr
         super().set_button_press(button, hand, left_ctr, right_ctr)
+        
+        ctr = left_ctr if hand == 'left' else right_ctr
 
         if self._hand_snaps[hand] == 'shifter':
             if button == openvr.k_EButton_A: # A
                 self.h_shifter_image.toggle_splitter(ctr)
 
         if button == openvr.k_EButton_Grip and hand == 'left':
-            if self.config.wheel_grabbed_by_grip_toggle:
+            if self.config.wheel_grabbed_by_grip_toggle: # TODO fix name. True means it is toggle
                 self._grip_queue.put(['left', True])
             else:
                 self._grip_queue.put(['left', self._hand_snaps['left'] == ''])
@@ -1251,8 +1306,8 @@ class Wheel(VirtualPad):
             epsilon = 0
             if self.ffb_paused == False:
                 epsilon = self._center_speed * self.config.wheel_centerforce
-                epsilon *= 2 # x2 to make the default value of 30 of wheel_centerforce is
-                             # a moderate value for centering the wheel
+                epsilon *= 0.6 # x0.6 to make the default value of 100 of wheel_centerforce is
+                               # a moderate value for centering the wheel
                 epsilon *= self._center_speed_ffb_mags[0]
 
             self._wheel_angles.append(self._wheel_angles[-1] + epsilon)
@@ -1260,7 +1315,8 @@ class Wheel(VirtualPad):
         else:
             # NO ffb
             epsilon = self._center_speed * self.config.wheel_centerforce
-            epsilon /= 10 # roughly 20 times difference between FFB and non FFB to make it kind of similar for same center force value
+            epsilon *= 0.04 # roughly 15 times difference between FFB and non FFB to make it kind of
+                            # similar for same center force value
 
             angle = self._wheel_angles[-1]
             if abs(angle) < epsilon:
@@ -1341,6 +1397,8 @@ class Wheel(VirtualPad):
         self.send_to_vjoy()
 
     def ffb_haptic(self, left_ctr, right_ctr):
+
+        # Consider both shifter and wheel for haptic
         left_bound = self._hand_snaps['left'] != ''
         right_bound = self._hand_snaps['right'] != ''
 
@@ -1415,20 +1473,6 @@ class Wheel(VirtualPad):
         tf[1][3] = ab.y
         tf[2][3] = ab.z
         self.hands_overlay.move(hand, tf)
-
-    def pre_edit_mode(self):
-        super().pre_edit_mode()
-
-        self._hand_snaps['left'] = ''
-        self._hand_snaps['right'] = ''
-        self.hands_overlay.attach_to_ctr('left')
-        self.hands_overlay.attach_to_ctr('right')
-        self.hands_overlay.left_ungrab()
-        self.hands_overlay.right_ungrab()
-        while not self._grip_queue.empty():
-            self._grip_queue.get()
-
-        self.enable_all()
 
     GRIP_FLAG_AUTO_GRAB = 0x1
 
@@ -1589,6 +1633,7 @@ class Wheel(VirtualPad):
                 self.attach_hand(hand, left_ctr, right_ctr)
             elif obj == 'shifter':
                 self.h_shifter_image.attach_hand(hand)
+        perf_time("After update hands")
 
         # Wheel angle
         angle = self._wheel_update(left_ctr, right_ctr)
@@ -1599,8 +1644,11 @@ class Wheel(VirtualPad):
 
         # render
         self.render(hmd)
+        perf_time("After self.render")
         self.h_shifter_image.render(hmd)
+        perf_time("After self.h_shifter_image.render")
         self.h_shifter_image.update()
+        perf_time("After self.h_shifter_image.update")
 
         # Up down joystick for Range
         shifter_hand = ''
@@ -1622,6 +1670,7 @@ class Wheel(VirtualPad):
             else:
                 self.h_shifter_image.lock_reverse()
 
+        perf_time("After shifter hands")
 
         # (ETS2)
         if now - self._ets2_last_hand_adjust_time > 1.0:
@@ -1670,6 +1719,7 @@ class Wheel(VirtualPad):
             self.config.wheel_pitch = max(-30, -(360 - self.config.wheel_pitch))
         elif self.config.wheel_pitch >= 120:
             self.config.wheel_pitch = 120
+        self.config.wheel_pitch = round(self.config.wheel_pitch)
 
         self._rot = rotation_matrix(-self.config.wheel_pitch, 0, 0)
         self._rot_inv = rotation_matrix(self.config.wheel_pitch, 0, 0)
@@ -1683,146 +1733,251 @@ class Wheel(VirtualPad):
         self.config.wheel_center = [self.center.x, self.center.y, self.center.z]
         self.wheel_image.move_rotate(pos=self.center)
 
-    def edit_mode(self, left_ctr, right_ctr, hmd):
+    def pre_edit_mode(self):
+        super().pre_edit_mode()
 
-        result, state_r = openvr.VRSystem().getControllerState(right_ctr.id)
+        left_ctr = self.left_ctr
+        right_ctr = self.right_ctr
+
+        self._hand_snaps['left'] = ''
+        self._hand_snaps['right'] = ''
+        self.hands_overlay.attach_to_ctr('left')
+        self.hands_overlay.attach_to_ctr('right')
+        self.hands_overlay.left_ungrab()
+        self.hands_overlay.right_ungrab()
+        while not self._grip_queue.empty():
+            self._grip_queue.get()
+
+        self.enable_all()
+
+        self._edit_snaps = {'left': '', 'right': ''}
+        self._edit_buttons_frame = {'left': [0] * 64, 'right': [0] * 64}
+        self._edit_discard_x = False
+        self._edit_last_l_pos = [left_ctr.x, left_ctr.y, left_ctr.z]
+        self._edit_last_r_pos = [right_ctr.x, right_ctr.y, right_ctr.z]
+        self._edit_cl = {'wheel': None, 'shifter': None}
+        self._edit_cl_override = {'wheel': None, 'shifter': None}
+        self._edit_alpha = {'wheel': None, 'shifter': None}
+        self._edit_alpha_override = {'wheel': None, 'shifter': None}
+        self._edit_timers = {
+            'wheel_alpha': None,
+            'shifter_alpha': None,
+            'shifter_xz': None
+        }
+        self._edit_shifter_xz = None
+        
+        if self.hands_overlay is not None:
+            self.hands_overlay.show()
+        if self.wheel_image is not None:
+            self.wheel_image.show()
+
+        print("""
+----- EDIT MODE -----
+
+Touch wheel + A or X     -     lock the X of wheel to 0
+Touch wheel + B or Y     -     change alpha
+Touch shifter + A or X   -     toggle sequential mode
+Touch shifter + B or Y   -     change alpha
+
+Grab wheel + joy left-right      -    resize
+Grab wheel + joy up-down         -    pitch
+Grab shifter + joy left-right    -    change tilt
+Grab shifter + joy up-down       -    change height
+
+Triple grips both hands  - exit edit mode
+
+---------------------
+        """)
+
+    def post_edit_mode(self):
+        super().post_edit_mode()
+
+        for key in self._edit_timers:
+            if self._edit_timers[key] is not None:
+                self._edit_timers[key].cancel()
+                self._edit_timers[key] = None
+
+        self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
+        self.h_shifter_image.set_alpha(self.config.shifter_alpha / 100.0)
+
+        self.wheel_image.set_color((1,1,1))
+        self.h_shifter_image.set_color((1,1,1))
+        self.hands_overlay.set_color((1,1,1))
+
+    def edit_mode(self, frames):
+
+        super().edit_mode(frames)
+        
+        def dead_and_stretch(v, d):
+            if abs(v) < d:
+                return 0.0
+            else:
+                s = v / abs(v)
+                return (v - s*d)/(1-d)
+
+        def distance(p0, ctr):
+            return sqrt((p0.x-ctr.x)**2 + (p0.y-ctr.y)**2 + (p0.z-ctr.z)**2)
+
+        hmd = self.hmd
+        left_ctr = self.left_ctr
+        right_ctr = self.right_ctr
         now = time.time()
 
-        if hasattr(self, "_edit_check") == False:
-            self._edit_check = True
-            self._edit_move_wheel = False
-            self._edit_move_shifter = False
-            self._edit_last_l_pos = [left_ctr.x, left_ctr.y, left_ctr.z]
-            self._edit_last_r_pos = [right_ctr.x, right_ctr.y, right_ctr.z]
-            self._edit_last_trigger_press = 0
-            self._edit_wheel_alpha_timer = None
-            self._edit_shifter_xz_timer = None
-            self._edit_shifter_xz = None
-            
-            self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
-
-            self.wheel_image.set_color((1,1,1))
-            self.h_shifter_image.set_color((1,1,1))
-            self.hands_overlay.set_color((1,1,1))
-
-        if self.hands_overlay != None:
-            self.hands_overlay.show()
-        if self.wheel_image != None:
-            self.wheel_image.show()
+        cl_idle = (0, 0.5, 0)
+        cl_collide = (0.5, 1, 0.4)
+        cl_moviong = (1, 0.1, 0.1)
 
         if self._edit_shifter_xz is None:
             self.h_shifter_image.render(hmd)
         else:
             self.h_shifter_image.render(hmd, xz_override=self._edit_shifter_xz)
 
-        r_d = [right_ctr.x-self._edit_last_r_pos[0], right_ctr.y-self._edit_last_r_pos[1], right_ctr.z-self._edit_last_r_pos[2]]
+        _, state_l = openvr.VRSystem().getControllerState(left_ctr.id)
+        _, state_r = openvr.VRSystem().getControllerState(right_ctr.id)
+        dp_l = [left_ctr.x-self._edit_last_l_pos[0],
+                left_ctr.y-self._edit_last_l_pos[1],
+                left_ctr.z-self._edit_last_l_pos[2]]
+        dp_r = [right_ctr.x-self._edit_last_r_pos[0],
+                right_ctr.y-self._edit_last_r_pos[1],
+                right_ctr.z-self._edit_last_r_pos[2]]
+        params = [['left', dp_l, state_l, left_ctr],
+                  ['right', dp_r, state_r, right_ctr]]
 
-        if self._edit_move_wheel:
-            #self.move_wheel(right_ctr, left_ctr)
-            self.move_delta(r_d)
-            self.wheel_image.set_color((1,0.3,0.3))
-        else:
-            self.wheel_image.set_color((0,1,0))
+        if self._edit_snaps['left'] != 'wheel' and self._edit_snaps['right'] != 'wheel':
+            self._edit_cl['wheel'] = cl_idle
+            self._edit_alpha['wheel'] = 1
+        if self._edit_snaps['left'] != 'shifter' and self._edit_snaps['right'] != 'shifter':
+            self._edit_cl['shifter'] = cl_idle
+            self._edit_alpha['shifter'] = 1
 
-        if self._edit_move_shifter:
-            self.h_shifter_image.move_delta(r_d)
-            self.h_shifter_image.set_color((1,0.3,0.3))
-        else:
-            self.h_shifter_image.set_color((0,1,0))
+        for hand, dp, state, ctr in params:
 
-        def distance(p0):
-            return sqrt((p0.x-right_ctr.x)**2 + (p0.y-right_ctr.y)**2 + (p0.z-right_ctr.z)**2)
+            # EVRControllerAxisType
+            #  k_eControllerAxis_None = 0, 
+            #  k_eControllerAxis_TrackPad = 1,
+            #  k_eControllerAxis_Joystick = 2,
+            #  k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
+            # rAxis
+            x, y = [0, 0]
+            if state.rAxis:
+                x = state_r.rAxis[0].x # quest 2 joystick
+                y = state_r.rAxis[0].y
 
-        # EVRControllerAxisType
-        #  k_eControllerAxis_None = 0, 
-        #  k_eControllerAxis_TrackPad = 1,
-        #  k_eControllerAxis_Joystick = 2,
-        #  k_eControllerAxis_Trigger = 3, // Analog trigger data is in the X axis
-        # rAxis
-        if state_r.rAxis:
-            def dead_and_stretch(v, d):
-                if abs(v) < d:
-                    return 0.0
-                else:
-                    s = v / abs(v)
-                    return (v - s*d)/(1-d)
+            # Button frame
+            buttons = [bit == '1' for bit in reversed(bin(state.ulButtonPressed)[2:])]
+            buttons += [False] * (64 - len(buttons))
+            def try_button(i):
+                if buttons[i] and frames - self._edit_buttons_frame[hand][i] >= 12:
+                    self._edit_buttons_frame[hand][i] = frames
+                    return True
+                return False
+
+            # Collision
+            snap = self._edit_snaps[hand]
+            collide = ''
+            if self.h_shifter_image.check_collision(ctr):
+                collide = 'shifter'
+            elif self.point_in_holding_bounds(ctr):
+                collide = 'wheel'
+
+            if snap == '' and collide != '':
+                self._edit_cl[collide] = cl_collide
+
+            # Snapping objects to hand
+            if buttons[openvr.k_EButton_Grip]:
+                if try_button(openvr.k_EButton_Grip):
+                    if collide != '' and snap == 'ready':
+                        self._edit_snaps[hand] = collide
+                        self._edit_cl[collide] = cl_moviong
+                    elif snap == '' and collide != '':
+                        # Prevent object being grabbed while exiting the edit mode
+                        self._edit_snaps[hand] = 'ready'
+            else:
+                self._edit_snaps[hand] = ''
+
+            def adjust_alpha(obj_key, cfg_key):
+
+                step = 10
+                old_alpha = getattr(self.config, cfg_key)
+                new_alpha = old_alpha + step
+                if new_alpha > 100:
+                    new_alpha = 0
+                setattr(self.config, cfg_key, new_alpha)
+                    
+                self._edit_cl_override[obj_key] = (1, 1, 1)
+                self._edit_alpha_override[obj_key] = new_alpha / 100.0
+
+                # Timer
+                def reset_preview():
+                    self._edit_cl_override[obj_key] = None
+                    self._edit_alpha_override[obj_key] = None
+
+                old_timer = self._edit_timers[cfg_key]
+                if old_timer is not None:
+                    old_timer.cancel()
+
+                new_timer = threading.Timer(1, reset_preview)
+                new_timer.start()
+                self._edit_timers[cfg_key] = new_timer
+
+            # Edit object
+            if snap == 'wheel':
+                if self._edit_discard_x:
+                    dp[0] = 0
+                self.move_delta(dp)
             
-            x = state_r.rAxis[0].x # quest 2 joystick
-            y = state_r.rAxis[0].y
-            if self._edit_move_wheel:
+            elif snap == 'shifter':
+                self.h_shifter_image.move_delta(dp)
+
+            if (snap == '' or snap == 'wheel') and collide == 'wheel':
+
                 self.resize_delta(dead_and_stretch(x, 0.3) / 240)
                 self.pitch_delta(dead_and_stretch(y, 0.75) * 2)
 
-            elif self._edit_move_shifter:
+                if try_button(openvr.k_EButton_ApplicationMenu):
+                   adjust_alpha('wheel', 'wheel_alpha')
+
+                if try_button(openvr.k_EButton_A):
+                    self._edit_discard_x = not self._edit_discard_x
+                    if self._edit_discard_x:
+                        self.discard_x()
+
+            elif (snap == '' or snap == 'shifter') and collide == 'shifter':
+
+                if try_button(openvr.k_EButton_ApplicationMenu):
+                   adjust_alpha('shifter', 'shifter_alpha')
+
+                if try_button(openvr.k_EButton_A):
+                    self.h_shifter_image.toggle_sequential()
 
                 tilt_delta = dead_and_stretch(x, 0.3) / 2
                 if tilt_delta != 0.0:
                     self.h_shifter_image.tilt_delta(tilt_delta)
                     self.config.shifter_degree = int(self.h_shifter_image.degree * 10)
 
-                    if self._edit_shifter_xz_timer is not None:
-                        self._edit_shifter_xz_timer.cancel()
-                        self._edit_shifter_xz_timer = None
+                    if self._edit_timers['shifter_xz'] is not None:
+                        self._edit_timers['shifter_xz'].cancel()
 
                     def reset_preview():
                         self._edit_shifter_xz = None
                     self._edit_shifter_xz = [1,1]
-                    self._edit_shifter_xz_timer = threading.Timer(0.6, reset_preview)
-                    self._edit_shifter_xz_timer.start()
+                    self._edit_timers['shifter_xz'] = threading.Timer(0.6, reset_preview)
+                    self._edit_timers['shifter_xz'].start()
 
                 scale_delta = dead_and_stretch(y, 0.5) / 100
                 if scale_delta != 0.0:
                     self.h_shifter_image.rescale_delta(scale_delta)
                     self.config.shifter_scale = int(self.h_shifter_image.stick_scale * 100)
 
-        if state_r.ulButtonPressed:
-            btns = list(reversed(bin(state_r.ulButtonPressed)[2:]))
-            btn_id = btns.index('1')
-            if btn_id == openvr.k_EButton_SteamVR_Trigger:
-                if now - self._edit_last_trigger_press > 0.2:
-                    if self.h_shifter_image.check_collision(right_ctr) and self._edit_move_wheel == False:
-                        self._edit_move_shifter = True
-                    elif distance(self.center) < 0.3 and self._edit_move_shifter == False:
-                        self._edit_move_wheel = True
-                self._edit_last_trigger_press = now
-            elif btn_id == openvr.k_EButton_ApplicationMenu and now - self._edit_mode_last_press > 0.2: #B on right
-                self._edit_mode_last_press = now
-                step = 10
-                if self.config.wheel_alpha + step > 100:
-                    self.config.wheel_alpha = 0
-                else:
-                    self.config.wheel_alpha += step
-
-                """
-                if self._edit_wheel_alpha_timer != None:
-                    self._edit_wheel_alpha_timer.cancel()
-                    self._edit_wheel_alpha_timer = None
-
-                def reset_preview():
-                    self.wheel_image.set_alpha(1)
-                self._edit_wheel_alpha_timer = threading.Timer(0.6, reset_preview)
-                self._edit_wheel_alpha_timer.start()
-                """
-
-                print("Switch alpha")
-                # Switch alpha and show preview
-                self.wheel_image.set_alpha(self.config.wheel_alpha / 100.0)
-            elif btn_id == openvr.k_EButton_A: #A on right
-                self.discard_x()
-                print("Set x to 0")
-            elif btn_id == openvr.k_EButton_Grip and now - self._edit_mode_entry > 0.5:
-                self.wheel_image.set_color((1,1,1))
-                self.h_shifter_image.set_color((1,1,1))
-                self.hands_overlay.set_color((1,1,1))
-                self.config.wheel_pitch = int(self.config.wheel_pitch)
-                self.is_edit_mode = False
-                self.__dict__.pop("_edit_check", None)
-        else:
-            if self._edit_move_wheel:
-                self._edit_move_wheel = False
-            if self._edit_move_shifter:
-                self._edit_move_shifter = False
-
         self._edit_last_l_pos = [left_ctr.x, left_ctr.y, left_ctr.z]
         self._edit_last_r_pos = [right_ctr.x, right_ctr.y, right_ctr.z]
-        super().edit_mode(left_ctr, right_ctr, hmd)
+
+        # Color and alpha
+        def get_first(*args):
+            for a in args:
+                if a is not None:
+                    return a
+        self.wheel_image.set_alpha(get_first(self._edit_alpha_override['wheel'], self._edit_alpha['wheel']))
+        self.wheel_image.set_color(get_first(self._edit_cl_override['wheel'], self._edit_cl['wheel']))
+        self.h_shifter_image.set_alpha(get_first(self._edit_alpha_override['shifter'], self._edit_alpha['shifter']))
+        self.h_shifter_image.set_color(get_first(self._edit_cl_override['shifter'], self._edit_cl['shifter']))

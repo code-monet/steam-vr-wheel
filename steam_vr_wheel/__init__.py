@@ -44,6 +44,10 @@ def deep_get(dictionary, keys, default=None):
             return default
     return dictionary
 
+perf_timings = []
+def perf_time(key):
+    perf_timings.append([key, time.time()])
+
 # Separate MCI worker into its own thread to ensure all the sounds
 # share the same thread context
 _mci_command_queue = queue.Queue()
@@ -97,9 +101,12 @@ def playsound(sound, block=True, volume=1.0, stop_alias=None):
     from random import random
     from time   import sleep
 
-    def winCommand(*command):
+    def winCommand(*command, get_return=False):
         result_queue = queue.Queue()
         _mci_command_queue.put((command, result_queue))
+        if get_return == False:
+            return
+
         result, e = result_queue.get()
         if e is not None:
             raise e
@@ -113,10 +120,10 @@ def playsound(sound, block=True, volume=1.0, stop_alias=None):
     winCommand('open "' + sound + '" alias', alias)
     winCommand('set', alias, 'time format milliseconds')
     winCommand('setaudio', alias, 'volume to', str(int(volume * 1000)))
-    durationInMS = winCommand('status', alias, 'length')
-    winCommand('play', alias, 'from 0 to', durationInMS.decode())
+    winCommand('play', alias)#, 'from 0 to', durationInMS.decode())
 
     if block:
+        durationInMS = winCommand('status', alias, 'length', get_return=True)
         sleep(float(durationInMS) / 1000.0)
     else:
         return alias
@@ -185,7 +192,6 @@ DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
                         edit_mode=False,
                         )
 """
-from collections import OrderedDict
 
 DEFAULT_CONFIG = OrderedDict([
     ('config_name', DEFAULT_CONFIG_NAME),
@@ -203,7 +209,7 @@ DEFAULT_CONFIG = OrderedDict([
     ('wheel_show_wheel', True),
     ('wheel_show_hands', True),
     ('wheel_degrees', 1440),
-    ('wheel_centerforce', 30),
+    ('wheel_centerforce', 100),
     ('wheel_alpha', 100),
     ('wheel_pitch', 0),
     ('wheel_transparent_center', False),
@@ -212,9 +218,10 @@ DEFAULT_CONFIG = OrderedDict([
 
     ## Shifter
     ('shifter_center', [0.25, -0.57, -0.15]),
-    ('shifter_degree', 60),
+    ('shifter_degree', 6.0),
     ('shifter_alpha', 100),
     ('shifter_scale', 100),
+    ('shifter_sequential', False),
     ('shifter_reverse_orientation', "Bottom Left"),
 
     ### Joystick as button
@@ -361,7 +368,10 @@ class PadConfig:
             data = self._data
         for key, value in DEFAULT_CONFIG.items():
             try:
-                assert type(data[key]) == type(value)
+                if type(value) == float:
+                    assert float == type(data[key]) or int == type(data[key])
+                else:
+                    assert type(data[key]) == type(value)
             except KeyError:
                 raise ConfigException("Missing key: {}".format(key))
             except AssertionError:
@@ -606,7 +616,7 @@ class PadConfig:
         return self._data['shifter_degree']
 
     @shifter_degree.setter
-    def shifter_degree(self, x: int):
+    def shifter_degree(self, x: float):
         self._data['shifter_degree'] = x
         self._write()
 
@@ -626,6 +636,15 @@ class PadConfig:
     @shifter_scale.setter
     def shifter_scale(self, x: int):
         self._data['shifter_scale'] = x
+        self._write()
+
+    @property
+    def shifter_sequential(self):
+        return self._data['shifter_sequential']
+
+    @shifter_sequential.setter
+    def shifter_sequential(self, x: bool):
+        self._data['shifter_sequential'] = x
         self._write()
 
     @property

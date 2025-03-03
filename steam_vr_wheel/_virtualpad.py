@@ -337,6 +337,12 @@ class VirtualPad:
     def pre_edit_mode(self):
         pass
 
+    def post_edit_mode(self):
+        pass
+
+    def edit_mode(self, frames):
+        pass
+
     def update_chaperone(self, chp):
         pass
 
@@ -359,12 +365,21 @@ class VirtualPad:
                 self._grip_times[hand] = []
                 self._grip_times[other] = []
 
-                openvr.VRSystem().triggerHapticPulse(left_ctr.id, 0, 3000)
-                openvr.VRSystem().triggerHapticPulse(right_ctr.id, 0, 3000)
+                if self.is_edit_mode == False:
+                    left_ctr.haptic(*[[None, 1], [0.05, None]]*3)
+                    right_ctr.haptic(*[[None, 1], [0.05, None]]*3)
 
-                self.pre_edit_mode()
-                self._edit_mode_entry = time.time()
-                self.is_edit_mode = True
+                    self._edit_mode_entry = time.time()
+                    self.is_edit_mode = True
+                    self.pre_edit_mode()
+                    
+                else:
+                    left_ctr.haptic([None, 1])
+                    right_ctr.haptic([None, 1])
+
+                    self.is_edit_mode = False
+                    self.post_edit_mode()
+
                 return
 
         try:
@@ -509,6 +524,3 @@ class VirtualPad:
 
         convert_axis(right_ctr.trackpadX, 'right', 'left-right')
         convert_axis(right_ctr.trackpadY, 'right', 'down-up')
-
-    def edit_mode(self, left_ctr, right_ctr, hmd):
-        pass
