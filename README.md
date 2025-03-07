@@ -10,9 +10,9 @@ https://github.com/hjjg200/steam-vr-wheel/assets/18535223/153c2fba-fc47-4f28-884
 <bike demo>
 ```
 
-## Requirements
+## Install
 
-Check out the release page and refer to the requirements of the very release you download.
+Check out the release page and refer to its instruction of the very release you download.
 
 ## vJoy Mapping
 
@@ -24,11 +24,11 @@ The below table shows **Quest 2 controller** to vJoy mapping
 |LT|1|Disabled as default|
 |LT Touch|31|Disabled as default|
 |L Grip||No mapping|
-|LS|4 or 4,5,6,7,8|More trackpad direction option enables the other 4 buttons|
+|LS|4 or 4,5,6,7,8|For VIVE, more trackpad direction option enables the other 4 buttons|
 |RT|9|Disabled as default|
 |RT Touch|32|Disabled as default|
 |R Grip||No mapping|
-|RS|12 or 12,13,14,15,16|More trackpad direction option enables the other 4 buttons|
+|RS|12 or 12,13,14,15,16|For VIVE, more trackpad direction option enables the other 4 buttons|
 |A|18||
 |B|11||
 |X|17||
@@ -59,18 +59,19 @@ The below table shows **Quest 2 controller** to vJoy mapping
 
 Troubleshooting records for the issues I personally experienced.
 
-#### Overlay images do not show up
-
-- The directory that contains the scripts must not have CJK characters or alike in its path. (Maybe due to encoding process while converting paths to c string)
-
 #### Buttons do not register in vJoy monitor app
 
 - It does NOT work on vJoy 2.2.1.1, possibly due to the old version of sdk included in the project.
-- Tested working on vJoy 2.1.9.1 (vJoySetup.exe SHA256: `f103ced4e7ff7ccb49c8415a542c56768ed4da4fea252b8f4ffdac343074654a`)
+- Tested working on vJoy 2.1.9.1 ([vJoySetup.exe](https://github.com/jshafer817/vJoy/releases/tag/v2.1.9.1) SHA256: `f103ced4e7ff7ccb49c8415a542c56768ed4da4fea252b8f4ffdac343074654a`)
 
 #### Wheel doesn't move in AMS 2
 
 - Controller Damping has to be set to 0, in the section where there are Steering Sensitivity, etc. (not FFB section)
+
+#### Overlay images do not show up
+
+- ~~The directory that contains the scripts must not have CJK characters or alike in its path. (Maybe due to encoding process while converting paths to c string)~~
+- Non-ASCII characters are now okay to be in the path
 
 ### Euro Truck Simulator 2
 
@@ -78,18 +79,18 @@ Example bindings
 
 |Key|Action|
 |-|-|
-|LT|Brake|
+|LT|Clutch (clutch range 95%)|
 |RT|Throttle|
 |L Joy Click|Attach/Detach Trailer (T)|
-|L Joy Left|`Button` Left Turn Indicator|
-|L Joy Up|`Button` Wiper|
-|L Joy Right|`Button` Light Modes|
-|L Joy Down|`Axis` Clutch (clutch range 95%)|
-|R Joy Click|Interact (Enter)|
-|R Joy Left|`Button` Navigation Mode (F5)|
-|R Joy Up|`Button` Route Advisor Menu (F1) for pausing game|
-|R Joy Right|`Button` Right Turn Indicator|
-|R Joy Down|`Button` Parking Brake|
+|L Joy Left|`Button` Light Modes|
+|L Joy Right|`Button` Wiper|
+|L Joy Up|`Button` Right Turn Indicator|
+|L Joy Down|`Button` Left Turn Indicator|
+|R Joy Click|Route Advisor Menu (F1) for pausing game|
+|R Joy Left|`Button` Interact (Enter)|
+|R Joy Right|`Button` Navigation Mode (F5)|
+|R Joy Up|`Button` Parking Brake|
+|R Joy Down|`Axis` Brake|
 |X|Horn|
 |Y|High Beam|
 |A|Cruise Control|
@@ -107,31 +108,15 @@ Example bindings
 
 ### Edit Mode
 
-Triple grip clicks of both the left and right controllers trigger the edit mode.
-
-#### Wheel
-
-Move your RIGHT controller to the center of the wheel and press the trigger on RIGHT controller; while holding down:
-- Resize: Move RIGHT joystick Left and Right to resize the wheel.
-- Adjust Pitch: Move RIGHT joystick Up and Down to resize the wheel.
-- Transparency: Press B button to cycle through the transparency mode. It returns to fully opaque after a short preview of the new transparency value.
-- Align Center: Press A button to align the wheel to center.
-
-Move your RIGHT controller to the knob of the shifter to adjust its position.
-
-Pressing the grip on RIGHT exits the edit mode.
-
-#### Bike
-
-To do
+Triple grip clicks of both the left and right controllers trigger the edit mode. Follow the instructions shown on the console after you enter the edit mode
 
 ### Quest 2's Joystick to Buttons
 
-You can convert all direcitons of the joysticks individually to buttons or leave it as axis.
+You can configure the behaivor of joystick -- whether it works as button or axis. And you can configure it separately for each direction.
 
-Example 1, if you choose to convert the Left Joy Down to button, Left Joy Left and Left Joy Right will remain as the same axis; the Left Joy Up will be solely adjusting the axis while the Left Joy Down acts as a button.
+Example 1, if you choose to convert `Left Joy Down` to button, `Left Joy Up` will be solely adjusting the Y axis while `Left Joy Down` acts as a button. Since `Left Joy Left` and `Left Joy Right` are unchanged, they adjust the Z axis together.
 
-Example 2, you can make all 8 directions to buttons; so that you can use them like dpads.
+Example 2, you can make all 8 directions to buttons; so that you can use them like dpads. In this scenario, Z, Y, RX, RY axes are unused.
 
 |Joystick|Axis|Button ID|
 |-|-|-|
@@ -159,45 +144,4 @@ R 2 4 6      2 4 6    2 4 6 R    2 4 6
 ### Todo
 
 - Make shifter rotatable in space
-- Clean up the edit mode code's mess
-- Sequential shifting mode
-  - Assign button for trigger on knob for handbrake
 - Code cleanup
-
-### Config memo
-
-Memos for \*original\* config behaviors. Some configs' behaviors are changed as I don't have Vive controllers to test the behavior
-
-|Config|Module|Behavior|
-|-|-|-|
-|Triggers pre press button|`VirtualPad`|Touching trigger registers|
-|Triggers press button|`VirtualPad`|Trigger press registers along with axis change|
-|5 Button touchpad|`VirtualPad`|On Quest 2 controller, the axis values determine button id|
-|Haptic feedback for trackpad button zones|`VirtualPad`|Haptic when 5-button button id changed|
-|Touchpad mapping to axis while untouched (axis move to center when released)|`VirtualPad`||
-|Steering wheel is vertical|`Wheel`||
-|Joystick moves only when grabbed (by right grip)|`Joystick`||
-|Joystick grab is a switch|`Joystick`||
-|Layout edit mode|`Wheel`||
-|Manual wheel grabbing|`Wheel`||
-|Continuous (index, checked) or toggle (vive) wheel gripping|`Wheel`||
-|Show Wheel Overlay|`Wheel`||
-|Show Hands Overlay|`Wheel`||
-
-Changed(applied or planned) behavior:
-
-|Config|Behavior|
-|-|-|
-|Triggers pre press button|Set default to disabled|
-|Triggers press button|Disabled as default, some games do not allow multiple input while configuring keys|
-|5 Button touchpad|Disabled as default, more description|
-|Haptic feedback for trackpad button zones|Disabled as default, more description|
-|Touchpad mapping to axis while untouched (axis move to center when released)|Disabled, since joysticks are handlded differently now|
-|Steering wheel is vertical|Disabled, the wheel will be manually rotatable in edit mode|
-|Joystick moves only when grabbed (by right grip)|Hidden; use the original version for better experience|
-|Joystick grab is a switch|Hidden|
-|Layout edit mode|Disabled, users have to enter edit mode by triple grip clicks|
-|Manual wheel grabbing||
-|Continuous (index, checked) or toggle (vive) wheel gripping||
-|Show Wheel Overlay||
-|Show Hands Overlay||

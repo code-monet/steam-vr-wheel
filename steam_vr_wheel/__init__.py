@@ -4,7 +4,6 @@ import threading
 import queue
 import shutil
 import hashlib
-import tempfile
 import openvr
 import copy
 from collections import OrderedDict

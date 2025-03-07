@@ -43,6 +43,18 @@ class ConfiguratorApp:
         self.touchpad_always_updates_box.Hide()
         ##
 
+        ## Joystick button or axis
+        self.pnl_joystick = wx.Panel(self.pnl)
+        self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
+        self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
+        self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
+        self.j_l_up_button = wx.CheckBox(self.pnl_joystick, label='L ▲')
+        self.j_l_down_button = wx.CheckBox(self.pnl_joystick, label='L ▼')
+        self.j_r_left_button = wx.CheckBox(self.pnl_joystick, label='R ◀')
+        self.j_r_right_button = wx.CheckBox(self.pnl_joystick, label='R ▶')
+        self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
+        self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
+
         self.nb = wx.Notebook(self.pnl)
 
         self.nb_pnl_wheel_wrapper = wx.Panel(self.nb)
@@ -59,9 +71,9 @@ class ConfiguratorApp:
         self.wheel_grabbed_by_grip_box = wx.CheckBox(self.nb_pnl_wheel, label='Manual wheel grabbing')
         self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.nb_pnl_wheel, label='Grabbing object is NOT toggle')
         self.wheel_show_wheel = wx.CheckBox(self.nb_pnl_wheel, label="Show Wheel Overlay")
-        self.wheel_show_wheel.Disable()
+        self.wheel_show_wheel.Hide()
         self.wheel_show_hands = wx.CheckBox(self.nb_pnl_wheel, label="Show Hands Overlay")
-        self.wheel_show_hands.Disable()
+        self.wheel_show_hands.Hide()
         self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000, size=(120,-1))
         self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000, size=(120,-1))
         self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback to center the wheel (tested on ETS2 only)")
@@ -101,20 +113,8 @@ class ConfiguratorApp:
         self.shifter_sequential = wx.CheckBox(self.nb_pnl_wheel, label="Sequential mode")
 
         self.shifter_reverse_orientation = wx.RadioBox(self.nb_pnl_wheel, label="Reverse Position",
-            choices=["Top Left", "Bottom Left", "Top Right", "Bottom Right"],
+            choices=["Top Left", "Top Right", "Bottom Left", "Bottom Right"],
             majorDimension=1, style=wx.RA_SPECIFY_ROWS)
-
-        ### Joystick button or axis
-        self.pnl_joystick = wx.Panel(self.nb_pnl_wheel)
-        self.hbox_joystick = wx.BoxSizer(wx.HORIZONTAL)
-        self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
-        self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
-        self.j_l_up_button = wx.CheckBox(self.pnl_joystick, label='L ▲')
-        self.j_l_down_button = wx.CheckBox(self.pnl_joystick, label='L ▼')
-        self.j_r_left_button = wx.CheckBox(self.pnl_joystick, label='R ◀')
-        self.j_r_right_button = wx.CheckBox(self.pnl_joystick, label='R ▶')
-        self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
-        self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
 
         ## Bike page
         self.bike_mode_absolute_radio = wx.RadioButton(self.nb_pnl_bike, name="Absolute", label="Use Absolute Positioning", style=wx.RB_GROUP)
@@ -136,11 +136,6 @@ class ConfiguratorApp:
         self.vbox_bike_max_steer = wx.BoxSizer(wx.VERTICAL)
         self.bike_max_steer = wx.SpinCtrl(self.pnl_bike_max_steer, name="Max Steer (Degrees)", min=0, max=90, size=(120,-1))
 
-        self.pnl_bike_angle_deadzone = wx.Panel(self.pnl_bike_angle)
-        self.vbox_bike_angle_deadzone = wx.BoxSizer(wx.VERTICAL)
-        self.bike_angle_deadzone = wx.SpinCtrl(self.pnl_bike_angle_deadzone, name="Deadzone (%)", min=0, max=100, size=(120,-1))
-
-
         # -
         self.bike_throttle_sensitivity = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Sensitivity (%)", min=1, max=10000, size=(120,-1))
         self.bike_throttle_decrease_per_sec = wx.SpinCtrl(self.nb_pnl_bike, name="Throttle Decrease per Second (%)", min=0, max=10000, size=(120,-1))
@@ -153,9 +148,6 @@ class ConfiguratorApp:
         self.bike_absolute_box_inner_pnl = wx.Panel(self.bike_absolute_box)
         self.bike_absolute_box_inner_vbox = wx.BoxSizer(wx.VERTICAL)
         self.bike_handlebar_height = wx.SpinCtrl(self.bike_absolute_box_inner_pnl, name="Handlebar Height (cm)", min=50, max=300, size=(120,-1))
-        self.bike_bound_hand_both = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Both Hands", label="Both Hands", style=wx.RB_GROUP)
-        self.bike_bound_hand_left = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Left", label="Left")
-        self.bike_bound_hand_right = wx.RadioButton(self.bike_absolute_box_inner_pnl, name="Right", label="Right")
 
 
         ### Relative box
@@ -183,6 +175,16 @@ class ConfiguratorApp:
         self.multibutton_trackpad_center_haptic_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.sfx_volume.Bind(wx.EVT_SPINCTRL, self.config_change)
         
+        ## Joystick button or axis
+        self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_l_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        
         # Wheel
         self.touchpad_always_updates_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.vertical_wheel_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -208,16 +210,6 @@ class ConfiguratorApp:
         self.shifter_sequential.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
-        ## Joystick button or axis
-        self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_l_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_l_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_l_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_r_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-
         # Bike
 
         self.bike_show_handlebar.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -228,21 +220,26 @@ class ConfiguratorApp:
         self.bike_throttle_decrease_per_sec.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_max_lean.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_max_steer.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.bike_angle_deadzone.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_handlebar_height.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.bike_relative_sensitivity.Bind(wx.EVT_SPINCTRL, self.config_change)
 
         self.bike_mode_absolute_radio.Bind(wx.EVT_RADIOBUTTON, self.config_change)
         self.bike_mode_relative_radio.Bind(wx.EVT_RADIOBUTTON, self.config_change)
-        self.bike_bound_hand_both.Bind(wx.EVT_RADIOBUTTON, self.config_change)
-        self.bike_bound_hand_left.Bind(wx.EVT_RADIOBUTTON, self.config_change)
-        self.bike_bound_hand_right.Bind(wx.EVT_RADIOBUTTON, self.config_change)
 
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
                                 multibutton_trackpad=self.multibutton_trackpad_box,
                                 multibutton_trackpad_center_haptic=self.multibutton_trackpad_center_haptic_box,
                                 sfx_volume=self.sfx_volume,
+                                j_l_left_button=self.j_l_left_button,
+                                j_l_right_button=self.j_l_right_button,
+                                j_l_up_button=self.j_l_up_button,
+                                j_l_down_button=self.j_l_down_button,
+                                j_r_left_button=self.j_r_left_button,
+                                j_r_right_button=self.j_r_right_button,
+                                j_r_up_button=self.j_r_up_button,
+                                j_r_down_button=self.j_r_down_button,
+
                                 touchpad_always_updates=self.touchpad_always_updates_box,
                                 vertical_wheel=self.vertical_wheel_box,
                                 joystick_updates_only_when_grabbed=self.joystick_updates_only_when_grabbed_box,
@@ -266,28 +263,17 @@ class ConfiguratorApp:
                                 shifter_sequential=self.shifter_sequential,
                                 shifter_reverse_orientation=self.shifter_reverse_orientation,
 
-                                j_l_left_button=self.j_l_left_button,
-                                j_l_right_button=self.j_l_right_button,
-                                j_l_up_button=self.j_l_up_button,
-                                j_l_down_button=self.j_l_down_button,
-                                j_r_left_button=self.j_r_left_button,
-                                j_r_right_button=self.j_r_right_button,
-                                j_r_up_button=self.j_r_up_button,
-                                j_r_down_button=self.j_r_down_button,
-
                                 bike_show_handlebar=self.bike_show_handlebar,
                                 bike_show_hands=self.bike_show_hands,
                                 bike_use_ac_server=self.bike_use_ac_server,
                                 bike_handlebar_height=self.bike_handlebar_height,
                                 bike_max_lean=self.bike_max_lean,
                                 bike_max_steer=self.bike_max_steer,
-                                bike_angle_deadzone=self.bike_angle_deadzone,
                                 bike_throttle_sensitivity=self.bike_throttle_sensitivity,
                                 bike_throttle_decrease_per_sec=self.bike_throttle_decrease_per_sec,
                                 bike_relative_sensitivity=self.bike_relative_sensitivity,
 
-                                bike_mode=[self.bike_mode_absolute_radio, self.bike_mode_relative_radio],
-                                bike_bound_hand=[self.bike_bound_hand_both, self.bike_bound_hand_left, self.bike_bound_hand_right]
+                                bike_mode=[self.bike_mode_absolute_radio, self.bike_mode_relative_radio]
 
                                 )
 
@@ -316,6 +302,23 @@ class ConfiguratorApp:
         self.vbox.AddSpacer(4)
         self.vbox.Add(wx.StaticText(self.pnl, label = "SFX Volume"))
         self.vbox.Add(self.sfx_volume)
+        self.vbox.AddSpacer(4)
+        
+        self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
+        self.vbox.Add(_decrease_font(
+            wx.StaticText(self.pnl, label = "Checked joystick acts as button")))
+        self.vbox.AddSpacer(2)
+        self.hbox_joystick.Add(self.j_l_left_button)
+        self.hbox_joystick.Add(self.j_l_right_button)
+        self.hbox_joystick.Add(self.j_l_up_button)
+        self.hbox_joystick.Add(self.j_l_down_button)
+        self.hbox_joystick.Add(self.j_r_left_button)
+        self.hbox_joystick.Add(self.j_r_right_button)
+        self.hbox_joystick.Add(self.j_r_up_button)
+        self.hbox_joystick.Add(self.j_r_down_button)
+        self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
+        self.vbox.Add(self.pnl_joystick)
+        self.vbox.AddSpacer(6)
 
         ## Adding items to Wheel page
         self.nb_vbox_wheel.AddSpacer(5)
@@ -370,22 +373,6 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.AddSpacer(4)
         self.nb_vbox_wheel.Add(self.shifter_reverse_orientation)
 
-        self.nb_vbox_wheel.AddSpacer(10)
-        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Use Joystick as Axis/Button"))
-        self.nb_vbox_wheel.Add(_decrease_font(
-            wx.StaticText(self.nb_pnl_wheel, label = "Checked joystick acts as button")))
-        self.nb_vbox_wheel.AddSpacer(6)
-        self.hbox_joystick.Add(self.j_l_left_button)
-        self.hbox_joystick.Add(self.j_l_right_button)
-        self.hbox_joystick.Add(self.j_l_up_button)
-        self.hbox_joystick.Add(self.j_l_down_button)
-        self.hbox_joystick.Add(self.j_r_left_button)
-        self.hbox_joystick.Add(self.j_r_right_button)
-        self.hbox_joystick.Add(self.j_r_up_button)
-        self.hbox_joystick.Add(self.j_r_down_button)
-        self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
-        self.nb_vbox_wheel.Add(self.pnl_joystick)
-
         self.nb_vbox_wheel.AddSpacer(5)
 
         self.nb_pnl_wheel.SetSizerAndFit(self.nb_vbox_wheel)
@@ -410,16 +397,12 @@ class ConfiguratorApp:
         self.vbox_bike_max_lean.Add(self.bike_max_lean)
         self.vbox_bike_max_steer.Add(wx.StaticText(self.pnl_bike_max_steer, label="Max Steer Angle"))
         self.vbox_bike_max_steer.Add(self.bike_max_steer)
-        self.vbox_bike_angle_deadzone.Add(wx.StaticText(self.pnl_bike_angle_deadzone, label="Deadzone (%)"))
-        self.vbox_bike_angle_deadzone.Add(self.bike_angle_deadzone)
 
         self.pnl_bike_max_lean.SetSizerAndFit(self.vbox_bike_max_lean)
         self.pnl_bike_max_steer.SetSizerAndFit(self.vbox_bike_max_steer)
-        self.pnl_bike_angle_deadzone.SetSizerAndFit(self.vbox_bike_angle_deadzone)
 
         self.hbox_bike_angle.Add(self.pnl_bike_max_lean)
         self.hbox_bike_angle.Add(self.pnl_bike_max_steer)
-        self.hbox_bike_angle.Add(self.pnl_bike_angle_deadzone)
         self.pnl_bike_angle.SetSizerAndFit(self.hbox_bike_angle)
         self.nb_vbox_bike.Add(self.pnl_bike_angle)
 
@@ -444,15 +427,6 @@ class ConfiguratorApp:
         self.bike_absolute_box_inner_vbox.Add(_decrease_font(
             wx.StaticText(self.bike_absolute_box_inner_pnl, label="In-game bike model handlebar's height from the floor")))
         self.bike_absolute_box_inner_vbox.Add(self.bike_handlebar_height)
-        self.bike_absolute_box_inner_vbox.AddSpacer(8)
-
-        self.bike_absolute_box_inner_vbox.Add(wx.StaticText(self.bike_absolute_box_inner_pnl, label="Bound Hands"))
-        self.bike_absolute_box_inner_vbox.Add(_decrease_font(
-            wx.StaticText(self.bike_absolute_box_inner_pnl, label="Selected hands are bound to the handlebar\nUnbound hand is free to move")))
-        self.bike_absolute_box_inner_vbox.AddSpacer(3)
-        self.bike_absolute_box_inner_vbox.Add(self.bike_bound_hand_both)
-        self.bike_absolute_box_inner_vbox.Add(self.bike_bound_hand_left)
-        self.bike_absolute_box_inner_vbox.Add(self.bike_bound_hand_right)
         self.bike_absolute_box_inner_vbox.AddSpacer(5)
 
         self.bike_absolute_box_inner_pnl.SetSizerAndFit(self.bike_absolute_box_inner_vbox)
@@ -495,12 +469,12 @@ class ConfiguratorApp:
 
         self.vbox.AddSpacer(5)
         self.vbox.Add(self.nb)
-        self.vbox.AddSpacer(5)
+        self.vbox.AddSpacer(8)
         self.pnl.SetSizerAndFit(self.vbox)
 
-        self.parent_hbox.AddSpacer(8)
+        self.parent_hbox.AddSpacer(10)
         self.parent_hbox.Add(self.pnl)
-        self.parent_hbox.AddSpacer(8)
+        self.parent_hbox.AddSpacer(10)
         self.parent_pnl.SetSizerAndFit(self.parent_hbox)
 
         self.read_config()

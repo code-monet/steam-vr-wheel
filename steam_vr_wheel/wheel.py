@@ -134,6 +134,21 @@ def main(type='wheel'):
     script_dir = os.path.abspath(os.path.dirname(__file__))
     os.chdir(script_dir)
     print("Current working directory:", os.getcwd())
+    print(f"""
+---------------------
+
+Required vJoy version: v2.1.9.1
+Open Configure vJoy
+    - Select vJoy device :   1
+    - Number of buttons  :   64
+    - Axes               :   all enabled
+    - POVs               :   Continuous 0
+    - Force Feedback     :   Enable Effects and check all
+
+Triple grips both hands     -     enter edit mode
+
+---------------------
+    """)
 
     openvr.init(openvr.VRApplication_Overlay)
     vrsystem = openvr.VRSystem()
@@ -164,21 +179,6 @@ def main(type='wheel'):
     wheel.left_ctr = left_ctr
     wheel.right_ctr = right_ctr
     wheel.update_chaperone(get_chaperone())
-    print("""
----------------------
-
-Required vJoy version: v2.1.9.1
-Open Configure vJoy
-    - Select vJoy device 1
-    - Number of buttons  :   64
-    - Axes               :   all enabled
-    - POVs               :   Continuous 0
-    - Force Feedback     :   Enable Effects and check all
-
-Triple grips both hands     -     enter edit mode
-
----------------------
-    """)
 
     poses_t = openvr.TrackedDevicePose_t * openvr.k_unMaxTrackedDeviceCount
     poses = poses_t()
