@@ -12,7 +12,7 @@ import queue
 import socket
 import struct
 
-from . import check_result, rotation_matrix, bezier_curve, Point
+from . import check_result, rotation_matrix, bezier_curve, Point, MEDIA_DIR, IMAGE_DATA
 from steam_vr_wheel.wheel import wheel_main_done
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
@@ -150,10 +150,10 @@ class HandlebarImage():
         check_result(self.vroverlay.setOverlayAlpha(self.handlebar, alpha))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.handlebar, size))
 
-        this_dir = os.path.abspath(os.path.dirname(__file__))
-        handlebar_img = os.path.join(this_dir, 'media', 'handlebar.png')
+        #this_dir = os.path.abspath(os.path.dirname(__file__))
+        handlebar_img = os.path.join(MEDIA_DIR, 'handlebar.png')
 
-        check_result(self.vroverlay.setOverlayFromFile(self.handlebar, handlebar_img.encode()))
+        check_result(self.vroverlay.setOverlayRaw(self.handlebar, *IMAGE_DATA[handlebar_img]))
 
         result, transform = self.vroverlay.setOverlayTransformAbsolute(self.handlebar, openvr.TrackingUniverseSeated)
 
@@ -313,20 +313,28 @@ class Bike(VirtualPad):
         self._last_left_ctr_pos = Point(left_ctr.x, left_ctr.y, left_ctr.z)
         self._last_right_ctr_pos = Point(right_ctr.x, right_ctr.y, right_ctr.z)
 
+        # dx = right - left
         if self.grabbed['left'] and self.grabbed['right']:
             self.x_center += (right_dp.x + left_dp.x) / 2
-            self.dy += right_dp.y - left_dp.y
-            self.dz += right_dp.z - left_dp.z
+            #self.dy += right_dp.y - left_dp.y
+            #self.dz += right_dp.z - left_dp.z
+
+            # Blend
+            real_dy = right_ctr.y - left_ctr.y
+            real_dz = right_ctr.z - left_ctr.z
+
+            self.dy = 0.95 * self.dy + 0.05 * real_dy
+            self.dz = 0.95 * self.dz + 0.05 * real_dz
+
         elif self.grabbed['left']:
             self.x_center += left_dp.x
             self.dy += -left_dp.y
             self.dz += -left_dp.z
+
         elif self.grabbed['right']:
             self.x_center += right_dp.x
             self.dy += right_dp.y
             self.dz += right_dp.z
-
-        #self.dx =
 
         # 
         x_center = self.x_center

@@ -7,7 +7,7 @@ import os
 from steam_vr_wheel.configurator import ConfiguratorApp
 from steam_vr_wheel.pyvjoy.vjoydevice import VJoyDevice, HID_USAGE_SL0, HID_USAGE_SL1, HID_USAGE_X, HID_USAGE_Y, HID_USAGE_Z, HID_USAGE_RX, HID_USAGE_RY
 from steam_vr_wheel.vrcontroller import Controller
-from . import PadConfig, ConfigException
+from . import PadConfig, ConfigException, MEDIA_DIR, IMAGE_DATA
 from . import check_result, rotation_matrix
 import multiprocessing
 
@@ -70,17 +70,17 @@ class HandsImage:
         check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr, 0))
         check_result(self.vroverlay.setOverlaySortOrder(self.r_ovr2, 0))
 
-        this_dir = os.path.abspath(os.path.dirname(__file__))
+        #this_dir = os.path.abspath(os.path.dirname(__file__))
 
-        self.l_open_png = os.path.join(this_dir, 'media', 'hand_open_l.png')
-        self.r_open_png = os.path.join(this_dir, 'media', 'hand_open_r.png')
-        self.l_close_png = os.path.join(this_dir, 'media', 'hand_closed_l.png')
-        self.r_close_png = os.path.join(this_dir, 'media', 'hand_closed_r.png')
+        self.l_open_png = os.path.join(MEDIA_DIR, 'hand_open_l.png')
+        self.r_open_png = os.path.join(MEDIA_DIR, 'hand_open_r.png')
+        self.l_close_png = os.path.join(MEDIA_DIR, 'hand_closed_l.png')
+        self.r_close_png = os.path.join(MEDIA_DIR, 'hand_closed_r.png')
 
-        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr, self.l_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.l_ovr2, self.l_close_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr, self.r_open_png.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.r_ovr2, self.r_close_png.encode()))
+        check_result(self.vroverlay.setOverlayRaw(self.l_ovr, *IMAGE_DATA[self.l_open_png]))
+        check_result(self.vroverlay.setOverlayRaw(self.l_ovr2, *IMAGE_DATA[self.l_close_png]))
+        check_result(self.vroverlay.setOverlayRaw(self.r_ovr, *IMAGE_DATA[self.r_open_png]))
+        check_result(self.vroverlay.setOverlayRaw(self.r_ovr2, *IMAGE_DATA[self.r_close_png]))
 
         result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr, self.left_ctr.id)
         result, ctr_tf = self.vroverlay.setOverlayTransformTrackedDeviceRelative(self.l_ovr2, self.left_ctr.id)

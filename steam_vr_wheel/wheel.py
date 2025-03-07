@@ -130,6 +130,11 @@ def get_controller_ids():
 
 
 def main(type='wheel'):
+
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    os.chdir(script_dir)
+    print("Current working directory:", os.getcwd())
+
     openvr.init(openvr.VRApplication_Overlay)
     vrsystem = openvr.VRSystem()
     hands_got = False

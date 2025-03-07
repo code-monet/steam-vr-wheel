@@ -4,6 +4,7 @@ import threading
 import queue
 import shutil
 import hashlib
+import tempfile
 import openvr
 import copy
 from collections import OrderedDict
@@ -43,6 +44,18 @@ def deep_get(dictionary, keys, default=None):
         else:
             return default
     return dictionary
+
+class ImageDataDict(dict):
+    def __missing__(self, media_path):
+        from PIL import Image
+        with Image.open(media_path) as img:
+            img = img.convert("RGBA")
+            width, height = img.size
+            depth = 4
+            buffer = img.tobytes()
+        self[media_path] = [buffer, width, height, depth]
+        return self[media_path]
+IMAGE_DATA = ImageDataDict()
 
 perf_timings = []
 def perf_time(key):
@@ -134,6 +147,7 @@ def bezier_curve(t, P0, P1, P2, P3):
 DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
+MEDIA_DIR = "media"
 
 """
 DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,

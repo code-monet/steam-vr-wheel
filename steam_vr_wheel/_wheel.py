@@ -13,7 +13,8 @@ import queue
 import struct
 import mmap
 
-from . import check_result, rotation_matrix, playsound, Point, bezier_curve, deep_get, perf_time
+from . import check_result, rotation_matrix, playsound, \
+              Point, bezier_curve, deep_get, perf_time, MEDIA_DIR, IMAGE_DATA
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 
@@ -165,27 +166,27 @@ class HShifterImage:
         check_result(result)
 
         # Media
-        this_dir = os.path.abspath(os.path.dirname(__file__))
+        #this_dir = os.path.abspath(os.path.dirname(__file__))
 
         # Sound
-        self._change_mp3_1 = os.path.join(this_dir, 'media', 'shifter_change_1.mp3')
-        self._change_mp3_2 = os.path.join(this_dir, 'media', 'shifter_change_2.mp3')
-        self._neutral_mp3 = os.path.join(this_dir, 'media', 'shifter_neutral.mp3')
-        self._button_mp3 = os.path.join(this_dir, 'media', 'shifter_button.mp3')
+        self._change_mp3_1 = os.path.join(MEDIA_DIR, 'shifter_change_1.mp3')
+        self._change_mp3_2 = os.path.join(MEDIA_DIR, 'shifter_change_2.mp3')
+        self._neutral_mp3 = os.path.join(MEDIA_DIR, 'shifter_neutral.mp3')
+        self._button_mp3 = os.path.join(MEDIA_DIR, 'shifter_button.mp3')
         self._last_change_play = 0
         self._last_neutral_play = 0
         self._neutral_instances = []
 
         # Images
-        self.slot_img = os.path.join(this_dir, 'media', 'h_shifter_slot_7.png')
-        self.slot_img_seq = os.path.join(this_dir, 'media', 'h_shifter_slot_seq.png')
-        self._stick_img = os.path.join(this_dir, 'media', 'h_shifter_stick_low.png')
-        self._stick_img_2 = os.path.join(this_dir, 'media', 'h_shifter_stick_high.png')
-        self._knob_img = os.path.join(this_dir, 'media', 'h_shifter_knob.png')
-        self._knob_img_2 = os.path.join(this_dir, 'media', 'h_shifter_knob_over.png')
+        self.slot_img = os.path.join(MEDIA_DIR, 'h_shifter_slot_7.png')
+        self.slot_img_seq = os.path.join(MEDIA_DIR, 'h_shifter_slot_seq.png')
+        self._stick_img = os.path.join(MEDIA_DIR, 'h_shifter_stick_low.png')
+        self._stick_img_2 = os.path.join(MEDIA_DIR, 'h_shifter_stick_high.png')
+        self._knob_img = os.path.join(MEDIA_DIR, 'h_shifter_knob.png')
+        self._knob_img_2 = os.path.join(MEDIA_DIR, 'h_shifter_knob_over.png')
 
-        check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img.encode()))
-        check_result(self.vroverlay.setOverlayFromFile(self.knob, self._knob_img.encode()))
+        check_result(self.vroverlay.setOverlayRaw(self.stick, *IMAGE_DATA[self._stick_img]))
+        check_result(self.vroverlay.setOverlayRaw(self.knob, *IMAGE_DATA[self._knob_img]))
 
         # Visibility
         self._slot_v = 0.2
@@ -341,17 +342,17 @@ class HShifterImage:
         self.set_stick_xz_pos([0,0])
 
         if self.sequential:
-            check_result(self.vroverlay.setOverlayFromFile(self.slot, self.slot_img_seq.encode()))
+            check_result(self.vroverlay.setOverlayRaw(self.slot, *IMAGE_DATA[self.slot_img_seq]))
         else:
-            check_result(self.vroverlay.setOverlayFromFile(self.slot, self.slot_img.encode()))
+            check_result(self.vroverlay.setOverlayRaw(self.slot, *IMAGE_DATA[self.slot_img]))
 
 
     def toggle_splitter(self, ctr):
 
         self._splitter_toggled = not self._splitter_toggled
         
-        check_result(self.vroverlay.setOverlayFromFile(self.knob, 
-            self._knob_img_2.encode() if self._splitter_toggled else self._knob_img.encode()))
+        check_result(self.vroverlay.setOverlayRaw(self.knob, 
+            *IMAGE_DATA[self._knob_img_2 if self._splitter_toggled else self._knob_img]))
         
         playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
         ctr.haptic([None, 0.6], [0.1, None], [None, 0.6])
@@ -368,10 +369,10 @@ class HShifterImage:
         playsound(self._button_mp3, block=False, volume=self.config.sfx_volume/100)
 
         if self._range_toggled:
-            check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img_2.encode()))
+            check_result(self.vroverlay.setOverlayRaw(self.stick, *IMAGE_DATA[self._stick_img_2]))
             ctr.haptic([0.3, lambda t: t**3])
         else:
-            check_result(self.vroverlay.setOverlayFromFile(self.stick, self._stick_img.encode()))
+            check_result(self.vroverlay.setOverlayRaw(self.stick, *IMAGE_DATA[self._stick_img]))
             ctr.haptic([0.3, lambda t: 0.2 * (1-t**2)])
 
     def snap_ctr(self, ctr):
@@ -746,10 +747,10 @@ class SteeringWheelImage:
         check_result(self.vroverlay.setOverlayAlpha(self.wheel, alpha))
         check_result(self.vroverlay.setOverlayWidthInMeters(self.wheel, size))
 
-        this_dir = os.path.abspath(os.path.dirname(__file__))
-        wheel_img = os.path.join(this_dir, 'media', 'steering_wheel.png')
+        #this_dir = os.path.abspath(os.path.dirname(__file__))
+        wheel_img = os.path.join(MEDIA_DIR, 'steering_wheel.png')
 
-        check_result(self.vroverlay.setOverlayFromFile(self.wheel, wheel_img.encode()))
+        check_result(self.vroverlay.setOverlayRaw(self.wheel, *IMAGE_DATA[wheel_img]))
 
 
         result, transform = self.vroverlay.setOverlayTransformAbsolute(self.wheel, openvr.TrackingUniverseSeated)
