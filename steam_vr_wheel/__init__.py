@@ -147,65 +147,6 @@ DEFAULT_CONFIG_NAME = 'config.json'
 CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 MEDIA_DIR = "media"
-
-"""
-DEFAULT_CONFIG = dict(config_name=DEFAULT_CONFIG_NAME,
-
-                        trigger_pre_press_button=False, trigger_press_button=False,
-                        multibutton_trackpad=False,
-                        multibutton_trackpad_center_haptic=False,
-                        sfx_volume=65,
-                      
-                        # Wheel
-                        wheel_center=[0, -0.4, -0.35], wheel_size=0.48,
-                        wheel_grabbed_by_grip=True,
-                        wheel_grabbed_by_grip_toggle=True,
-                        wheel_show_wheel=True, wheel_show_hands=True,
-                        wheel_degrees=1440, wheel_centerforce=30, wheel_alpha=100,
-                        wheel_pitch=0, wheel_transparent_center=False,
-                        wheel_ffb=True,
-                        wheel_ffb_haptic=False,
-
-                        ## Shifter
-                        shifter_center=[0.25, -0.57, -0.15], shifter_degree=80, shifter_alpha=100,
-                        shifter_scale=100,
-                        shifter_reverse_orientation="Bottom Left",
-
-                        ### Joystick as button
-                        j_l_left_button=False,
-                        j_l_right_button=False,
-                        j_l_up_button=False,
-                        j_l_down_button=False,
-                        j_r_left_button=False,
-                        j_r_right_button=False,
-                        j_r_up_button=False,
-                        j_r_down_button=False,
-
-                        ## Bike
-                        bike_center=[0, -0.4, -0.35],
-                        bike_show_handlebar=True,
-                        bike_show_hands=True,
-                        bike_use_ac_server=False,
-                        bike_max_lean=60,
-                        bike_max_steer=12,
-                        bike_angle_deadzone=5,
-                        bike_throttle_sensitivity=100,
-                        bike_throttle_decrease_per_sec=10,
-                        
-                        bike_mode="Absolute",
-
-                        bike_handlebar_height=95,
-                        bike_bound_hand="Both Hands",
-
-                        bike_relative_sensitivity=100,
-
-                        # Disabled
-                        touchpad_always_updates=True, vertical_wheel=True,
-                        joystick_updates_only_when_grabbed=False, joystick_grabbing_switch=False,
-                        edit_mode=False,
-                        )
-"""
-
 DEFAULT_CONFIG = OrderedDict([
     ('config_name', DEFAULT_CONFIG_NAME),
     ('trigger_pre_press_button', False),
@@ -213,14 +154,24 @@ DEFAULT_CONFIG = OrderedDict([
     ('multibutton_trackpad', False),
     ('multibutton_trackpad_center_haptic', False),
     ('sfx_volume', 65),
+    ('haptic_intensity', 100),
     
+    ## Joystick as button
+    ('j_l_left_button', False),
+    ('j_l_right_button', False),
+    ('j_l_up_button', False),
+    ('j_l_down_button', False),
+    ('j_r_left_button', False),
+    ('j_r_right_button', False),
+    ('j_r_up_button', False),
+    ('j_r_down_button', False),
+    ('axis_deadzone', 30),
+
     # Wheel
     ('wheel_center', [0, -0.4, -0.35]),
     ('wheel_size', 0.48),
     ('wheel_grabbed_by_grip', True),
     ('wheel_grabbed_by_grip_toggle', True),
-    ('wheel_show_wheel', True),
-    ('wheel_show_hands', True),
     ('wheel_degrees', 1440),
     ('wheel_centerforce', 100),
     ('wheel_alpha', 100),
@@ -237,16 +188,6 @@ DEFAULT_CONFIG = OrderedDict([
     ('shifter_sequential', False),
     ('shifter_reverse_orientation', "Bottom Left"),
 
-    ### Joystick as button
-    ('j_l_left_button', False),
-    ('j_l_right_button', False),
-    ('j_l_up_button', False),
-    ('j_l_down_button', False),
-    ('j_r_left_button', False),
-    ('j_r_right_button', False),
-    ('j_r_up_button', False),
-    ('j_r_down_button', False),
-
     ## Bike
     ('bike_center', [0, -0.4, -0.35]),
     ('bike_show_handlebar', True),
@@ -254,12 +195,10 @@ DEFAULT_CONFIG = OrderedDict([
     ('bike_use_ac_server', False),
     ('bike_max_lean', 60),
     ('bike_max_steer', 12),
-    ('bike_angle_deadzone', 5),
     ('bike_throttle_sensitivity', 100),
     ('bike_throttle_decrease_per_sec', 10),
     ('bike_mode', "Absolute"),
     ('bike_handlebar_height', 95),
-    ('bike_bound_hand', "Both Hands"),
     ('bike_relative_sensitivity', 100),
 
     # Disabled
@@ -450,6 +389,24 @@ class PadConfig:
     @sfx_volume.setter
     def sfx_volume(self, x: int):
         self._data['sfx_volume'] = x
+        self._write()
+
+    @property
+    def haptic_intensity(self):
+        return self._data['haptic_intensity']
+
+    @haptic_intensity.setter
+    def haptic_intensity(self, x: int):
+        self._data['haptic_intensity'] = x
+        self._write()
+
+    @property
+    def axis_deadzone(self):
+        return self._data['axis_deadzone']
+
+    @axis_deadzone.setter
+    def axis_deadzone(self, x: int):
+        self._data['axis_deadzone'] = x
         self._write()
 
     @property

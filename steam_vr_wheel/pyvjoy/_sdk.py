@@ -384,8 +384,8 @@ class FfbGenCB:
                     })
                 #debug_structure_hex(effect)
 
-            # Ffb_h_Eff_Cond
-            # Ffb_h_Eff_Ramp
+            # TODO Ffb_h_Eff_Cond
+            # TODO Ffb_h_Eff_Ramp
 
             elif ERROR_SUCCESS == _vj.Ffb_h_Eff_Constant(fData, byref(cnst)):
                 # This guarantees

@@ -14,7 +14,7 @@ import struct
 
 from . import check_result, rotation_matrix, bezier_curve, Point, MEDIA_DIR, IMAGE_DATA
 from steam_vr_wheel.wheel import wheel_main_done
-from steam_vr_wheel._virtualpad import VirtualPad
+from steam_vr_wheel._virtualpad import VirtualPad, HandsImage
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
 
 # IVRChaperoneSetup
@@ -516,6 +516,11 @@ class Bike(VirtualPad):
     def update(self, left_ctr, right_ctr, hmd):
         super().update(left_ctr, right_ctr, hmd)
 
+        # Hands
+        if self.hands_overlay is None:
+            self.hands_overlay = HandsImage(self.left_ctr, self.right_ctr)
+            self.hands_overlay.closed_hands_always_top()
+            
         # Update grip
         self.update_grip('left', left_ctr)
         self.update_grip('right', right_ctr)

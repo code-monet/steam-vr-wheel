@@ -31,14 +31,29 @@ class ConfiguratorApp:
         self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
 
         #
-        self.trigger_pre_btn_box = wx.CheckBox(self.pnl, label='Button click when resting finger on triggers (button 31, 32)')
-        self.trigger_btn_box = wx.CheckBox(self.pnl, label='Button click when pressing triggers (button 1, 9)')
+        self.trigger_pre_btn_box = wx.CheckBox(self.pnl, label='Button click when you rest finger on triggers')
+        self.trigger_btn_box = wx.CheckBox(self.pnl, label='Button click when you press triggers')
         self.multibutton_trackpad_box = wx.CheckBox(self.pnl, label='(VIVE) Trackpad clicks has 4 additional zones')
-        self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl,
-                                                                  label='(VIVE) Haptic feedback for trackpad button zones')
-        self.sfx_volume = wx.SpinCtrl(self.pnl, name = "SFX Volume", min=0, max=100, size=(120,-1))
+        ##
+        
+        self.pnl_general1 = wx.Panel(self.pnl)
+        self.hbox_general1 = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.pnl_general1_sfx_volume = wx.Panel(self.pnl_general1)
+        self.vbox_general1_sfx_volume = wx.BoxSizer(wx.VERTICAL)
+        self.sfx_volume = wx.SpinCtrl(self.pnl_general1_sfx_volume, name = "SFX Volume", min=0, max=100, size=(120,-1))
+
+        self.pnl_general1_haptic_intensity = wx.Panel(self.pnl_general1)
+        self.vbox_general1_haptic_intensity = wx.BoxSizer(wx.VERTICAL)
+        self.haptic_intensity = wx.SpinCtrl(self.pnl_general1_haptic_intensity, name = "Haptic Intensity", min=0, max=200, size=(120,-1))
+
+        self.pnl_general1_axis_deadzone = wx.Panel(self.pnl_general1)
+        self.vbox_general1_axis_deadzone = wx.BoxSizer(wx.VERTICAL)
+        self.axis_deadzone = wx.SpinCtrl(self.pnl_general1_axis_deadzone, name = "Axis Deadzone", min=0, max=100, size=(120,-1))
 
         ## Hidden
+        self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl, label='(VIVE) Haptic feedback for trackpad button zones')
+        self.multibutton_trackpad_center_haptic_box.Hide()
         self.touchpad_always_updates_box = wx.CheckBox(self.pnl, label='Touchpad mapping to axis while untouched (axis move to center when released)')
         self.touchpad_always_updates_box.Hide()
         ##
@@ -174,6 +189,7 @@ class ConfiguratorApp:
         self.multibutton_trackpad_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_center_haptic_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.sfx_volume.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.haptic_intensity.Bind(wx.EVT_SPINCTRL, self.config_change)
         
         ## Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -184,6 +200,7 @@ class ConfiguratorApp:
         self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
+        self.axis_deadzone.Bind(wx.EVT_SPINCTRL, self.config_change)
         
         # Wheel
         self.touchpad_always_updates_box.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -231,6 +248,7 @@ class ConfiguratorApp:
                                 multibutton_trackpad=self.multibutton_trackpad_box,
                                 multibutton_trackpad_center_haptic=self.multibutton_trackpad_center_haptic_box,
                                 sfx_volume=self.sfx_volume,
+                                haptic_intensity=self.haptic_intensity,
                                 j_l_left_button=self.j_l_left_button,
                                 j_l_right_button=self.j_l_right_button,
                                 j_l_up_button=self.j_l_up_button,
@@ -239,6 +257,7 @@ class ConfiguratorApp:
                                 j_r_right_button=self.j_r_right_button,
                                 j_r_up_button=self.j_r_up_button,
                                 j_r_down_button=self.j_r_down_button,
+                                axis_deadzone=self.axis_deadzone,
 
                                 touchpad_always_updates=self.touchpad_always_updates_box,
                                 vertical_wheel=self.vertical_wheel_box,
@@ -296,14 +315,32 @@ class ConfiguratorApp:
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Trackpads have 4 more button ids depending on the clicked zone\n Quest 2 is recommended to uncheck")))
         self.vbox.Add(self.multibutton_trackpad_center_haptic_box)
-        self.vbox.Add(_decrease_font(
+        '''self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
+        '''
         self.vbox.Add(self.touchpad_always_updates_box)
         self.vbox.AddSpacer(4)
-        self.vbox.Add(wx.StaticText(self.pnl, label = "SFX Volume"))
-        self.vbox.Add(self.sfx_volume)
+        
+        self.vbox_general1_sfx_volume.Add(wx.StaticText(self.pnl_general1_sfx_volume, label = "SFX Volume"))
+        self.vbox_general1_sfx_volume.Add(self.sfx_volume)
+        self.vbox_general1_haptic_intensity.Add(wx.StaticText(self.pnl_general1_haptic_intensity, label = "Haptic Intensity"))
+        self.vbox_general1_haptic_intensity.Add(self.haptic_intensity)
+        self.vbox_general1_axis_deadzone.Add(wx.StaticText(self.pnl_general1_axis_deadzone, label = "Axis Deadzone"))
+        self.vbox_general1_axis_deadzone.Add(self.axis_deadzone)
+
+        self.pnl_general1_sfx_volume.SetSizerAndFit(self.vbox_general1_sfx_volume)
+        self.pnl_general1_haptic_intensity.SetSizerAndFit(self.vbox_general1_haptic_intensity)
+        self.pnl_general1_axis_deadzone.SetSizerAndFit(self.vbox_general1_axis_deadzone)
+
+        self.hbox_general1.Add(self.pnl_general1_sfx_volume)
+        self.hbox_general1.Add(self.pnl_general1_haptic_intensity)
+        self.hbox_general1.Add(self.pnl_general1_axis_deadzone)
+        self.pnl_general1.SetSizerAndFit(self.hbox_general1)
+        self.vbox.Add(self.pnl_general1)
+
         self.vbox.AddSpacer(4)
         
+        ## Axis
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = "Checked joystick acts as button")))
@@ -318,6 +355,7 @@ class ConfiguratorApp:
         self.hbox_joystick.Add(self.j_r_down_button)
         self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
         self.vbox.Add(self.pnl_joystick)
+
         self.vbox.AddSpacer(6)
 
         ## Adding items to Wheel page

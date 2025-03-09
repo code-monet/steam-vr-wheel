@@ -15,8 +15,9 @@ import mmap
 
 from . import check_result, rotation_matrix, playsound, \
               Point, bezier_curve, deep_get, perf_time, MEDIA_DIR, IMAGE_DATA
-from steam_vr_wheel._virtualpad import VirtualPad
+from steam_vr_wheel._virtualpad import VirtualPad, HandsImage
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
+from steam_vr_wheel.util import *
 
 def print_matrix(matrix):
     l = []
@@ -830,6 +831,7 @@ class Wheel(VirtualPad):
         self._inertia = inertia
         self._center_speed = center_speed  # radians per frame, force which returns wheel to center when not grabbed
         self._center_speed_ffb_mags = np.zeros(60)
+
         # FFB
         if self.config.wheel_ffb:
             self.ffb_paused = False
@@ -1597,6 +1599,11 @@ class Wheel(VirtualPad):
 
         now = time.time()
 
+        # Hands
+        if self.hands_overlay is None:
+            self.hands_overlay = HandsImage(self.left_ctr, self.right_ctr)
+            self.hands_overlay.closed_hands_always_top()
+
         # Check hands
         while not self._grip_queue.empty():
             self._update_hands(self._grip_queue.get(), left_ctr, right_ctr)
@@ -1808,13 +1815,6 @@ Triple grips both hands  - exit edit mode
     def edit_mode(self, frames):
 
         super().edit_mode(frames)
-        
-        def dead_and_stretch(v, d):
-            if abs(v) < d:
-                return 0.0
-            else:
-                s = v / abs(v)
-                return (v - s*d)/(1-d)
 
         def distance(p0, ctr):
             return sqrt((p0.x-ctr.x)**2 + (p0.y-ctr.y)**2 + (p0.z-ctr.z)**2)

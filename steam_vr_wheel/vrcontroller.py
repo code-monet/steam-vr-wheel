@@ -13,7 +13,12 @@ else:
 
 class Controller:
 
+    @staticmethod
+    def set_haptic_intensity(x):
+        Controller._haptic_intensity = min(2.0, max(0.0, x))
+
     _haptic_dict = dict()
+    _haptic_intensity = 1.0
     @staticmethod 
     def update_haptic(frames):
 
@@ -75,6 +80,7 @@ class Controller:
 
             # Finally play haptic
             strength_sum = min(1, strength_sum)
+            strength_sum *= Controller._haptic_intensity
             # Convert the strength to make it feel linear to human
             strength_sum = ((math.exp(strength_sum) - 1) / (math.e - 1))
             if strength_sum > 0:
