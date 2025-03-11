@@ -161,11 +161,11 @@ DEFAULT_CONFIG = OrderedDict([
     ('j_l_right_button', False),
     ('j_l_up_button', False),
     ('j_l_down_button', False),
-    ('j_r_left_button', False),
-    ('j_r_right_button', False),
-    ('j_r_up_button', False),
-    ('j_r_down_button', False),
-    ('axis_deadzone', 30),
+    ('j_r_left_button', True),
+    ('j_r_right_button', True),
+    ('j_r_up_button', True),
+    ('j_r_down_button', True),
+    ('axis_deadzone', 20),
 
     # Wheel
     ('wheel_center', [0, -0.4, -0.35]),
@@ -410,51 +410,6 @@ class PadConfig:
         self._write()
 
     @property
-    def touchpad_always_updates(self):
-        return self._data['touchpad_always_updates']
-
-    @touchpad_always_updates.setter
-    def touchpad_always_updates(self, x: bool):
-        self._data['touchpad_always_updates'] = x
-        self._write()
-
-    @property
-    def vertical_wheel(self):
-        return self._data['vertical_wheel']
-
-    @vertical_wheel.setter
-    def vertical_wheel(self, x: bool):
-        self._data['vertical_wheel'] = x
-        self._write()
-
-    @property
-    def joystick_updates_only_when_grabbed(self):
-        return self._data['joystick_updates_only_when_grabbed']
-
-    @joystick_updates_only_when_grabbed.setter
-    def joystick_updates_only_when_grabbed(self, x: bool):
-        self._data['joystick_updates_only_when_grabbed'] = x
-        self._write()
-
-    @property
-    def joystick_grabbing_switch(self):
-        return self._data['joystick_grabbing_switch']
-
-    @joystick_grabbing_switch.setter
-    def joystick_grabbing_switch(self, x: bool):
-        self._data['joystick_grabbing_switch'] = x
-        self._write()
-
-    @property
-    def edit_mode(self):
-        return self._data['edit_mode']
-
-    @edit_mode.setter
-    def edit_mode(self, x: bool):
-        self._data['edit_mode'] = x
-        self._write()
-
-    @property
     def wheel_center(self):
         return self._data['wheel_center']
 
@@ -552,25 +507,7 @@ class PadConfig:
     def wheel_ffb_haptic(self, x: bool):
         self._data['wheel_ffb_haptic'] = x
         self._write()
-
-    @property
-    def wheel_show_wheel(self):
-        return self._data['wheel_show_wheel']
-
-    @wheel_show_wheel.setter
-    def wheel_show_wheel(self, x: bool):
-        self._data['wheel_show_wheel'] = x
-        self._write()
-
-    @property
-    def wheel_show_hands(self):
-        return self._data['wheel_show_hands']
-
-    @wheel_show_hands.setter
-    def wheel_show_hands(self, x: bool):
-        self._data['wheel_show_hands'] = x
-        self._write()
-
+    
     # Shifter
     @property
     def shifter_center(self):

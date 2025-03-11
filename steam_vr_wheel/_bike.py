@@ -493,7 +493,7 @@ class Bike(VirtualPad):
                 self.throttle -= self.get_update_delta() * self.throttle_decrease_per_second
                 self.throttle = max(0.0, self.throttle)
 
-        self.device.set_axis(HID_USAGE_RZ, int(self.throttle * 0x8000))
+        self.set_axis(HID_USAGE_RZ, int(self.throttle * 0x8000))
 
     def update_chaperone(self, chp):
         self.original_chaperone = chp
@@ -541,7 +541,7 @@ class Bike(VirtualPad):
             lean_axis = self.AC_CAL.to_axis(lean_axis, self.ac_speed)
         
         axisX = int((lean_axis+1)/2.0 * 0x8000)
-        self.device.set_axis(HID_USAGE_X, axisX)
+        self.set_axis(HID_USAGE_X, axisX)
 
         self.render(hmd)
 

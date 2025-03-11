@@ -123,6 +123,7 @@ class Controller:
             self.trackpadX = 0
             self.trackpadY = 0
             self.pressed = 0
+            self.touched = 0
         self.x, self.y, self.z = 0, 0, 0
         self.pitch, self.yaw, self.roll = 0, 0, 0
         self.name = name
@@ -133,6 +134,12 @@ class Controller:
             return False
         return True
     
+    def is_touched(self, btn_id):
+        btns = list(reversed(bin(self.touched)[2:]))
+        if len(btns) < btn_id+1 or btns[btn_id] == '0':
+            return False
+        return True
+
     def update(self, pose):
         vrsys = openvr.VRSystem()
 
@@ -170,6 +177,7 @@ class Controller:
             self.trackpadX = pControllerState.rAxis[0].x
             self.trackpadY = pControllerState.rAxis[0].y
             self.pressed = pControllerState.ulButtonPressed
+            self.touched = pControllerState.ulButtonTouched
 
             '''
 k_EButton_A 7   

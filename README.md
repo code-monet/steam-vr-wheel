@@ -75,14 +75,14 @@ WIP
 |R Joy Right|`Button` Navigation Mode (F5)|
 |R Joy Up|`Button` Parking Brake|
 |R Joy Down|`Axis` Brake|
-|X|Horn|
+|X|Hazard Warning|
 |Y|High Beam|
 |A|Cruise Control|
-|B|Next Camera|
+|B|Engine Start/Stop|
 
 - Set `Shifter Toggles Use Switch Mode` to *ON*
 - Set `Shifter Layout Behavior` to *Advanced*
-- Set `Shifter fast split` to *Clutch*
+- Set `Shifter fast split` to *Clutch press*
 
 
 ## Troubleshooting

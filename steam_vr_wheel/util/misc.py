@@ -1,4 +1,6 @@
 
+from collections.abc import Iterable
+
 def dead_and_stretch(v, d):
     # 0 <= d <= 1
     # -1 <= v <= 1 
@@ -9,3 +11,7 @@ def dead_and_stretch(v, d):
         if v < 0:
             s = -1
         return (v - s * d)/(1 - d)
+
+
+def expand_to_array(item):
+    return item if isinstance(item, Iterable) and not isinstance(item, (str, bytes)) else [item]

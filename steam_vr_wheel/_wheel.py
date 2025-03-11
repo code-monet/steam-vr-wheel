@@ -534,24 +534,24 @@ class HShifterImage:
             self._one_tick_reset_pulse = False
             for v in self._pos_to_button.values():
                 if v is not None:
-                    self.wheel.device.set_button(v, False)
+                    self.wheel.set_button(v, False)
 
-            self.wheel.device.set_button(self._splitter_button, not self._splitter_toggled)
-            self.wheel.device.set_button(self._range_button, not self._range_toggled)
+            self.wheel.set_button(self._splitter_button, not self._splitter_toggled)
+            self.wheel.set_button(self._range_button, not self._range_toggled)
 
             return
 
         for v in self._pos_to_button.values():
             if v != self._pressed_button and v is not None:
-                self.wheel.device.set_button(v, False)
+                self.wheel.set_button(v, False)
         if self._pressed_button is not None:
-            self.wheel.device.set_button(self._pressed_button, True)
+            self.wheel.set_button(self._pressed_button, True)
 
         now = time.time()
 
         # Toggles
-        self.wheel.device.set_button(self._splitter_button, self._splitter_toggled)
-        self.wheel.device.set_button(self._range_button, self._range_toggled)
+        self.wheel.set_button(self._splitter_button, self._splitter_toggled)
+        self.wheel.set_button(self._range_button, self._range_toggled)
 
         if self._snapped:
             u_sin = (self.stick_height * sin(self.degree*pi/180))
@@ -876,7 +876,7 @@ class Wheel(VirtualPad):
         self._shifter_button_lock = threading.Lock()
 
         # (ETS2)
-        self._ets2_last_hand_adjust_time = 0
+        self._ets2_last_hand_cl = 1
 
     def ffb_callback(self, data):
 
@@ -1015,13 +1015,14 @@ class Wheel(VirtualPad):
                 """
                 _ffb_test_f(False, typ)
 
-        if now - self._ffb_test_t > 30.0:
-            # [TEST] FFB behaviors
-            # NO  {'13': 2, '11': 1, '10-1-1': 4, '17': 4}
-            # YES {'13': 2, '5': 74874, '1': 4, '12-4': 3, '10-3': 2, '12-3': 14, '3': 10060}
-            # Dir {'DirX 0': 0, 'Direction 0': 0}
-
-            # 17, 11, 1
+        if False: #now - self._ffb_test_t > 30.0:
+            '''
+            [TEST] FFB behaviors
+            NO  {'17': 1, '11': 1}
+            YES {'12-3': 2, '12-4': 2, '13': 1, '5': 22659, '1': 22548, '10-1': 22547, '10-3': 104}
+            Dir {'DirX 63': 0, 'Direction 63': 0}
+            '''
+            
             print("[TEST] FFB behaviors",
                 "\n  NO ", self._ffb_test_unhandled,
                 "\n  YES", self._ffb_test_handled,
@@ -1333,7 +1334,7 @@ class Wheel(VirtualPad):
     def send_to_vjoy(self):
         wheel_turn = self._wheel_angles[-1] / (2 * pi)
         axisX = int((-wheel_turn / (self.config.wheel_degrees / 360) + 0.5) * 0x8000)
-        self.device.set_axis(HID_USAGE_X, axisX)
+        self.set_axis(HID_USAGE_X, axisX)
 
     def render(self, hmd):
 
@@ -1506,9 +1507,15 @@ class Wheel(VirtualPad):
 
                     # Enable splitter/range related buttons back
                     ## Wait for each button to be unpressed to prevent unwanted button presses
-                    t = [False, False, False, False]
+                    t = [False, False, False, True]
                     c = ctr
+
+                    if self.config.trigger_pre_press_button:
+                        # Also enable trigger touch if it is configured so
+                        t[3] = False
+
                     while True:
+
                         self._shifter_button_lock.acquire()
                         if self._hand_snaps[hand] == 'shifter' or self._hand_snaps['right'] == 'shifter':
                             self._shifter_button_lock.release()
@@ -1517,7 +1524,7 @@ class Wheel(VirtualPad):
                         if t[0]:
                             pass
                         elif c.is_pressed(openvr.k_EButton_SteamVR_Trigger) == False:
-                            self.enable_button(hand, openvr.k_EButton_SteamVR_Trigger)
+                            self.enable_axis(hand, openvr.k_EButton_SteamVR_Trigger)
                             t[0] = True
 
                         if t[1]:
@@ -1534,9 +1541,10 @@ class Wheel(VirtualPad):
 
                         if t[3]:
                             pass
-                        elif c.axis <= 0.1:
-                            self.enable_axis(hand, 'trigger')
+                        elif c.is_touched(openvr.k_EButton_SteamVR_Trigger) == False:
+                            self.enable_button(hand, 'trigger-touch')
                             t[3] = True
+                        
                         self._shifter_button_lock.release()
 
                         if False not in t:
@@ -1562,15 +1570,21 @@ class Wheel(VirtualPad):
                 if self._hand_snaps[other] == 'shifter':
                     return
 
-                self._shifter_button_lock.acquire()
+                self._shifter_button_lock.acquire() # ACQUIRE ----------
+
                 self._hand_snaps[hand] = 'shifter'
 
                 # Disable splitter/range buttons so that it won't register
-                self.disable_button(hand, openvr.k_EButton_SteamVR_Trigger)
-                self.disable_axis(hand, 'trigger')
-                self.disable_button(hand, openvr.k_EButton_A)
+                
+                self.disable_axis(hand, openvr.k_EButton_SteamVR_Trigger)
                 self.disable_axis(hand, 'down-up')
-                self._shifter_button_lock.release()
+                self.disable_button(hand, openvr.k_EButton_A)
+                
+                if self.config.trigger_pre_press_button:
+                    # If user uses trigger touch, disable it also
+                    self.disable_button(hand, 'trigger-touch')
+
+                self._shifter_button_lock.release() # RELEASE ----------
 
                 self.h_shifter_image.snap_ctr(ctr)
                 ctr.haptic(*[(None, 0.5)]*3)
@@ -1681,14 +1695,14 @@ class Wheel(VirtualPad):
         perf_time("After shifter hands")
 
         # (ETS2)
-        if now - self._ets2_last_hand_adjust_time > 1.0:
+        if True:
             # https://github.com/RenCloud/scs-sdk-plugin/blob/master/scs-client/C%23/SCSSdkClient/SCSSdkConvert.cs
             mm = mmap.mmap(0, 32*1024, "Local\\SCSTelemetry")
-            self._ets2_last_hand_adjust_time = now
 
             a = struct.unpack("?", mm[0:1])[0] # sdk active
             p = struct.unpack("?", mm[4:5])[0] # paused
             d = struct.unpack("I", mm[64:68])[0] # time in minutes
+            # NOTE you can get speed for getting G value for
 
             v = abs(((d%1440) / 60) - 13.5)
             
@@ -1703,10 +1717,15 @@ class Wheel(VirtualPad):
                     cl = (1-min_cl) - ((v-4.5)/3.5)*(1-min_cl) + min_cl
                 else:
                     cl = min_cl
-                
-            self.wheel_image.set_color((cl,cl,cl))
-            self.hands_overlay.set_color((cl,cl,cl))
-            self.h_shifter_image.set_color((cl,cl,cl)) 
+
+            cmp_cl0 = round(cl * 255)
+            cmp_cl1 = round(self._ets2_last_hand_cl * 255)
+            if cmp_cl0 != cmp_cl1:
+                self._ets2_last_hand_cl = cl
+
+                self.wheel_image.set_color((cl,cl,cl))
+                self.hands_overlay.set_color((cl,cl,cl))
+                self.h_shifter_image.set_color((cl,cl,cl)) 
             
     def move_delta(self, d):
         self.center = Point(self.center.x + d[0], self.center.y + d[1], self.center.z + d[2])
@@ -1782,7 +1801,7 @@ class Wheel(VirtualPad):
         print("""
 ----- EDIT MODE -----
 
-Touch wheel + A or X     -     lock the X of wheel to 0
+Touch wheel + A or X     -     set the X of wheel to 0
 Touch wheel + B or Y     -     change alpha
 Touch shifter + A or X   -     toggle sequential mode
 Touch shifter + B or Y   -     change alpha
@@ -1890,10 +1909,16 @@ Triple grips both hands  - exit edit mode
                     if collide != '' and snap == 'ready':
                         self._edit_snaps[hand] = collide
                         self._edit_cl[collide] = cl_moviong
+
+                        if collide == 'wheel':
+                            # When snapping wheel
+                            self._edit_discard_x = False
+
                     elif snap == '' and collide != '':
                         # Prevent object being grabbed while exiting the edit mode
                         self._edit_snaps[hand] = 'ready'
             else:
+                
                 self._edit_snaps[hand] = ''
 
             def adjust_alpha(obj_key, cfg_key):

@@ -26,7 +26,7 @@ class ConfiguratorApp:
         self.pnl_profile_buttons = wx.Panel(self.pnl)
         self.hbox_profile_buttons = wx.BoxSizer(wx.HORIZONTAL)
         self.profile_combo = wx.ComboBox(self.pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
-        self.profile_new = wx.Button(self.pnl_profile_buttons, label="New", size=(60,22))
+        self.profile_new = wx.Button(self.pnl_profile_buttons, label="Save", size=(60,22))
         self.profile_open_dir = wx.Button(self.pnl_profile_buttons, label="Open", size=(60,22))
         self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
 
@@ -50,13 +50,6 @@ class ConfiguratorApp:
         self.pnl_general1_axis_deadzone = wx.Panel(self.pnl_general1)
         self.vbox_general1_axis_deadzone = wx.BoxSizer(wx.VERTICAL)
         self.axis_deadzone = wx.SpinCtrl(self.pnl_general1_axis_deadzone, name = "Axis Deadzone", min=0, max=100, size=(120,-1))
-
-        ## Hidden
-        self.multibutton_trackpad_center_haptic_box = wx.CheckBox(self.pnl, label='(VIVE) Haptic feedback for trackpad button zones')
-        self.multibutton_trackpad_center_haptic_box.Hide()
-        self.touchpad_always_updates_box = wx.CheckBox(self.pnl, label='Touchpad mapping to axis while untouched (axis move to center when released)')
-        self.touchpad_always_updates_box.Hide()
-        ##
 
         ## Joystick button or axis
         self.pnl_joystick = wx.Panel(self.pnl)
@@ -85,10 +78,6 @@ class ConfiguratorApp:
         ## Wheel Page
         self.wheel_grabbed_by_grip_box = wx.CheckBox(self.nb_pnl_wheel, label='Manual wheel grabbing')
         self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.nb_pnl_wheel, label='Grabbing object is NOT toggle')
-        self.wheel_show_wheel = wx.CheckBox(self.nb_pnl_wheel, label="Show Wheel Overlay")
-        self.wheel_show_wheel.Hide()
-        self.wheel_show_hands = wx.CheckBox(self.nb_pnl_wheel, label="Show Hands Overlay")
-        self.wheel_show_hands.Hide()
         self.wheel_degrees = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Degrees", max=10000, size=(120,-1))
         self.wheel_centerforce = wx.SpinCtrl(self.nb_pnl_wheel, name = "Center Force", max=10000, size=(120,-1))
         self.wheel_ffb = wx.CheckBox(self.nb_pnl_wheel, label="Use Force Feedback to center the wheel (tested on ETS2 only)")
@@ -96,17 +85,6 @@ class ConfiguratorApp:
         self.wheel_pitch = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Pitch", min=-30, max=120, size=(120,-1))
         self.wheel_alpha = wx.SpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha", max=100, size=(120,-1))
         self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
-
-        ### hidden
-        self.vertical_wheel_box = wx.CheckBox(self.nb_pnl_wheel, label='Steering wheel is vertical')
-        self.vertical_wheel_box.Hide()
-        self.joystick_updates_only_when_grabbed_box = wx.CheckBox(self.nb_pnl_wheel, label='Joystick moves only when grabbed (by right grip)')
-        self.joystick_updates_only_when_grabbed_box.Hide()
-        self.joystick_grabbing_switch_box = wx.CheckBox(self.nb_pnl_wheel, label='Joystick grab is a switch')
-        self.joystick_grabbing_switch_box.Hide()
-        self.edit_mode_box = wx.CheckBox(self.nb_pnl_wheel, label='Layout edit mode')
-        self.edit_mode_box.Hide()
-        ###
 
         ### Shifter
         self.pnl_shifter = wx.Panel(self.nb_pnl_wheel)
@@ -187,9 +165,9 @@ class ConfiguratorApp:
         self.trigger_pre_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.trigger_btn_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.multibutton_trackpad_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.multibutton_trackpad_center_haptic_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.sfx_volume.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.haptic_intensity.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.axis_deadzone.Bind(wx.EVT_SPINCTRL, self.config_change)
         
         ## Joystick button or axis
         self.j_l_left_button.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -200,18 +178,10 @@ class ConfiguratorApp:
         self.j_r_right_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_up_button.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.j_r_down_button.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.axis_deadzone.Bind(wx.EVT_SPINCTRL, self.config_change)
         
         # Wheel
-        self.touchpad_always_updates_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.vertical_wheel_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.joystick_updates_only_when_grabbed_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.joystick_grabbing_switch_box.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.edit_mode_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_grabbed_by_grip_box.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_grabbed_by_grip_box_toggle.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.wheel_show_wheel.Bind(wx.EVT_CHECKBOX, self.config_change)
-        self.wheel_show_hands.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.wheel_degrees.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_centerforce.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.wheel_ffb.Bind(wx.EVT_CHECKBOX, self.config_change)
@@ -224,7 +194,7 @@ class ConfiguratorApp:
         self.shifter_degree.Bind(wx.EVT_SPINCTRLDOUBLE, self.config_change)
         self.shifter_alpha.Bind(wx.EVT_SPINCTRL, self.config_change)
         self.shifter_scale.Bind(wx.EVT_SPINCTRL, self.config_change)
-        self.shifter_sequential.Bind(wx.EVT_SPINCTRL, self.config_change)
+        self.shifter_sequential.Bind(wx.EVT_CHECKBOX, self.config_change)
         self.shifter_reverse_orientation.Bind(wx.EVT_RADIOBOX, self.config_change)
 
         # Bike
@@ -246,7 +216,6 @@ class ConfiguratorApp:
         self._config_map = dict(trigger_pre_press_button=self.trigger_pre_btn_box,
                                 trigger_press_button=self.trigger_btn_box,
                                 multibutton_trackpad=self.multibutton_trackpad_box,
-                                multibutton_trackpad_center_haptic=self.multibutton_trackpad_center_haptic_box,
                                 sfx_volume=self.sfx_volume,
                                 haptic_intensity=self.haptic_intensity,
                                 j_l_left_button=self.j_l_left_button,
@@ -259,15 +228,8 @@ class ConfiguratorApp:
                                 j_r_down_button=self.j_r_down_button,
                                 axis_deadzone=self.axis_deadzone,
 
-                                touchpad_always_updates=self.touchpad_always_updates_box,
-                                vertical_wheel=self.vertical_wheel_box,
-                                joystick_updates_only_when_grabbed=self.joystick_updates_only_when_grabbed_box,
-                                joystick_grabbing_switch=self.joystick_grabbing_switch_box,
-                                edit_mode=self.edit_mode_box,
                                 wheel_grabbed_by_grip=self.wheel_grabbed_by_grip_box,
                                 wheel_grabbed_by_grip_toggle=self.wheel_grabbed_by_grip_box_toggle,
-                                wheel_show_wheel=self.wheel_show_wheel,
-                                wheel_show_hands=self.wheel_show_hands,
                                 wheel_degrees=self.wheel_degrees,
                                 wheel_centerforce=self.wheel_centerforce,
                                 wheel_ffb=self.wheel_ffb,
@@ -314,18 +276,13 @@ class ConfiguratorApp:
         self.vbox.Add(self.multibutton_trackpad_box)
         self.vbox.Add(_decrease_font(
             wx.StaticText(self.pnl, label = " Trackpads have 4 more button ids depending on the clicked zone\n Quest 2 is recommended to uncheck")))
-        self.vbox.Add(self.multibutton_trackpad_center_haptic_box)
-        '''self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = " Haptic feedback when you click on a different click zone\n Quest 2 is recommended to uncheck")))
-        '''
-        self.vbox.Add(self.touchpad_always_updates_box)
         self.vbox.AddSpacer(4)
         
-        self.vbox_general1_sfx_volume.Add(wx.StaticText(self.pnl_general1_sfx_volume, label = "SFX Volume"))
+        self.vbox_general1_sfx_volume.Add(wx.StaticText(self.pnl_general1_sfx_volume, label = "SFX Volume (%)"))
         self.vbox_general1_sfx_volume.Add(self.sfx_volume)
-        self.vbox_general1_haptic_intensity.Add(wx.StaticText(self.pnl_general1_haptic_intensity, label = "Haptic Intensity"))
+        self.vbox_general1_haptic_intensity.Add(wx.StaticText(self.pnl_general1_haptic_intensity, label = "Haptic Intensity (%)"))
         self.vbox_general1_haptic_intensity.Add(self.haptic_intensity)
-        self.vbox_general1_axis_deadzone.Add(wx.StaticText(self.pnl_general1_axis_deadzone, label = "Axis Deadzone"))
+        self.vbox_general1_axis_deadzone.Add(wx.StaticText(self.pnl_general1_axis_deadzone, label = "Axis Deadzone (%)"))
         self.vbox_general1_axis_deadzone.Add(self.axis_deadzone)
 
         self.pnl_general1_sfx_volume.SetSizerAndFit(self.vbox_general1_sfx_volume)
@@ -343,15 +300,22 @@ class ConfiguratorApp:
         ## Axis
         self.vbox.Add(wx.StaticText(self.pnl, label = "Use Joystick as Axis/Button"))
         self.vbox.Add(_decrease_font(
-            wx.StaticText(self.pnl, label = "Checked joystick acts as button")))
+            wx.StaticText(self.pnl, label = "Checked joystick direction acts as button")))
         self.vbox.AddSpacer(2)
         self.hbox_joystick.Add(self.j_l_left_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_l_right_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_l_up_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_l_down_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_r_left_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_r_right_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_r_up_button)
+        self.hbox_joystick.AddSpacer(6)
         self.hbox_joystick.Add(self.j_r_down_button)
         self.pnl_joystick.SetSizerAndFit(self.hbox_joystick)
         self.vbox.Add(self.pnl_joystick)
@@ -360,21 +324,15 @@ class ConfiguratorApp:
 
         ## Adding items to Wheel page
         self.nb_vbox_wheel.AddSpacer(5)
-        self.nb_vbox_wheel.Add(self.vertical_wheel_box)
-        self.nb_vbox_wheel.Add(self.joystick_updates_only_when_grabbed_box)
-        self.nb_vbox_wheel.Add(self.joystick_grabbing_switch_box)
-        self.nb_vbox_wheel.Add(self.edit_mode_box)
         self.nb_vbox_wheel.Add(self.wheel_grabbed_by_grip_box)
         self.nb_vbox_wheel.Add(self.wheel_grabbed_by_grip_box_toggle)
-        self.nb_vbox_wheel.Add(self.wheel_show_wheel)
-        self.nb_vbox_wheel.Add(self.wheel_show_hands)
         self.nb_vbox_wheel.AddSpacer(10)
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Degrees"))
         self.nb_vbox_wheel.Add(self.wheel_degrees)
         self.nb_vbox_wheel.Add(_decrease_font(
             wx.StaticText(self.nb_pnl_wheel, label = "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck")))
         self.nb_vbox_wheel.AddSpacer(4)
-        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Center Force"))
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Center Force (%)"))
         self.nb_vbox_wheel.Add(self.wheel_centerforce)
         self.nb_vbox_wheel.Add(self.wheel_ffb)
         self.nb_vbox_wheel.Add(self.wheel_ffb_haptic)
@@ -382,16 +340,16 @@ class ConfiguratorApp:
         self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Pitch"))
         self.nb_vbox_wheel.Add(self.wheel_pitch)
         self.nb_vbox_wheel.AddSpacer(4)
-        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Alpha"))
+        self.nb_vbox_wheel.Add(wx.StaticText(self.nb_pnl_wheel, label = "Wheel Alpha (%)"))
         self.nb_vbox_wheel.Add(self.wheel_alpha)
         self.nb_vbox_wheel.Add(self.wheel_transparent_center_box)
 
         self.nb_vbox_wheel.AddSpacer(10)
+        self.vbox_shifter_alpha.Add(wx.StaticText(self.pnl_shifter_alpha, label = "Shifter Alpha (%)"))
+        self.vbox_shifter_alpha.Add(self.shifter_alpha)
         self.vbox_shifter_degree.Add(wx.StaticText(self.pnl_shifter_degree, label = "Shifter Tilt"))
         self.vbox_shifter_degree.Add(self.shifter_degree)
-        self.vbox_shifter_alpha.Add(wx.StaticText(self.pnl_shifter_alpha, label = "Shifter Alpha"))
-        self.vbox_shifter_alpha.Add(self.shifter_alpha)
-        self.vbox_shifter_scale.Add(wx.StaticText(self.pnl_shifter_scale, label = "Shifter Height Scale"))
+        self.vbox_shifter_scale.Add(wx.StaticText(self.pnl_shifter_scale, label = "Shifter Height (%)"))
         self.vbox_shifter_scale.Add(self.shifter_scale)
 
         self.pnl_shifter_alpha.SetSizerAndFit(self.vbox_shifter_alpha)
@@ -534,6 +492,7 @@ class ConfiguratorApp:
 
         #
         self.profile_combo.Clear()
+        self.profile_combo.Append("(Default)")
         for p in PadConfig.get_profiles():
             self.profile_combo.Append(p)
 
@@ -548,17 +507,26 @@ class ConfiguratorApp:
 
         #
         for key, item in self._config_map.items():
-            if isinstance(item, list):
-                value = getattr(self.config, key)
-                for each in item:
-                    if each.GetName() == value:
-                        each.SetValue(True)
-                    else:
-                        each.SetValue(False)
-            elif type(item) is wx.RadioBox:
-                item.SetSelection(item.FindString(getattr(self.config, key)))
-            else:
-                item.SetValue(getattr(self.config, key))
+
+            try:
+                if isinstance(item, list):
+                    value = getattr(self.config, key)
+                    for each in item:
+                        if each.GetName() == value:
+                            each.SetValue(True)
+                        else:
+                            each.SetValue(False)
+                elif type(item) is wx.RadioBox:
+                    item.SetSelection(item.FindString(getattr(self.config, key)))
+                else:
+                    item.SetValue(getattr(self.config, key))
+
+            except KeyError:
+                print(f"'{key}' is not found in self.config._data")
+
+            except AttributeError:
+                print(f"'{key}' is not found in attributes of self.config")
+
 
     def config_change(self, event):
         for key, item in self._config_map.items():
@@ -579,14 +547,19 @@ class ConfiguratorApp:
 
     def profile_change(self, event):
         cb = event.GetEventObject()
-        self.config.switch_profile(cb.GetValue())
+        p = cb.GetValue()
+        if p == "(Default)":
+            self.config._load_default()
+            cb.SetValue("")
+        else:
+            self.config.switch_profile(p)
         self.read_config()
 
     def profile_buttons(self, event):
-        l = event.GetEventObject().GetLabel()
-        if l == "New":
+        l = event.GetEventObject()
+        if l == self.profile_new:
 
-            fd = wx.FileDialog(self.pnl, "New Profile",
+            fd = wx.FileDialog(self.pnl, "Save Profile",
                 self.config.get_config_dir(), "new-profile.json",
                 "*.json|*.json",
                 style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
@@ -599,12 +572,12 @@ class ConfiguratorApp:
             i = self.profile_combo.Append(p)
             self.profile_combo.SetSelection(i)
 
-        elif l == "Delete":
+        elif l == self.profile_delete:
             i = self.profile_combo.GetSelection()
             if i != wx.NOT_FOUND:
                 self.config.delete_profile(self.profile_combo.GetValue())
                 self.profile_combo.Delete(i)
-        elif l == "Open":
+        elif l == self.profile_open_dir:
             os.startfile(self.config.get_config_dir())
 
     def run(self):
