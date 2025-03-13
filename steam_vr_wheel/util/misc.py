@@ -12,6 +12,8 @@ def dead_and_stretch(v, d):
             s = -1
         return (v - s * d)/(1 - d)
 
+def is_array(ary):
+    return isinstance(ary, Iterable) and not isinstance(ary, (str, bytes))
 
 def expand_to_array(item):
-    return item if isinstance(item, Iterable) and not isinstance(item, (str, bytes)) else [item]
+    return item if is_array(item) else [item]

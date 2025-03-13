@@ -152,7 +152,6 @@ DEFAULT_CONFIG = OrderedDict([
     ('trigger_pre_press_button', False),
     ('trigger_press_button', False),
     ('multibutton_trackpad', False),
-    ('multibutton_trackpad_center_haptic', False),
     ('sfx_volume', 65),
     ('haptic_intensity', 100),
     
@@ -200,13 +199,6 @@ DEFAULT_CONFIG = OrderedDict([
     ('bike_mode', "Absolute"),
     ('bike_handlebar_height', 95),
     ('bike_relative_sensitivity', 100),
-
-    # Disabled
-    ('touchpad_always_updates', True),
-    ('vertical_wheel', True),
-    ('joystick_updates_only_when_grabbed', False),
-    ('joystick_grabbing_switch', False),
-    ('edit_mode', False),
 ])
 
 
@@ -371,15 +363,6 @@ class PadConfig:
     @multibutton_trackpad.setter
     def multibutton_trackpad(self, x: bool):
         self._data['multibutton_trackpad'] = x
-        self._write()
-
-    @property
-    def multibutton_trackpad_center_haptic(self):
-        return self._data['multibutton_trackpad_center_haptic']
-
-    @multibutton_trackpad_center_haptic.setter
-    def multibutton_trackpad_center_haptic(self, x: bool):
-        self._data['multibutton_trackpad_center_haptic'] = x
         self._write()
 
     @property
