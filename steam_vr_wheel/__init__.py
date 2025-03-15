@@ -143,8 +143,13 @@ def playsound(sound, block=True, volume=1.0, stop_alias=None):
 def bezier_curve(t, P0, P1, P2, P3):
     return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
 
+# Directory
+script_dir = os.path.abspath(os.path.dirname(__file__))
+os.chdir(script_dir)
+print("Current working directory:", os.getcwd())
 DEFAULT_CONFIG_NAME = 'config.json'
-CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
+#CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
+CONFIG_DIR = os.path.join(os.getcwd(), "../../configs")
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 MEDIA_DIR = "media"
 DEFAULT_CONFIG = OrderedDict([
@@ -199,6 +204,10 @@ DEFAULT_CONFIG = OrderedDict([
     ('bike_mode', "Absolute"),
     ('bike_handlebar_height', 95),
     ('bike_relative_sensitivity', 100),
+
+    # Advanced
+    ('advanced_mode', False),
+    ('adv_vjoy_device', 1)
 ])
 
 
@@ -287,10 +296,15 @@ class PadConfig:
 
     def _load_default(self):
         self._data = DEFAULT_CONFIG
-        os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+        except Exception as e:
+            print("Failed to create config dir")
+            raise e
         self._write()
 
     def __init__(self, load_defaults=False):
+
         if load_defaults:
             self._load_default()
         else:
@@ -305,7 +319,7 @@ class PadConfig:
                         raise ConfigException(str(e))
                     self.validate_config()
             except FileNotFoundError as e:
-                raise ConfigException(str(e))
+                raise e
 
     def validate_config(self, data=None):
         if data is None:
@@ -329,410 +343,14 @@ class PadConfig:
             with open(CONFIG_PATH, 'w') as f:
                  json.dump(self._data, f, indent=2, sort_keys=False)
 
-    @property
-    def config_name(self):
-        return self._data['config_name']
 
-    @config_name.setter
-    def config_name(self, x: bool):
-        self._data['config_name'] = x
+def make_property(key):
+    def getter(self):
+        return self._data.get(key)
+    def setter(self, value):
+        self._data[key] = value
         self._write()
+    return property(getter, setter)
 
-    @property
-    def trigger_pre_press_button(self):
-        return self._data['trigger_pre_press_button']
-
-    @trigger_pre_press_button.setter
-    def trigger_pre_press_button(self, x: bool):
-        self._data['trigger_pre_press_button'] = x
-        self._write()
-
-    @property
-    def trigger_press_button(self):
-        return self._data['trigger_press_button']
-
-    @trigger_press_button.setter
-    def trigger_press_button(self, x: bool):
-        self._data['trigger_press_button'] = x
-        self._write()
-
-    @property
-    def multibutton_trackpad(self):
-        return self._data['multibutton_trackpad']
-
-    @multibutton_trackpad.setter
-    def multibutton_trackpad(self, x: bool):
-        self._data['multibutton_trackpad'] = x
-        self._write()
-
-    @property
-    def sfx_volume(self):
-        return self._data['sfx_volume']
-
-    @sfx_volume.setter
-    def sfx_volume(self, x: int):
-        self._data['sfx_volume'] = x
-        self._write()
-
-    @property
-    def haptic_intensity(self):
-        return self._data['haptic_intensity']
-
-    @haptic_intensity.setter
-    def haptic_intensity(self, x: int):
-        self._data['haptic_intensity'] = x
-        self._write()
-
-    @property
-    def axis_deadzone(self):
-        return self._data['axis_deadzone']
-
-    @axis_deadzone.setter
-    def axis_deadzone(self, x: int):
-        self._data['axis_deadzone'] = x
-        self._write()
-
-    @property
-    def wheel_center(self):
-        return self._data['wheel_center']
-
-    @wheel_center.setter
-    def wheel_center(self, x: bool):
-        self._data['wheel_center'] = x
-        self._write()
-
-    @property
-    def wheel_size(self):
-        return self._data['wheel_size']
-
-    @wheel_size.setter
-    def wheel_size(self, x: bool):
-        self._data['wheel_size'] = x
-        self._write()
-
-    @property
-    def wheel_grabbed_by_grip(self):
-        return self._data['wheel_grabbed_by_grip']
-
-    @wheel_grabbed_by_grip.setter
-    def wheel_grabbed_by_grip(self, x: bool):
-        self._data['wheel_grabbed_by_grip'] = x
-        self._write()
-
-    @property
-    def wheel_grabbed_by_grip_toggle(self):
-        return self._data['wheel_grabbed_by_grip_toggle']
-
-    @wheel_grabbed_by_grip_toggle.setter
-    def wheel_grabbed_by_grip_toggle(self, x: bool):
-        self._data['wheel_grabbed_by_grip_toggle'] = x
-        self._write()
-
-    @property
-    def wheel_degrees(self):
-        return self._data['wheel_degrees']
-
-    @wheel_degrees.setter
-    def wheel_degrees(self, x: int):
-        self._data['wheel_degrees'] = x
-        self._write()
-
-    @property
-    def wheel_centerforce(self):
-        return self._data['wheel_centerforce']
-
-    @wheel_centerforce.setter
-    def wheel_centerforce(self, x: int):
-        self._data['wheel_centerforce'] = x
-        self._write()
-
-    @property
-    def wheel_alpha(self):
-        return self._data['wheel_alpha']
-
-    @wheel_alpha.setter
-    def wheel_alpha(self, x: int):
-        self._data['wheel_alpha'] = x
-        self._write()
-
-    @property
-    def wheel_pitch(self):
-        return self._data['wheel_pitch']
-
-    @wheel_pitch.setter
-    def wheel_pitch(self, x: int):
-        self._data['wheel_pitch'] = x
-        self._write()
-
-    @property
-    def wheel_transparent_center(self):
-        return self._data['wheel_transparent_center']
-
-    @wheel_transparent_center.setter
-    def wheel_transparent_center(self, x: bool):
-        self._data['wheel_transparent_center'] = x
-        self._write()
-
-    @property
-    def wheel_ffb(self):
-        return self._data['wheel_ffb']
-
-    @wheel_ffb.setter
-    def wheel_ffb(self, x: bool):
-        self._data['wheel_ffb'] = x
-        self._write()
-
-    @property
-    def wheel_ffb_haptic(self):
-        return self._data['wheel_ffb_haptic']
-
-    @wheel_ffb_haptic.setter
-    def wheel_ffb_haptic(self, x: bool):
-        self._data['wheel_ffb_haptic'] = x
-        self._write()
-    
-    # Shifter
-    @property
-    def shifter_center(self):
-        return self._data['shifter_center']
-
-    @shifter_center.setter
-    def shifter_center(self, x: bool):
-        self._data['shifter_center'] = x
-        self._write()
-
-    @property
-    def shifter_degree(self):
-        return self._data['shifter_degree']
-
-    @shifter_degree.setter
-    def shifter_degree(self, x: float):
-        self._data['shifter_degree'] = x
-        self._write()
-
-    @property
-    def shifter_alpha(self):
-        return self._data['shifter_alpha']
-
-    @shifter_alpha.setter
-    def shifter_alpha(self, x: int):
-        self._data['shifter_alpha'] = x
-        self._write()
-
-    @property
-    def shifter_scale(self):
-        return self._data['shifter_scale']
-
-    @shifter_scale.setter
-    def shifter_scale(self, x: int):
-        self._data['shifter_scale'] = x
-        self._write()
-
-    @property
-    def shifter_sequential(self):
-        return self._data['shifter_sequential']
-
-    @shifter_sequential.setter
-    def shifter_sequential(self, x: bool):
-        self._data['shifter_sequential'] = x
-        self._write()
-
-    @property
-    def shifter_reverse_orientation(self):
-        return self._data['shifter_reverse_orientation']
-
-    @shifter_reverse_orientation.setter
-    def shifter_reverse_orientation(self, x: bool):
-        self._data['shifter_reverse_orientation'] = x
-        self._write()
-
-    # Joystick as button
-    @property
-    def j_l_left_button(self):
-        return self._data['j_l_left_button']
-
-    @j_l_left_button.setter
-    def j_l_left_button(self, x: bool):
-        self._data['j_l_left_button'] = x
-        self._write()
-
-    @property
-    def j_l_right_button(self):
-        return self._data['j_l_right_button']
-
-    @j_l_right_button.setter
-    def j_l_right_button(self, x: bool):
-        self._data['j_l_right_button'] = x
-        self._write()
-
-    @property
-    def j_l_up_button(self):
-        return self._data['j_l_up_button']
-
-    @j_l_up_button.setter
-    def j_l_up_button(self, x: bool):
-        self._data['j_l_up_button'] = x
-        self._write()
-
-    @property
-    def j_l_down_button(self):
-        return self._data['j_l_down_button']
-
-    @j_l_down_button.setter
-    def j_l_down_button(self, x: bool):
-        self._data['j_l_down_button'] = x
-        self._write()
-
-    @property
-    def j_r_left_button(self):
-        return self._data['j_r_left_button']
-
-    @j_r_left_button.setter
-    def j_r_left_button(self, x: bool):
-        self._data['j_r_left_button'] = x
-        self._write()
-
-    @property
-    def j_r_right_button(self):
-        return self._data['j_r_right_button']
-
-    @j_r_right_button.setter
-    def j_r_right_button(self, x: bool):
-        self._data['j_r_right_button'] = x
-        self._write()
-
-    @property
-    def j_r_up_button(self):
-        return self._data['j_r_up_button']
-
-    @j_r_up_button.setter
-    def j_r_up_button(self, x: bool):
-        self._data['j_r_up_button'] = x
-        self._write()
-
-    @property
-    def j_r_down_button(self):
-        return self._data['j_r_down_button']
-
-    @j_r_down_button.setter
-    def j_r_down_button(self, x: bool):
-        self._data['j_r_down_button'] = x
-        self._write()
-
-    # Bike
-    @property
-    def bike_show_handlebar(self):
-        return self._data['bike_show_handlebar']
-
-    @bike_show_handlebar.setter
-    def bike_show_handlebar(self, x: bool):
-        self._data['bike_show_handlebar'] = x
-        self._write()
-
-    @property
-    def bike_show_hands(self):
-        return self._data['bike_show_hands']
-
-    @bike_show_hands.setter
-    def bike_show_hands(self, x: bool):
-        self._data['bike_show_hands'] = x
-        self._write()
-
-    @property
-    def bike_use_ac_server(self):
-        return self._data['bike_use_ac_server']
-
-    @bike_use_ac_server.setter
-    def bike_use_ac_server(self, x: bool):
-        self._data['bike_use_ac_server'] = x
-        self._write()
-
-    @property
-    def bike_handlebar_height(self):
-        return self._data['bike_handlebar_height']
-
-    @bike_handlebar_height.setter
-    def bike_handlebar_height(self, x: int):
-        self._data['bike_handlebar_height'] = x
-        self._write()
-
-    @property
-    def bike_max_lean(self):
-        return self._data['bike_max_lean']
-
-    @bike_max_lean.setter
-    def bike_max_lean(self, x: int):
-        self._data['bike_max_lean'] = x
-        self._write()
-
-    @property
-    def bike_max_steer(self):
-        return self._data['bike_max_steer']
-
-    @bike_max_steer.setter
-    def bike_max_steer(self, x: int):
-        self._data['bike_max_steer'] = x
-        self._write()
-
-    @property
-    def bike_angle_deadzone(self):
-        return self._data['bike_angle_deadzone']
-
-    @bike_angle_deadzone.setter
-    def bike_angle_deadzone(self, x: int):
-        self._data['bike_angle_deadzone'] = x
-        self._write()
-
-    @property
-    def bike_center(self):
-        return self._data['bike_center']
-
-    @bike_center.setter
-    def bike_center(self, x: bool):
-        self._data['bike_center'] = x
-        self._write()
-
-    @property
-    def bike_mode(self):
-        return self._data['bike_mode']
-
-    @bike_mode.setter
-    def bike_mode(self, x: bool):
-        self._data['bike_mode'] = x
-        self._write()
-
-    @property
-    def bike_throttle_sensitivity(self):
-        return self._data['bike_throttle_sensitivity']
-
-    @bike_throttle_sensitivity.setter
-    def bike_throttle_sensitivity(self, x: int):
-        self._data['bike_throttle_sensitivity'] = x
-        self._write()
-
-    @property
-    def bike_throttle_decrease_per_sec(self):
-        return self._data['bike_throttle_decrease_per_sec']
-
-    @bike_throttle_decrease_per_sec.setter
-    def bike_throttle_decrease_per_sec(self, x: int):
-        self._data['bike_throttle_decrease_per_sec'] = x
-        self._write()
-
-    @property
-    def bike_bound_hand(self):
-        return self._data['bike_bound_hand']
-
-    @bike_bound_hand.setter
-    def bike_bound_hand(self, x: bool):
-        self._data['bike_bound_hand'] = x
-        self._write()
-
-    @property
-    def bike_relative_sensitivity(self):
-        return self._data['bike_relative_sensitivity']
-
-    @bike_relative_sensitivity.setter
-    def bike_relative_sensitivity(self, x: bool):
-        self._data['bike_relative_sensitivity'] = x
-        self._write()
+for key in DEFAULT_CONFIG.keys():
+    setattr(PadConfig, key, make_property(key))

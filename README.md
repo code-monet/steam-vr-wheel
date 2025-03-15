@@ -164,5 +164,5 @@ The below table shows **Quest 2 controller** to vJoy mapping
 
 ### Todo
 
-- Make shifter rotatable in space
-- Code cleanup
+- Translate readme
+- Expand the scope of config object -- from virtualpad to app

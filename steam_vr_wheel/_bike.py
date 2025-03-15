@@ -16,6 +16,7 @@ from . import check_result, rotation_matrix, bezier_curve, Point, MEDIA_DIR, IMA
 from steam_vr_wheel.wheel import wheel_main_done
 from steam_vr_wheel._virtualpad import VirtualPad, HandsImage
 from steam_vr_wheel.pyvjoy.vjoydevice import HID_USAGE_RZ, HID_USAGE_X
+from steam_vr_wheel.i18n import _I
 
 # IVRChaperoneSetup
 
@@ -232,6 +233,9 @@ class Bike(VirtualPad):
 
     def __init__(self):
         super().__init__()
+
+        print(_I("intro.bike"))
+
         self.vrsys = openvr.VRSystem()
         self.hands_overlay = None
         self.is_edit_mode = False

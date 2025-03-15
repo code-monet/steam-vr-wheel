@@ -16,6 +16,7 @@ from . import perf_timings, perf_time
 from steam_vr_wheel._bike import Bike
 from steam_vr_wheel._virtualpad import VirtualPad
 from steam_vr_wheel._wheel import Wheel
+from steam_vr_wheel.i18n import _I
 from steam_vr_wheel.vrcontroller import Controller
 from steam_vr_wheel.configurator import run
 
@@ -131,24 +132,7 @@ def get_controller_ids():
 
 def main(type='wheel'):
 
-    script_dir = os.path.abspath(os.path.dirname(__file__))
-    os.chdir(script_dir)
-    print("Current working directory:", os.getcwd())
-    print(f"""
----------------------
-
-Required vJoy version: v2.1.9.1
-Open Configure vJoy
-    - Select vJoy device :   1
-    - Number of buttons  :   64
-    - Axes               :   all enabled
-    - POVs               :   Continuous 0
-    - Force Feedback     :   Enable Effects and check all
-
-Triple grips both hands     -     enter edit mode
-
----------------------
-    """)
+    print(_I("intro.main"))
 
     openvr.init(openvr.VRApplication_Overlay)
     vrsystem = openvr.VRSystem()
@@ -170,6 +154,9 @@ Triple grips both hands     -     enter edit mode
     if type == 'wheel':
         wheel = Wheel()
     elif type == 'bike':
+        print('''
+BIKE is WIP
+        ''')
         wheel = Bike()
     elif type == 'pad':
         wheel = VirtualPad()

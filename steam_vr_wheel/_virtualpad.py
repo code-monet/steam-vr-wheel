@@ -211,12 +211,7 @@ class VirtualPad:
 
     def __init__(self):
         self.init_config()
-        device = 1
-        try:
-            device = int(sys.argv[1])
-        except:
-            print('selecting default')
-            pass
+        device = self.config.adv_vjoy_device
         self.device = VJoyDevice(device)
         self.trackpadRtouch = False
         self.trackpadLtouch = False
@@ -246,7 +241,12 @@ class VirtualPad:
             try:
                 self.config = PadConfig()
                 config_loaded = True
-            except ConfigException as e:
+
+            except FileNotFoundError:
+                self.config = PadConfig(load_defaults=True)
+                config_loaded = True
+
+            except ConfigException as e:                
                 print(e)
                 if not app_ran:
                     p = multiprocessing.Process(target=run_configurator)

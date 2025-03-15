@@ -18,6 +18,7 @@ from . import check_result, rotation_matrix, playsound, \
 from steam_vr_wheel._virtualpad import VirtualPad, HandsImage
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 from steam_vr_wheel.util import *
+from steam_vr_wheel.i18n import _I
 
 def print_matrix(matrix):
     l = []
@@ -823,6 +824,9 @@ class GrabControllerPoint(Point):
 class Wheel(VirtualPad):
     def __init__(self, inertia=0.95, center_speed=pi/180):
         super().__init__()
+
+        print(_I("intro.wheel"))
+
         self.vrsys = openvr.VRSystem()
         self.hands_overlay = None
         self.is_edit_mode = False
@@ -1798,23 +1802,7 @@ class Wheel(VirtualPad):
         if self.wheel_image is not None:
             self.wheel_image.show()
 
-        print("""
------ EDIT MODE -----
-
-Touch wheel + A or X     -     set the X of wheel to 0
-Touch wheel + B or Y     -     change alpha
-Touch shifter + A or X   -     toggle sequential mode
-Touch shifter + B or Y   -     change alpha
-
-Grab wheel + joy left-right      -    resize
-Grab wheel + joy up-down         -    pitch
-Grab shifter + joy left-right    -    change tilt
-Grab shifter + joy up-down       -    change height
-
-Triple grips both hands  - exit edit mode
-
----------------------
-        """)
+        print(_I("intro.wheel.edit_mode"))
 
     def post_edit_mode(self):
         super().post_edit_mode()

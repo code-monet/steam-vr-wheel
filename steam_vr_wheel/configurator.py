@@ -4,6 +4,7 @@ import os
 
 from steam_vr_wheel import PadConfig, ConfigException, DEFAULT_CONFIG
 from steam_vr_wheel.util import expand_to_array, is_array
+from steam_vr_wheel.i18n import _I
 
 
 class HelperPanel(wx.Panel):
@@ -43,7 +44,7 @@ class HelperPanel(wx.Panel):
         inner.SetSizer(inner_sizer)
 
         wrap_hbox.AddSpacer(pad[3])
-        wrap_hbox.Add(inner, proportion=1, flag=wx.EXPAND | wx.ALL)
+        wrap_hbox.Add(inner, proportion=1, flag=wx.ALIGN_CENTER)
         wrap_hbox.AddSpacer(pad[1])
 
         wrap_vbox.AddSpacer(pad[0])
@@ -125,24 +126,32 @@ class LabeledSpinCtrl(wx.Panel):
         label = wx.StaticText(pnl_label, label=kwargs['name'])
 
         # Create the spin control.
+        pnl_spin = wx.Panel(self)
+        pnl_spin_sizer = wx.BoxSizer(wx.VERTICAL)
         self.is_double = is_double
         if is_double:
-            self.spin = wx.SpinCtrlDouble(self, *args, **kwargs)
+            self.spin = wx.SpinCtrlDouble(pnl_spin, size=(120, -1), *args, **kwargs)
             self.spin.SetDigits(1)
         else:
-            self.spin = wx.SpinCtrl(self, *args, **kwargs)
+            self.spin = wx.SpinCtrl(pnl_spin, size=(120, -1), *args, **kwargs)
 
         # Center align
         label_height = label.GetBestSize()[1]
         spin_height = self.spin.GetBestSize()[1]
         pnl_label_sizer.AddSpacer(1 + int((spin_height - label_height) / 2))
-        pnl_label_sizer.Add(label)
+        pnl_label_sizer.Add(label, flag=wx.ALIGN_RIGHT)
         pnl_label.SetSizerAndFit(pnl_label_sizer)
-        
+
+        #
+        pnl_spin_sizer.Add(self.spin, flag=wx.ALIGN_CENTER)
+        pnl_spin.SetSizerAndFit(pnl_spin_sizer)
+
         # Add the label, with proportion=1 so it expands horizontally.
         sizer.Add(pnl_label, proportion=1, flag=wx.EXPAND | wx.ALL)
+
         # Add the spin control with fixed size.
-        sizer.Add(self.spin, proportion=0, flag=wx.ALL)
+        sizer.Add(pnl_spin, proportion=1, flag=wx.EXPAND | wx.ALL)
+        sizer.AddSpacer(60)
         
         self.SetSizerAndFit(sizer)
 
@@ -175,225 +184,253 @@ class ConfiguratorApp:
             style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER ^ wx.MINIMIZE_BOX ^ wx.MAXIMIZE_BOX)
         defer_fit(self.window)
 
-        self.pnl = HelperPanel(self.window, (10, 12, 24, 12), size=(500, -1))
+        self.pnl = HelperPanel(self.window, (10, 12, 16, 12), size=(500, -1))
         defer_fit(self.pnl)
 
+        self.nb_advanced_pages = []
+
         #
-        self.pnl_general = HelperPanel(self.pnl, PAD_m)
-        self.pnl.Add(self.pnl_general, flag=wx.EXPAND)
+        pnl_general = HelperPanel(self.pnl, (PAD_m, 8))
+        self.pnl.Add(pnl_general, flag=wx.EXPAND)
 
-        self.pnl_general.Add(wx.StaticText(self.pnl_general, label = "Selected Profile"))
+        pnl_general.Add(wx.StaticText(pnl_general, label=_I("{cfg.selected_profile}")))
 
-        self.pnl_profile_buttons = HelperPanel(self.pnl_general, vertical=False)
-        self.pnl_general.Add(self.pnl_profile_buttons, flag=wx.EXPAND)
+        pnl_profile_buttons = HelperPanel(pnl_general, vertical=False)
+        pnl_general.Add(pnl_profile_buttons, flag=wx.EXPAND)
 
-        self.profile_combo = wx.ComboBox(self.pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
-        self.pnl_profile_buttons.Add(self.profile_combo)
-        self.pnl_profile_buttons.AddSpacer(6)
+        self.profile_combo = wx.ComboBox(pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
+        pnl_profile_buttons.Add(self.profile_combo)
+        pnl_profile_buttons.AddSpacer(6)
 
-        self.profile_new = wx.Button(self.pnl_profile_buttons, label="Save", size=(60,22))
-        self.profile_open_dir = wx.Button(self.pnl_profile_buttons, label="Open", size=(60,22))
-        self.profile_delete = wx.Button(self.pnl_profile_buttons, label="Delete", size=(60,22))
-        self.pnl_profile_buttons.Add(self.profile_new)
-        self.pnl_profile_buttons.Add(self.profile_open_dir)
-        self.pnl_profile_buttons.Add(self.profile_delete)
+        self.profile_new = wx.Button(pnl_profile_buttons, label=_I('{cfg.save}'), size=(60,22))
+        self.profile_open_dir = wx.Button(pnl_profile_buttons, label=_I('{cfg.open_dir}'), size=(60,22))
+        self.profile_delete = wx.Button(pnl_profile_buttons, label=_I('{cfg.delete}'), size=(60,22))
+        pnl_profile_buttons.Add(self.profile_new)
+        pnl_profile_buttons.Add(self.profile_open_dir)
+        pnl_profile_buttons.Add(self.profile_delete)
 
-        self.pnl_general.AddSpacer(PAD_lg)
+        pnl_general.AddSpacer(PAD_lg)
 
-        self.trigger_pre_btn_box = wx.CheckBox(self.pnl_general, label='Button click when you rest finger on triggers')
-        self.trigger_btn_box = wx.CheckBox(self.pnl_general, label='Button click when you press triggers')
-        self.pnl_general.Add(self.trigger_pre_btn_box)
-        self.pnl_general.Add(self.trigger_btn_box)
+        trigger_pre_btn_box = wx.CheckBox(pnl_general, label=_I('cfg.trigger_pre_btn_box'))
+        trigger_btn_box = wx.CheckBox(pnl_general, label=_I('cfg.trigger_btn_box'))
+        pnl_general.Add(trigger_pre_btn_box)
+        pnl_general.Add(trigger_btn_box)
 
-        self.pnl_general.AddSpacer(PAD_m)
+        pnl_general.AddSpacer(PAD_m)
 
-        self.sfx_volume = LabeledSpinCtrl(self.pnl_general, name="SFX Volume (%)", min=0, max=100, size=(120,-1))
-        self.pnl_general.Add(self.sfx_volume, flag=wx.EXPAND)
-        self.pnl_general.AddSpacer(PAD_sm)
-        self.haptic_intensity = LabeledSpinCtrl(self.pnl_general, name="Haptic Intensity (%)", min=0, max=200, size=(120,-1))
-        self.pnl_general.Add(self.haptic_intensity, flag=wx.EXPAND)
+        sfx_volume = LabeledSpinCtrl(pnl_general, name=_I('cfg.sfx_volume'), min=0, max=100)
+        pnl_general.Add(sfx_volume, flag=wx.EXPAND)
+        pnl_general.AddSpacer(PAD_sm)
+        haptic_intensity = LabeledSpinCtrl(pnl_general, name=_I('cfg.haptic_intensity'), min=0, max=200)
+        pnl_general.Add(haptic_intensity, flag=wx.EXPAND)
 
         ## Joystick button or axis
 
         PAGE_PAD = (16, 12, 30, 12)
         FRAME_PAD = (12, 8, 16, 8)
-        self.nb = wx.Notebook(self.pnl, style=wx.NB_MULTILINE)
-        self.pnl.Add(self.nb, flag=wx.EXPAND)
+        nb = wx.Notebook(self.pnl, style=wx.NB_MULTILINE)
+        self.nb = nb
+        self.pnl.Add(nb, flag=wx.EXPAND)
 
         ## Joystick page
-        self.nb_pnl_joystick = HelperPanel(self.nb, PAGE_PAD)
-        self.nb.AddPage(self.nb_pnl_joystick, " Joystick ")
+        nb_pnl_joystick = HelperPanel(nb, PAGE_PAD)
+        nb.AddPage(nb_pnl_joystick, _I(" {cfg.joystick} "))
 
-        self.axis_deadzone = LabeledSpinCtrl(self.nb_pnl_joystick, name="Axis Deadzone (%)", min=0, max=100, size=(120, -1))
-        self.nb_pnl_joystick.Add(self.axis_deadzone, flag=wx.EXPAND)
-        self.nb_pnl_joystick.AddSpacer(PAD_xl)
+        axis_deadzone = LabeledSpinCtrl(nb_pnl_joystick, name=_I('cfg.axis_deadzone'), min=0, max=100)
+        nb_pnl_joystick.Add(axis_deadzone, flag=wx.EXPAND)
+        nb_pnl_joystick.AddSpacer(PAD_xl)
         
-        self.pnl_joystick_frame = HelperPanel(self.nb_pnl_joystick, FRAME_PAD, label="Axis or Button")
-        self.nb_pnl_joystick.Add(self.pnl_joystick_frame, flag=wx.EXPAND)
+        pnl_joystick_frame = HelperPanel(nb_pnl_joystick, FRAME_PAD, label=_I('cfg.pnl_joystick_frame'))
+        nb_pnl_joystick.Add(pnl_joystick_frame, flag=wx.EXPAND)
 
-        self.pnl_joystick_frame.Add(HelperText(self.pnl_joystick_frame, is_muted=True, label="Checked joystick direction will act as button"))
-        self.pnl_joystick_frame.AddSpacer(PAD_m)
+        pnl_joystick_frame.Add(HelperText(pnl_joystick_frame, is_muted=True, label=_I('cfg.pnl_joystick_frame_descr')))
+        pnl_joystick_frame.AddSpacer(PAD_m)
 
-        self.pnl_joystick = HelperPanel(self.pnl_joystick_frame, vertical=False)
-        self.pnl_joystick_frame.Add(self.pnl_joystick, flag=wx.EXPAND)
+        pnl_joystick = HelperPanel(pnl_joystick_frame, vertical=False)
+        pnl_joystick_frame.Add(pnl_joystick, flag=wx.EXPAND)
 
-        self.j_l_left_button = wx.CheckBox(self.pnl_joystick, label='L ◀')
-        self.j_l_right_button = wx.CheckBox(self.pnl_joystick, label='L ▶')
-        self.j_l_up_button = wx.CheckBox(self.pnl_joystick, label='L ▲')
-        self.j_l_down_button = wx.CheckBox(self.pnl_joystick, label='L ▼')
-        self.j_r_left_button = wx.CheckBox(self.pnl_joystick, label='R ◀')
-        self.j_r_right_button = wx.CheckBox(self.pnl_joystick, label='R ▶')
-        self.j_r_up_button = wx.CheckBox(self.pnl_joystick, label='R ▲')
-        self.j_r_down_button = wx.CheckBox(self.pnl_joystick, label='R ▼')
-        self.pnl_joystick.Add(self.j_l_left_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_l_right_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_l_up_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_l_down_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_r_left_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_r_right_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_r_up_button); self.pnl_joystick.AddSpacer(6)
-        self.pnl_joystick.Add(self.j_r_down_button)
+        j_l_left_button = wx.CheckBox(pnl_joystick, label='L ◀')
+        j_l_right_button = wx.CheckBox(pnl_joystick, label='L ▶')
+        j_l_up_button = wx.CheckBox(pnl_joystick, label='L ▲')
+        j_l_down_button = wx.CheckBox(pnl_joystick, label='L ▼')
+        j_r_left_button = wx.CheckBox(pnl_joystick, label='R ◀')
+        j_r_right_button = wx.CheckBox(pnl_joystick, label='R ▶')
+        j_r_up_button = wx.CheckBox(pnl_joystick, label='R ▲')
+        j_r_down_button = wx.CheckBox(pnl_joystick, label='R ▼')
+        pnl_joystick.Add(j_l_left_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_l_right_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_l_up_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_l_down_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_r_left_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_r_right_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_r_up_button); pnl_joystick.AddSpacer(6)
+        pnl_joystick.Add(j_r_down_button)
 
-        self.nb_pnl_joystick.AddSpacer(PAD_xl)
-        self.multibutton_trackpad_box = wx.CheckBox(self.nb_pnl_joystick, label='Joystick has 4 additional click regions')
-        self.nb_pnl_joystick.Add(self.multibutton_trackpad_box)
-        self.nb_pnl_joystick.AddSpacer(PAD_sm)
-        self.nb_pnl_joystick.Add(HelperText(self.nb_pnl_joystick, 
+        nb_pnl_joystick.AddSpacer(PAD_xl)
+        multibutton_trackpad_box = wx.CheckBox(nb_pnl_joystick, label=_I('cfg.multibutton_trackpad_box'))
+        nb_pnl_joystick.Add(multibutton_trackpad_box)
+        nb_pnl_joystick.AddSpacer(PAD_sm)
+        nb_pnl_joystick.Add(HelperText(nb_pnl_joystick, 
             is_muted=True,
-            label='''Joysticks (or trackpads on VIVE) have 4 more buttons registered
-                     Center, left, right, down, and up totaling 5 click regions'''))
+            label=_I('cfg.multibutton_trackpad_box_descr')))
 
         ## Wheel Page
-        self.nb_pnl_wheel = HelperPanel(self.nb, PAGE_PAD)
-        self.nb.AddPage(self.nb_pnl_wheel, " Wheel ")
+        nb_pnl_wheel = HelperPanel(nb, PAGE_PAD)
+        nb.AddPage(nb_pnl_wheel, _I(" {cfg.wheel} "))
 
-        self.wheel_degrees = LabeledSpinCtrl(self.nb_pnl_wheel, name = "Wheel Rotation (Degrees)", max=10000, size=(120,-1))
-        self.nb_pnl_wheel.Add(self.wheel_degrees, flag=wx.EXPAND)
-        self.nb_pnl_wheel.AddSpacer(PAD_sm)
-        self.nb_pnl_wheel.Add(
-            HelperText(self.nb_pnl_wheel, is_muted=True, label="360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck"))
-        self.nb_pnl_wheel.AddSpacer(PAD_xl)
+        wheel_degrees = LabeledSpinCtrl(nb_pnl_wheel, name=_I("cfg.wheel_degrees"), max=10000)
+        nb_pnl_wheel.Add(wheel_degrees, flag=wx.EXPAND)
+        nb_pnl_wheel.AddSpacer(PAD_sm)
+        nb_pnl_wheel.Add(
+            HelperText(nb_pnl_wheel, is_muted=True, label=_I('cfg.wheel_degrees_descr')))
+        nb_pnl_wheel.AddSpacer(PAD_xl)
 
-        self.wheel_pitch = LabeledSpinCtrl(self.nb_pnl_wheel, name = "Wheel Tilt (Degrees)", min=-30, max=120, size=(120,-1))
-        self.nb_pnl_wheel.Add(self.wheel_pitch, flag=wx.EXPAND)
-        self.nb_pnl_wheel.AddSpacer(PAD_sm)
+        wheel_pitch = LabeledSpinCtrl(nb_pnl_wheel, name=_I('cfg.wheel_pitch'), min=-30, max=120)
+        nb_pnl_wheel.Add(wheel_pitch, flag=wx.EXPAND)
+        nb_pnl_wheel.AddSpacer(PAD_sm)
 
-        self.wheel_alpha = LabeledSpinCtrl(self.nb_pnl_wheel, name = "Wheel Alpha (%)", max=100, size=(120,-1))
-        self.wheel_transparent_center_box = wx.CheckBox(self.nb_pnl_wheel, label='Wheel becomes transparent while looking at it')
-        self.nb_pnl_wheel.Add(self.wheel_alpha, flag=wx.EXPAND)
-        self.nb_pnl_wheel.AddSpacer(PAD_sm)
-        self.nb_pnl_wheel.Add(self.wheel_transparent_center_box)
-        self.nb_pnl_wheel.AddSpacer(PAD_xl)
+        wheel_alpha = LabeledSpinCtrl(nb_pnl_wheel, name=_I('cfg.wheel_alpha'), max=100)
+        wheel_transparent_center_box = wx.CheckBox(nb_pnl_wheel, label=_I('cfg.wheel_transparent_center_box'))
+        nb_pnl_wheel.Add(wheel_alpha, flag=wx.EXPAND)
+        nb_pnl_wheel.AddSpacer(PAD_sm)
+        nb_pnl_wheel.Add(wheel_transparent_center_box)
+        nb_pnl_wheel.AddSpacer(PAD_xl)
 
-        self.wheel_centering = HelperPanel(self.nb_pnl_wheel, FRAME_PAD, label="Wheel Centering")
-        self.nb_pnl_wheel.Add(self.wheel_centering, flag=wx.EXPAND)
+        wheel_centering = HelperPanel(nb_pnl_wheel, FRAME_PAD, label=_I('cfg.wheel_centering'))
+        nb_pnl_wheel.Add(wheel_centering, flag=wx.EXPAND)
 
-        self.wheel_centerforce = LabeledSpinCtrl(self.wheel_centering, name = "Center Force (%)", max=10000, size=(120,-1))
-        self.wheel_ffb = wx.CheckBox(self.wheel_centering, label="Use Force Feedback to center the wheel")
-        self.wheel_ffb_haptic = wx.CheckBox(self.wheel_centering, label="Force Feedback haptic on bumpy roads")
-        self.wheel_centering.Add(self.wheel_centerforce, flag=wx.EXPAND)
-        self.wheel_centering.AddSpacer(PAD_lg)
-        self.wheel_centering.Add(self.wheel_ffb)
-        self.wheel_centering.Add(self.wheel_ffb_haptic)
-        self.nb_pnl_wheel.AddSpacer(PAD_xl)
+        wheel_centerforce = LabeledSpinCtrl(wheel_centering, name=_I('cfg.wheel_centerforce') , max=10000)
+        wheel_ffb = wx.CheckBox(wheel_centering, label=_I('cfg.wheel_ffb'))
+        wheel_ffb_haptic = wx.CheckBox(wheel_centering, label=_I('cfg.wheel_ffb_haptic'))
+        wheel_centering.Add(wheel_centerforce, flag=wx.EXPAND)
+        wheel_centering.AddSpacer(PAD_lg)
+        wheel_centering.Add(wheel_ffb)
+        wheel_centering.Add(wheel_ffb_haptic)
+        nb_pnl_wheel.AddSpacer(PAD_xl)
 
-        self.wheel_grab_behavior = HelperPanel(self.nb_pnl_wheel, FRAME_PAD, label="Grab Behavior")
-        self.nb_pnl_wheel.Add(self.wheel_grab_behavior, flag=wx.EXPAND)
+        wheel_grab_behavior = HelperPanel(nb_pnl_wheel, FRAME_PAD, label=_I('cfg.wheel_grab_behavior'))
+        nb_pnl_wheel.Add(wheel_grab_behavior, flag=wx.EXPAND)
 
-        self.wheel_grabbed_by_grip_box = wx.CheckBox(self.wheel_grab_behavior, label='Manual wheel grabbing')
-        self.wheel_grabbed_by_grip_box_toggle = wx.CheckBox(self.wheel_grab_behavior, label='Grabbing object is NOT toggle')
-        self.wheel_grab_behavior.Add(self.wheel_grabbed_by_grip_box)
-        self.wheel_grab_behavior.Add(self.wheel_grabbed_by_grip_box_toggle)
+        wheel_grabbed_by_grip_box = wx.CheckBox(wheel_grab_behavior, label=_I('cfg.wheel_grabbed_by_grip_box'))
+        wheel_grabbed_by_grip_box_toggle = wx.CheckBox(wheel_grab_behavior, label=_I('cfg.wheel_grabbed_by_grip_box_toggle'))
+        wheel_grab_behavior.Add(wheel_grabbed_by_grip_box)
+        wheel_grab_behavior.Add(wheel_grabbed_by_grip_box_toggle)
 
         ## Shifter page
-        self.nb_pnl_shifter = HelperPanel(self.nb, PAGE_PAD)
-        self.nb.AddPage(self.nb_pnl_shifter, " H Shifter ")
+        nb_pnl_shifter = HelperPanel(nb, PAGE_PAD)
+        nb.AddPage(nb_pnl_shifter, _I(" {cfg.shifter} "))
 
-        self.shifter_degree = LabeledSpinCtrl(self.nb_pnl_shifter, is_double=True, name="Shifter Tilt (Degrees)", inc=0.1, min=0.0, max=30.0, size=(120,-1))
-        self.nb_pnl_shifter.Add(self.shifter_degree, flag=wx.EXPAND)
-        self.nb_pnl_shifter.AddSpacer(PAD_sm)
+        shifter_degree = LabeledSpinCtrl(nb_pnl_shifter, is_double=True, name=_I('cfg.shifter_degree'), \
+            inc=0.1, min=0.0, max=30.0)
+        nb_pnl_shifter.Add(shifter_degree, flag=wx.EXPAND)
+        nb_pnl_shifter.AddSpacer(PAD_sm)
 
-        self.shifter_alpha = LabeledSpinCtrl(self.nb_pnl_shifter, name = "Shifter Alpha (%)", min=0, max=100, size=(120,-1))
-        self.nb_pnl_shifter.Add(self.shifter_alpha, flag=wx.EXPAND)
-        self.nb_pnl_shifter.AddSpacer(PAD_sm)
+        shifter_alpha = LabeledSpinCtrl(nb_pnl_shifter, name=_I('cfg.shifter_alpha'), min=0, max=100)
+        nb_pnl_shifter.Add(shifter_alpha, flag=wx.EXPAND)
+        nb_pnl_shifter.AddSpacer(PAD_sm)
 
-        self.shifter_scale = LabeledSpinCtrl(self.nb_pnl_shifter, name = "Shifter Height Scale (%)", min=10, max=100, size=(120,-1))
-        self.nb_pnl_shifter.Add(self.shifter_scale, flag=wx.EXPAND)
-        self.nb_pnl_shifter.Add(
-            HelperText(self.nb_pnl_shifter, is_muted=True, label="Height Scale 100%=Truck Height Scale 30%=General"))
-        self.nb_pnl_shifter.AddSpacer(PAD_xl)
+        shifter_scale = LabeledSpinCtrl(nb_pnl_shifter, name=_I('cfg.shifter_scale'), min=10, max=100)
+        nb_pnl_shifter.Add(shifter_scale, flag=wx.EXPAND)
+        nb_pnl_shifter.AddSpacer(PAD_sm)
+        nb_pnl_shifter.Add(
+            HelperText(nb_pnl_shifter, is_muted=True, label=_I('cfg.shifter_scale_descr')))
+        nb_pnl_shifter.AddSpacer(PAD_xl)
         
-        self.shifter_sequential = wx.CheckBox(self.nb_pnl_shifter, label="Sequential mode")
-        self.nb_pnl_shifter.Add(self.shifter_sequential)
-        self.nb_pnl_shifter.AddSpacer(PAD_xl)
+        shifter_sequential = wx.CheckBox(nb_pnl_shifter, label=_I('cfg.shifter_sequential'))
+        nb_pnl_shifter.Add(shifter_sequential)
+        nb_pnl_shifter.AddSpacer(PAD_xl)
 
-        shifter_rev = HelperPanel(self.nb_pnl_shifter, FRAME_PAD, vertical=False, label="Reverse Position")
-        self.nb_pnl_shifter.Add(shifter_rev, flag=wx.EXPAND)
+        shifter_rev = HelperPanel(nb_pnl_shifter, FRAME_PAD, vertical=False, label=_I('cfg.shifter_rev'))
+        nb_pnl_shifter.Add(shifter_rev, flag=wx.EXPAND)
 
-        shifter_rev_tl = wx.RadioButton(shifter_rev, name="Top Left", label="Top Left", style=wx.RB_GROUP)
-        shifter_rev_tr = wx.RadioButton(shifter_rev, name="Top Right", label="Top Right")
-        shifter_rev_bl = wx.RadioButton(shifter_rev, name="Bottom Left", label="Bottom Left")
-        shifter_rev_br = wx.RadioButton(shifter_rev, name="Bottom Right", label="Bottom Right")
+        shifter_rev_tl = wx.RadioButton(shifter_rev, name="Top Left", label=_I('cfg.shifter_rev_tl'), style=wx.RB_GROUP)
+        shifter_rev_tr = wx.RadioButton(shifter_rev, name="Top Right", label=_I('cfg.shifter_rev_tr'))
+        shifter_rev_bl = wx.RadioButton(shifter_rev, name="Bottom Left", label=_I('cfg.shifter_rev_bl'))
+        shifter_rev_br = wx.RadioButton(shifter_rev, name="Bottom Right", label=_I('cfg.shifter_rev_br'))
         shifter_rev.Add(shifter_rev_tl); shifter_rev.AddSpacer(6)
         shifter_rev.Add(shifter_rev_tr); shifter_rev.AddSpacer(6)
         shifter_rev.Add(shifter_rev_bl); shifter_rev.AddSpacer(6)
         shifter_rev.Add(shifter_rev_br)
 
         ## Bike page
-        self.nb_pnl_bike = HelperPanel(self.nb, PAGE_PAD)
-        self.nb.AddPage(self.nb_pnl_bike, " Bike ")
+        nb_pnl_bike = HelperPanel(nb, PAGE_PAD)
+        nb.AddPage(nb_pnl_bike, _I(" {cfg.bike} "))
+        self.nb_advanced_pages.append([nb_pnl_bike, _I(" {cfg.bike} ")])
 
-        self.bike_show_handlebar = wx.CheckBox(self.nb_pnl_bike, label="Show Handlebar Overlay")
-        self.bike_show_hands = wx.CheckBox(self.nb_pnl_bike, label="Show Hands Overlay")
-        self.bike_use_ac_server = wx.CheckBox(self.nb_pnl_bike, label="Use Assetto Corsa telemetry to calibrate max lean")
-        self.nb_pnl_bike.Add(self.bike_show_handlebar)
-        self.nb_pnl_bike.Add(self.bike_show_hands)
-        self.nb_pnl_bike.Add(self.bike_use_ac_server)
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
+        bike_show_handlebar = wx.CheckBox(nb_pnl_bike, label=_I('cfg.bike_show_handlebar'))
+        bike_show_hands = wx.CheckBox(nb_pnl_bike, label=_I('cfg.bike_show_hands'))
+        bike_use_ac_server = wx.CheckBox(nb_pnl_bike, label=_I('cfg.bike_use_ac_server'))
+        nb_pnl_bike.Add(bike_show_handlebar)
+        nb_pnl_bike.Add(bike_show_hands)
+        nb_pnl_bike.Add(bike_use_ac_server)
+        nb_pnl_bike.AddSpacer(PAD_sm)
 
-        self.bike_max_lean = LabeledSpinCtrl(self.nb_pnl_bike, name="Lean Angle (Degrees)", min=0, max=90, size=(120,-1))
-        self.bike_max_steer = LabeledSpinCtrl(self.nb_pnl_bike, name="Max Steer (Degrees)", min=0, max=90, size=(120,-1))
-        self.bike_throttle_sensitivity = LabeledSpinCtrl(self.nb_pnl_bike, name="Throttle Sensitivity (%)", min=1, max=10000, size=(120,-1))
-        self.bike_throttle_decrease_per_sec = LabeledSpinCtrl(self.nb_pnl_bike, name="Throttle Decrease per Second (%)", min=0, max=10000, size=(120,-1))
-        self.nb_pnl_bike.Add(self.bike_max_lean, flag=wx.EXPAND)
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
-        self.nb_pnl_bike.Add(self.bike_max_steer, flag=wx.EXPAND)
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
-        self.nb_pnl_bike.Add(self.bike_throttle_sensitivity, flag=wx.EXPAND)
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
-        self.nb_pnl_bike.Add(self.bike_throttle_decrease_per_sec, flag=wx.EXPAND)
-        self.nb_pnl_bike.AddSpacer(PAD_m)
+        bike_max_lean = LabeledSpinCtrl(nb_pnl_bike, name=_I('cfg.bike_max_lean'), min=0, max=90)
+        bike_max_steer = LabeledSpinCtrl(nb_pnl_bike, name=_I('cfg.bike_max_steer'), min=0, max=90)
+        bike_throttle_sensitivity = LabeledSpinCtrl(nb_pnl_bike, name=_I('cfg.bike_throttle_sensitivity'), min=1, max=10000)
+        bike_throttle_decrease_per_sec = LabeledSpinCtrl(nb_pnl_bike, name=_I('cfg.bike_throttle_decrease_per_sec'), min=0, max=10000)
+        nb_pnl_bike.Add(bike_max_lean, flag=wx.EXPAND)
+        nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(bike_max_steer, flag=wx.EXPAND)
+        nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(bike_throttle_sensitivity, flag=wx.EXPAND)
+        nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(bike_throttle_decrease_per_sec, flag=wx.EXPAND)
+        nb_pnl_bike.AddSpacer(PAD_m)
         
-        self.bike_mode_absolute_radio = wx.RadioButton(self.nb_pnl_bike, name="Absolute", label="Use Absolute Positioning", style=wx.RB_GROUP)
-        self.bike_mode_relative_radio = wx.RadioButton(self.nb_pnl_bike, name="Relative", label="Use Relative Positioning")
+        bike_mode_absolute_radio = wx.RadioButton(nb_pnl_bike, name="Absolute", label=_I('cfg.bike_mode_absolute_radio'), style=wx.RB_GROUP)
+        bike_mode_relative_radio = wx.RadioButton(nb_pnl_bike, name="Relative", label=_I('cfg.bike_mode_relative_radio'))
 
         ### Absolute box
-        self.nb_pnl_bike.Add(self.bike_mode_absolute_radio)
-        self.nb_pnl_bike.Add(
-            HelperText(self.nb_pnl_bike, is_muted=True, label="Position of hands determines the lean angle"))
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(bike_mode_absolute_radio)
+        nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(
+            HelperText(nb_pnl_bike, is_muted=True, label=_I('cfg.bike_mode_absolute_radio_descr')))
+        nb_pnl_bike.AddSpacer(PAD_sm)
 
-        self.bike_absolute_box = HelperPanel(self.nb_pnl_bike, FRAME_PAD, label="Absolute Mode")
+        bike_absolute_box = HelperPanel(nb_pnl_bike, FRAME_PAD, label=_I('cfg.bike_absolute_box'))
 
-        self.bike_handlebar_height = LabeledSpinCtrl(self.bike_absolute_box, name="Handlebar Height (cm)", min=50, max=300, size=(120,-1))
-        self.bike_absolute_box.Add(self.bike_handlebar_height, flag=wx.EXPAND)
-        self.bike_absolute_box.Add(
-            HelperText(self.bike_absolute_box, is_muted=True, label="In-game bike model handlebar's height from the floor"))
+        bike_handlebar_height = LabeledSpinCtrl(bike_absolute_box, name=_I('cfg.bike_handlebar_height'), min=50, max=300)
+        bike_absolute_box.Add(bike_handlebar_height, flag=wx.EXPAND)
+        bike_absolute_box.AddSpacer(PAD_sm)
+        bike_absolute_box.Add(
+            HelperText(bike_absolute_box, is_muted=True, label=_I('cfg.bike_handlebar_height_descr')))
 
-        self.nb_pnl_bike.Add(self.bike_absolute_box, flag=wx.EXPAND)
+        nb_pnl_bike.Add(bike_absolute_box, flag=wx.EXPAND)
 
         ### Relative box
-        self.nb_pnl_bike.AddSpacer(PAD_m)
-        self.nb_pnl_bike.Add(self.bike_mode_relative_radio)
-        self.nb_pnl_bike.Add(
-            HelperText(self.nb_pnl_bike, is_muted=True, label="Angle between two hands determine the lean angle"))
-        self.nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.AddSpacer(PAD_m)
+        nb_pnl_bike.Add(bike_mode_relative_radio)
+        nb_pnl_bike.AddSpacer(PAD_sm)
+        nb_pnl_bike.Add(
+            HelperText(nb_pnl_bike, is_muted=True, label=_I('cfg.bike_mode_relative_radio_descr')))
+        nb_pnl_bike.AddSpacer(PAD_sm)
 
-        self.bike_relative_box = HelperPanel(self.nb_pnl_bike, FRAME_PAD, label="Relative Mode")
-        self.bike_relative_sensitivity = LabeledSpinCtrl(self.bike_relative_box, name="Relative Sensitivity (%)", min=1, max=10000, size=(120,-1))
-        self.bike_relative_box.Add(self.bike_relative_sensitivity, flag=wx.EXPAND)
+        bike_relative_box = HelperPanel(nb_pnl_bike, FRAME_PAD, label=_I('cfg.bike_relative_box'))
+        bike_relative_sensitivity = LabeledSpinCtrl(bike_relative_box, name=_I('cfg.bike_relative_sensitivity'), min=1, max=10000)
+        bike_relative_box.Add(bike_relative_sensitivity, flag=wx.EXPAND)
 
-        self.nb_pnl_bike.Add(self.bike_relative_box, flag=wx.EXPAND)
+        nb_pnl_bike.Add(bike_relative_box, flag=wx.EXPAND)
+
+        # Advanced
+        self.pnl.AddSpacer(PAD_sm * 2)
+        advanced_mode = wx.CheckBox(self.pnl, label=_I("cfg.advanced_mode"))
+        self.advanced_mode = advanced_mode
+        self.pnl.Add(advanced_mode, flag=wx.ALIGN_RIGHT)
+
+        ## Advanced page
+        nb_pnl_advanced = HelperPanel(nb, PAGE_PAD)
+        nb.AddPage(nb_pnl_advanced, _I(" {cfg.advanced} "))
+        self.nb_advanced_pages.append([nb_pnl_advanced, _I(" {cfg.advanced} ")])
+
+        nb_pnl_advanced.Add(
+            HelperText(nb_pnl_advanced, is_muted=True, label=_I('cfg.advanced_descr')),
+            flag=wx.ALIGN_CENTER)
+        nb_pnl_advanced.AddSpacer(PAD_m)
+        adv_vjoy_device = LabeledSpinCtrl(nb_pnl_advanced, name='adv_vjoy_device', min=1, max=16)
+        nb_pnl_advanced.Add(adv_vjoy_device, flag=wx.EXPAND)
+        # TODO add button constants (mapping) to advanced so that user can change
+        #      the ids used for toggling splitter or range on shifter knob or other buttons ids as well
 
         # BINDINGS
 
@@ -404,52 +441,56 @@ class ConfiguratorApp:
         self.profile_open_dir.Bind(wx.EVT_BUTTON, self.profile_buttons)
 
         # General
-        self.bind("trigger_pre_press_button", self.trigger_pre_btn_box)
-        self.bind("trigger_press_button", self.trigger_btn_box)
-        self.bind("multibutton_trackpad", self.multibutton_trackpad_box)
-        self.bind("sfx_volume", self.sfx_volume)
-        self.bind("haptic_intensity", self.haptic_intensity)
+        self.bind("trigger_pre_press_button", trigger_pre_btn_box)
+        self.bind("trigger_press_button", trigger_btn_box)
+        self.bind("multibutton_trackpad", multibutton_trackpad_box)
+        self.bind("sfx_volume", sfx_volume)
+        self.bind("haptic_intensity", haptic_intensity)
 
         ## Joystick button or axis
-        self.bind("j_l_left_button", self.j_l_left_button)
-        self.bind("j_l_right_button", self.j_l_right_button)
-        self.bind("j_l_up_button", self.j_l_up_button)
-        self.bind("j_l_down_button", self.j_l_down_button)
-        self.bind("j_r_left_button", self.j_r_left_button)
-        self.bind("j_r_right_button", self.j_r_right_button)
-        self.bind("j_r_up_button", self.j_r_up_button)
-        self.bind("j_r_down_button", self.j_r_down_button)
-        self.bind("axis_deadzone", self.axis_deadzone)
+        self.bind("j_l_left_button", j_l_left_button)
+        self.bind("j_l_right_button", j_l_right_button)
+        self.bind("j_l_up_button", j_l_up_button)
+        self.bind("j_l_down_button", j_l_down_button)
+        self.bind("j_r_left_button", j_r_left_button)
+        self.bind("j_r_right_button", j_r_right_button)
+        self.bind("j_r_up_button", j_r_up_button)
+        self.bind("j_r_down_button", j_r_down_button)
+        self.bind("axis_deadzone", axis_deadzone)
 
         # Wheel
-        self.bind("wheel_grabbed_by_grip", self.wheel_grabbed_by_grip_box)
-        self.bind("wheel_grabbed_by_grip_toggle", self.wheel_grabbed_by_grip_box_toggle)
-        self.bind("wheel_degrees", self.wheel_degrees)
-        self.bind("wheel_centerforce", self.wheel_centerforce)
-        self.bind("wheel_ffb", self.wheel_ffb)
-        self.bind("wheel_ffb_haptic", self.wheel_ffb_haptic)
-        self.bind("wheel_pitch", self.wheel_pitch)
-        self.bind("wheel_alpha", self.wheel_alpha)
-        self.bind("wheel_transparent_center", self.wheel_transparent_center_box)
+        self.bind("wheel_grabbed_by_grip", wheel_grabbed_by_grip_box)
+        self.bind("wheel_grabbed_by_grip_toggle", wheel_grabbed_by_grip_box_toggle)
+        self.bind("wheel_degrees", wheel_degrees)
+        self.bind("wheel_centerforce", wheel_centerforce)
+        self.bind("wheel_ffb", wheel_ffb)
+        self.bind("wheel_ffb_haptic", wheel_ffb_haptic)
+        self.bind("wheel_pitch", wheel_pitch)
+        self.bind("wheel_alpha", wheel_alpha)
+        self.bind("wheel_transparent_center", wheel_transparent_center_box)
 
-        ## Shifter
-        self.bind("shifter_degree", self.shifter_degree)
-        self.bind("shifter_alpha", self.shifter_alpha)
-        self.bind("shifter_scale", self.shifter_scale)
-        self.bind("shifter_sequential", self.shifter_sequential)
+        # Shifter
+        self.bind("shifter_degree", shifter_degree)
+        self.bind("shifter_alpha", shifter_alpha)
+        self.bind("shifter_scale", shifter_scale)
+        self.bind("shifter_sequential", shifter_sequential)
         self.bind("shifter_reverse_orientation", [shifter_rev_tl, shifter_rev_tr, shifter_rev_bl, shifter_rev_br])
 
         # Bike
-        self.bind("bike_show_handlebar", self.bike_show_handlebar)
-        self.bind("bike_show_hands", self.bike_show_hands)
-        self.bind("bike_use_ac_server", self.bike_use_ac_server)
-        self.bind("bike_handlebar_height", self.bike_handlebar_height)
-        self.bind("bike_max_lean", self.bike_max_lean)
-        self.bind("bike_max_steer", self.bike_max_steer)
-        self.bind("bike_throttle_sensitivity", self.bike_throttle_sensitivity)
-        self.bind("bike_throttle_decrease_per_sec", self.bike_throttle_decrease_per_sec)
-        self.bind("bike_relative_sensitivity", self.bike_relative_sensitivity)
-        self.bind("bike_mode", [self.bike_mode_absolute_radio, self.bike_mode_relative_radio])
+        self.bind("bike_show_handlebar", bike_show_handlebar)
+        self.bind("bike_show_hands", bike_show_hands)
+        self.bind("bike_use_ac_server", bike_use_ac_server)
+        self.bind("bike_handlebar_height", bike_handlebar_height)
+        self.bind("bike_max_lean", bike_max_lean)
+        self.bind("bike_max_steer", bike_max_steer)
+        self.bind("bike_throttle_sensitivity", bike_throttle_sensitivity)
+        self.bind("bike_throttle_decrease_per_sec", bike_throttle_decrease_per_sec)
+        self.bind("bike_relative_sensitivity", bike_relative_sensitivity)
+        self.bind("bike_mode", [bike_mode_absolute_radio, bike_mode_relative_radio])
+
+        # Advanced
+        self.bind("advanced_mode", advanced_mode)
+        self.bind("adv_vjoy_device", adv_vjoy_device)
 
         no_binds = set(DEFAULT_CONFIG.keys()) - set(self._config_map.keys())
         #print(no_binds)
@@ -460,6 +501,10 @@ class ConfiguratorApp:
 
         self.window.Show(True)
         self.read_config()
+
+        # Bind advanced mode
+        self.read_advanced_mode()
+        advanced_mode.Bind(wx.EVT_CHECKBOX, self.on_advanced_mode)
 
     def bind(self, key, ctrl):
 
@@ -489,9 +534,27 @@ class ConfiguratorApp:
         else:
             raise ValueError("Control type not supported")
 
+    def on_advanced_mode(self, event):
+        self.read_advanced_mode()
+        event.Skip()
+
+    def read_advanced_mode(self):
+        on = self.advanced_mode.GetValue()
+
+        for page, label in self.nb_advanced_pages:
+            i = self.nb.FindPage(page)
+            if on == True and i == wx.NOT_FOUND:
+                self.nb.AddPage(page, label)
+            elif on == False:
+                self.nb.RemovePage(i)
+
     def read_config(self):
         try:
             self.config = PadConfig()
+            
+        except FileNotFoundError:
+            self.config = PadConfig(load_defaults=True)
+
         except ConfigException as e:
             msg = "Config error: {}. Load defaults?".format(e)
             dlg = wx.MessageDialog(self.pnl, msg, "Config Error", wx.YES_NO | wx.ICON_QUESTION)
@@ -556,6 +619,7 @@ class ConfiguratorApp:
         p = self.profile_combo.GetValue()
         if p != "":
             self.config.save_to_profile(p)
+        event.Skip()
 
     def profile_change(self, event):
         cb = event.GetEventObject()
