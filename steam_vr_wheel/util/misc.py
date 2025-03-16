@@ -17,3 +17,12 @@ def is_array(ary):
 
 def expand_to_array(item):
     return item if is_array(item) else [item]
+
+def deep_get(dictionary, keys, default=None):
+    """Safely get a nested value from a dictionary."""
+    for key in keys:
+        if isinstance(dictionary, dict):
+            dictionary = dictionary.get(key, default)
+        else:
+            return default
+    return dictionary

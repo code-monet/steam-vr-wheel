@@ -91,7 +91,7 @@ class HelperPanel(wx.Panel):
 class HelperText(wx.StaticText):
     def __init__(self, parent, is_muted=False, label="Label", *args, **kwargs):
 
-        label = "\n".join(a.strip() for a in label.split("\n"))
+        #label = "\n".join(a.strip() for a in label.split("\n"))
 
         super().__init__(parent, label=label, *args, **kwargs)
 
@@ -168,6 +168,8 @@ PAD_sm = 4
 PAD_m = 12
 PAD_lg = 18
 PAD_xl = 30
+PAGE_PAD = (16, 12, 30, 12)
+FRAME_PAD = (12, 8, 16, 8)
 
 class ConfiguratorApp:
 
@@ -190,13 +192,15 @@ class ConfiguratorApp:
         self.nb_advanced_pages = []
 
         #
-        pnl_general = HelperPanel(self.pnl, (PAD_m, 8))
-        self.pnl.Add(pnl_general, flag=wx.EXPAND)
+        self.pnl.AddSpacer(PAD_m)
 
-        pnl_general.Add(wx.StaticText(pnl_general, label=_I("{cfg.selected_profile}")))
+        pnl_header = HelperPanel(self.pnl, (0, PAD_sm * 2))
+        self.pnl.Add(pnl_header, flag=wx.EXPAND)
 
-        pnl_profile_buttons = HelperPanel(pnl_general, vertical=False)
-        pnl_general.Add(pnl_profile_buttons, flag=wx.EXPAND)
+        pnl_header.Add(wx.StaticText(pnl_header, label=_I("{cfg.selected_profile}")))
+
+        pnl_profile_buttons = HelperPanel(pnl_header, vertical=False)
+        pnl_header.Add(pnl_profile_buttons, flag=wx.EXPAND)
 
         self.profile_combo = wx.ComboBox(pnl_profile_buttons, style=wx.CB_READONLY, size=(160,24))
         pnl_profile_buttons.Add(self.profile_combo)
@@ -209,7 +213,10 @@ class ConfiguratorApp:
         pnl_profile_buttons.Add(self.profile_open_dir)
         pnl_profile_buttons.Add(self.profile_delete)
 
-        pnl_general.AddSpacer(PAD_lg)
+        pnl_header.AddSpacer(PAD_lg)
+
+        pnl_general = HelperPanel(pnl_header, FRAME_PAD, label=_I('cfg.general'))
+        pnl_header.Add(pnl_general, flag=wx.EXPAND)
 
         trigger_pre_btn_box = wx.CheckBox(pnl_general, label=_I('cfg.trigger_pre_btn_box'))
         trigger_btn_box = wx.CheckBox(pnl_general, label=_I('cfg.trigger_btn_box'))
@@ -224,10 +231,10 @@ class ConfiguratorApp:
         haptic_intensity = LabeledSpinCtrl(pnl_general, name=_I('cfg.haptic_intensity'), min=0, max=200)
         pnl_general.Add(haptic_intensity, flag=wx.EXPAND)
 
+        self.pnl.AddSpacer(PAD_m)
+
         ## Joystick button or axis
 
-        PAGE_PAD = (16, 12, 30, 12)
-        FRAME_PAD = (12, 8, 16, 8)
         nb = wx.Notebook(self.pnl, style=wx.NB_MULTILINE)
         self.nb = nb
         self.pnl.Add(nb, flag=wx.EXPAND)
@@ -282,7 +289,8 @@ class ConfiguratorApp:
         nb_pnl_wheel.Add(wheel_degrees, flag=wx.EXPAND)
         nb_pnl_wheel.AddSpacer(PAD_sm)
         nb_pnl_wheel.Add(
-            HelperText(nb_pnl_wheel, is_muted=True, label=_I('cfg.wheel_degrees_descr')))
+            HelperText(nb_pnl_wheel, is_muted=True, label=_I('{cfg.wheel_degrees_descr}  ')),
+            flag=wx.ALIGN_CENTER)
         nb_pnl_wheel.AddSpacer(PAD_xl)
 
         wheel_pitch = LabeledSpinCtrl(nb_pnl_wheel, name=_I('cfg.wheel_pitch'), min=-30, max=120)
@@ -333,7 +341,8 @@ class ConfiguratorApp:
         nb_pnl_shifter.Add(shifter_scale, flag=wx.EXPAND)
         nb_pnl_shifter.AddSpacer(PAD_sm)
         nb_pnl_shifter.Add(
-            HelperText(nb_pnl_shifter, is_muted=True, label=_I('cfg.shifter_scale_descr')))
+            HelperText(nb_pnl_shifter, is_muted=True, label=_I('{cfg.shifter_scale_descr}  ')),
+            flag=wx.ALIGN_CENTER)
         nb_pnl_shifter.AddSpacer(PAD_xl)
         
         shifter_sequential = wx.CheckBox(nb_pnl_shifter, label=_I('cfg.shifter_sequential'))

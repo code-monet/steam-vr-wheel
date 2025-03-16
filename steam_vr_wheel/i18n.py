@@ -10,7 +10,48 @@ DEFAULT_LOCALE = 'en'
 LOCALE = {}
 
 def trim(text):
-    return "\n".join(a.strip() for a in text.split("\n"))
+    lines = text.splitlines()
+    
+    # Remove leading and trailing blank (or whitespace-only) lines.
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    
+    # If no lines remain, return an empty string.
+    if not lines:
+        return ""
+    
+    # Compute the common whitespace prefix from non-empty lines.
+    non_empty = [line for line in lines if line.strip()]
+    common_prefix = None
+    for line in non_empty:
+        # Get the leading whitespace of the line.
+        prefix = line[:len(line) - len(line.lstrip())]
+        if common_prefix is None:
+            common_prefix = prefix
+        else:
+            # Shorten common_prefix to the shared prefix of itself and the current line.
+            new_prefix = ""
+            for cp_char, p_char in zip(common_prefix, prefix):
+                if cp_char == p_char:
+                    new_prefix += cp_char
+                else:
+                    break
+            common_prefix = new_prefix
+
+    # Remove the common prefix from all lines if present.
+    trimmed_lines = []
+    for line in lines:
+        if common_prefix == '':
+            trimmed_lines.append(line.lstrip())
+        elif line.startswith(common_prefix):
+            trimmed_lines.append(line[len(common_prefix):])
+        else:
+            trimmed_lines.append(line)
+    
+    return "\n".join(trimmed_lines)
+
 
 def replace_keys_in_text(text):
     
@@ -20,7 +61,7 @@ def replace_keys_in_text(text):
         if lang_code not in l:
             c = DEFAULT_LOCALE
 
-        return trim(l[c])
+        return l[c]
 
     if text in LOCALE:
         return getter(text)
@@ -42,76 +83,141 @@ def _I(*args):
 LOCALE = {
     'intro.main': {
         'en': """
----------------------
+        ---------------------
 
-Required vJoy version: v2.1.9.1
-Open Configure vJoy
-    - Select vJoy device :   1
-    - Number of buttons  :   64
-    - Axes               :   all enabled
-    - POVs               :   Continuous 0
-    - Force Feedback     :   Enable Effects and check all
+        Required vJoy version: v2.1.9.1
+        Open Configure vJoy
+            - Select vJoy device :   1
+            - Number of buttons  :   64
+            - Axes               :   all enabled
+            - POVs               :   Continuous 0
+            - Force Feedback     :   Enable Effects and check all
 
-Triple grips both hands     -     enter edit mode
+        Triple grips both hands     -     enter edit mode
 
----------------------
+        ---------------------
         """,
         'ko': """
----------------------
+        ---------------------
 
-필요한 vJoy 버전: v2.1.9.1
-Configure vJoy 실행 후 아래와 같이 설정
-    - vJoy device 선택    :   1
-    - Number of buttons  :   64
-    - Axes               :   모두 선택
-    - POVs               :   Continuous 0
-    - Force Feedback     :   Enable Effects을 포함해 모두 선택
+        필요한 vJoy 버전: v2.1.9.1
+        Configure vJoy 실행 후 아래와 같이 설정
+            - vJoy device 선택    :   1
+            - Number of buttons  :   64
+            - Axes               :   모두 선택
+            - POVs               :   Continuous 0
+            - Force Feedback     :   Enable Effects을 포함해 모두 선택
 
-양 손의 그립 버튼 동시에 세번 누르기     -     편집 모드
+        양 손의 그립 버튼 동시에 세번 누르기     -     편집 모드
 
----------------------
+        ---------------------
+        """,
+        'ja': """
+        ---------------------
+
+        必要なvJoyのバージョン: v2.1.9.1
+        Configure vJoyを開き、以下のように設定してください:
+            - vJoy device 選択    :   1
+            - Number of buttons  :   64
+            - Axes               :   すべて有効
+            - POVs               :   Continuous 0
+            - Force Feedback     :   Enable Effectsを有効にし、すべてチェック
+
+        両手でグリップボタンを三回同時に押すと、編集モードに入ります
+
+        ---------------------
         """
     },
     'intro.wheel': {
         'en': """
+        ----- How to use Wheel -----
 
+        Press 'Grip' button to grab Wheel or Shifter
+        While you are grabbing the Shifter's knob
+            - Press A or Y        :     toggle splitter
+            - Push joystick up    :     select range high
+            - Push joystick down  :     select range low
+            - Press 'Trigger' to unlock the reverse gear
+
+        ----------------------------
         """,
+        'ko': """
+        ----- 핸들 사용법 -----
+        
+        '그립' 버튼을 눌러서 핸들이나 변속기를 잡을 수 있습니다
+        변속기를 잡고 있을 때
+            - A or Y 클릭        :     스플리터 토글
+            - 조이스틱 위로 밀기    :     high 레인지 선택
+            - 조이스틱 아래로 밀기  :     low 레인지 선택
+            - '트리거'를 눌러서 후진 기어 락 해제
+
+        -----------------------
+        """,
+        'ja': """
+        ----- ハンドルの使い方 -----
+
+        「グリップ」ボタンを押して、ハンドルまたはシフターを掴みます。
+        シフターのノブを掴んでいる間に：
+            - A または Y を押す     :  スプリッターの切替
+            - ジョイスティックを上に押す  :  高レンジを選択
+            - ジョイスティックを下に押す  :  低レンジを選択
+            - 「トリガー」を押して、リバースギアのロックを解除
+
+        ----------------------------
+        """
     },
     'intro.wheel.edit_mode': {
         'en': """
------ EDIT MODE -----
+        ----- EDIT MODE -----
 
-Touch wheel + A or X     -     set the X of wheel to 0
-Touch wheel + B or Y     -     change alpha
-Touch shifter + A or X   -     toggle sequential mode
-Touch shifter + B or Y   -     change alpha
+        Touch wheel + A or X     -     set the X of wheel to 0
+        Touch wheel + B or Y     -     change opacity
+        Touch shifter + A or X   -     toggle sequential mode
+        Touch shifter + B or Y   -     change opacity
 
-Grab wheel + joy left-right      -    resize
-Grab wheel + joy up-down         -    pitch
-Grab shifter + joy left-right    -    change tilt
-Grab shifter + joy up-down       -    change height
+        Grab wheel + joy left-right      -    resize
+        Grab wheel + joy up-down         -    pitch
+        Grab shifter + joy left-right    -    change tilt
+        Grab shifter + joy up-down       -    change height
 
-Triple grips both hands  - exit edit mode
+        Triple grips both hands  - exit edit mode
 
----------------------
+        ---------------------
         """,
         'ko': """
------ 편집 모드 -----
+        ----- 편집 모드 -----
 
-핸들 터치 + A or X     -     핸들의 x좌표를 0으로 설정
-핸들 터치 + B or Y     -     투명도 변경
-변속기 터치 + A or X   -     시퀀셜 모드 토글
-변속기 터치 + B or Y   -     투명도 변경
+        핸들 터치 + A or X     -     핸들의 x좌표를 0으로 설정
+        핸들 터치 + B or Y     -     투명도 변경
+        변속기 터치 + A or X   -     시퀀셜 모드 토글
+        변속기 터치 + B or Y   -     투명도 변경
 
-핸들 잡기 + 조이스틱 좌우         -    사이즈 조절
-핸들 잡기 + 조이스틱 상하         -    기울기 조절
-변속기 잡기 + 조이스틱 좌우       -    기울기 조절
-변속기 잡기 + 조이스틱 상하       -    높이 조절
+        핸들 잡기 + 조이스틱 좌우         -    사이즈 조절
+        핸들 잡기 + 조이스틱 상하         -    기울기 조절
+        변속기 잡기 + 조이스틱 좌우       -    기울기 조절
+        변속기 잡기 + 조이스틱 상하       -    높이 조절
 
-양 손의 그립 버튼 동시에 세번 누르기  -   편집 모드 나가기
+        양 손의 그립 버튼 동시에 세번 누르기  -   편집 모드 나가기
 
----------------------
+        ---------------------
         """,
+        'ja': """
+        ----- 編集モード -----
+
+        ハンドルに触れながら A または X を押す    - ハンドルのX座標を0に設定
+        ハンドルに触れながら B または Y を押す    - 透明度を変更
+        シフターに触れながら A または X を押す    - シーケンシャルモードを切替
+        シフターに触れながら B または Y を押す    - 透明度を変更
+
+        ハンドルを掴みながらジョイスティックを左右に動かす   - サイズ調整
+        ハンドルを掴みながらジョイスティックを上下に動かす   - ピッチ調整
+        シフターを掴みながらジョイスティックを左右に動かす  - チルト調整
+        シフターを掴みながらジョイスティックを上下に動かす  - 高さ調整
+
+        両手でグリップボタンを三回同時に押すと、編集モードを終了します
+
+        ---------------------
+        """
     },
     'intro.bike': {
         'en': "!! BIKE is WIP !!"
@@ -135,6 +241,11 @@ Triple grips both hands  - exit edit mode
         'en': "Delete",
         'ko': "삭제",
         'ja': "削除"
+    },
+    'cfg.general': {
+        'en': "General",
+        'ko': "일반",
+        'ja': "一般"
     },
     'cfg.trigger_pre_btn_box': {
         'en': "Button click when you rest finger on triggers",
@@ -174,12 +285,12 @@ Triple grips both hands  - exit edit mode
     'cfg.pnl_joystick_frame_descr': {
         'en': "Checked joystick direction will act as button",
         'ko': "선택된 조이스틱 방향은 버튼이 됩니다",
-        'ja': "選択されたジョイスティックの方向がボタンとして機能します"
+        'ja': "選択されたジョイスティックの方向はボタンとして機能します"
     },
     'cfg.multibutton_trackpad_box': {
         'en': "Joystick has 4 additional click regions",
         'ko': "조이스틱에 4개의 추가 클릭 영역을 할당",
-        'ja': "ジョイスティックには4つの追加クリック領域が割り当てられています"
+        'ja': "ジョイスティックに4つのクリック領域を追加する"
     },
     'cfg.multibutton_trackpad_box_descr': {
         'en': """Joysticks (or trackpads on VIVE) have 4 more buttons registered
@@ -200,8 +311,8 @@ Triple grips both hands  - exit edit mode
         'ja': "ハンドル回転（度）"
     },
     'cfg.wheel_degrees_descr': {
-        'en': "360=F1 540 - 1080=Rally car 1440=Default 900 - 1800=Truck",
-        'ko': "360=F1 540 - 1080=랠리카 1440=기본 900 - 1800=트럭",
+        'en': "360=F1 540-1080=Rally car 1440=Default 900-1800=Truck",
+        'ko': "360=F1 540-1080=랠리카 1440=기본 900-1800=트럭",
         'ja': "360=F1 540-1080=ラリーカー 1440=デフォルト 900-1800=トラック"
     },
     'cfg.wheel_pitch': {
@@ -210,9 +321,9 @@ Triple grips both hands  - exit edit mode
         'ja': "ハンドル傾斜（度）"
     },
     'cfg.wheel_alpha': {
-        'en': "Wheel Alpha (%)",
-        'ko': "핸들 투명도 (%)",
-        'ja': "ハンドル透明度（%）"
+        'en': "Wheel Opacity (%)",
+        'ko': "핸들 불투명도 (%)",
+        'ja': "ハンドル不透明度（%）"
     },
     'cfg.wheel_transparent_center_box': {
         'en': "Wheel becomes transparent while looking at it",
@@ -265,9 +376,9 @@ Triple grips both hands  - exit edit mode
         'ja': "シフター傾斜（度）"
     },
     'cfg.shifter_alpha': {
-        'en': "Shifter Alpha (%)",
-        'ko': "변속기 투명도 (%)",
-        'ja': "シフター透明度（%）"
+        'en': "Shifter Opacity (%)",
+        'ko': "변속기 불투명도 (%)",
+        'ja': "シフター不透明度（%）"
     },
     'cfg.shifter_scale': {
         'en': "Shifter Height Scale (%)",
@@ -395,12 +506,21 @@ Triple grips both hands  - exit edit mode
         'ja': "感度（%）"
     },
     'cfg.advanced_mode': {
-        'en': "Advanced Mode"
+        'en': "Advanced Mode",
+        'ko': "고급 모드",
+        'ja': "詳細設定モード"
     },
     'cfg.advanced': {
-        'en': "Advanced"
+        'en': "Advanced",
+        'ko': "고급",
+        'ja': "詳細設定"
     },
     'cfg.advanced_descr': {
         'en': "Consult the source code for its usage"
     }
 }
+
+for key, val in LOCALE.items():
+    for l, txt in val.items():
+        val[l] = trim(txt)
+        #print(val[l])

@@ -13,97 +13,12 @@ import queue
 import struct
 import mmap
 
-from . import check_result, rotation_matrix, playsound, \
-              Point, bezier_curve, deep_get, perf_time, MEDIA_DIR, IMAGE_DATA
+from . import playsound, perf_time, MEDIA_DIR, IMAGE_DATA
 from steam_vr_wheel._virtualpad import VirtualPad, HandsImage
 from steam_vr_wheel.pyvjoy import HID_USAGE_X, FFB_CTRL, FFBPType, FFBOP
 from steam_vr_wheel.util import *
 from steam_vr_wheel.i18n import _I
 
-def print_matrix(matrix):
-    l = []
-    for i in range(3):
-        ll = []
-        for j in range(4):
-            ll.append(matrix[j])
-        l.append(ll)
-    print(l)
-
-def rotation_matrix_around_vec(theta, vec):
-    theta = theta * np.pi / 180
-    m = sqrt(vec[0]**2 + vec[1]**2 + vec[2]**2)
-    ux = vec[0]/m
-    uy = vec[1]/m
-    uz = vec[2]/m
-    s, c = sin(theta), cos(theta)
-
-    return np.array([[c+ux**2*(1-c), ux*uy*(1-c)-uz*s, ux*uz*(1-c)+uy*s],
-                    [uy*ux*(1-c)+uz*s, c+uy**2*(1-c), uy*uz*(1-c)-ux*s],
-                    [uz*ux*(1-c)-uy*s, uz*uy*(1-c)+ux*s, c+uz**2*(1-c)]])
-
-def initRotationMatrix(axis, angle, matrix=None):
-    # angle in radians
-    if matrix is None:
-        matrix = openvr.HmdMatrix34_t()
-    if axis==0:
-        matrix.m[0][0] = 1.0
-        matrix.m[0][1] = 0.0
-        matrix.m[0][2] = 0.0
-        matrix.m[0][3] = 0.0
-        matrix.m[1][0] = 0.0
-        matrix.m[1][1] = cos(angle)
-        matrix.m[1][2] = -sin(angle)
-        matrix.m[1][3] = 0.0
-        matrix.m[2][0] = 0.0
-        matrix.m[2][1] = sin(angle)
-        matrix.m[2][2] = cos(angle)
-        matrix.m[2][3] = 0.0
-    elif axis==1:
-        matrix.m[0][0] = cos(angle)
-        matrix.m[0][1] = 0.0
-        matrix.m[0][2] = sin(angle)
-        matrix.m[0][3] = 0.0
-        matrix.m[1][0] = 0.0
-        matrix.m[1][1] = 1.0
-        matrix.m[1][2] = 0.0
-        matrix.m[1][3] = 0.0
-        matrix.m[2][0] = -sin(angle)
-        matrix.m[2][1] = 0.0
-        matrix.m[2][2] = cos(angle)
-        matrix.m[2][3] = 0.0
-    elif axis == 2:
-        matrix.m[0][0] = cos(angle)
-        matrix.m[0][1] = -sin(angle)
-        matrix.m[0][2] = 0.0
-        matrix.m[0][3] = 0.0
-        matrix.m[1][0] = sin(angle)
-        matrix.m[1][1] = cos(angle)
-        matrix.m[1][2] = 0.0
-        matrix.m[1][3] = 0.0
-        matrix.m[2][0] = 0.0
-        matrix.m[2][1] = 0.0
-        matrix.m[2][2] = 1.0
-        matrix.m[2][3] = 0.0
-    return matrix
-
-
-def matMul33(a, b, result=None):
-    if result is None:
-        result = openvr.HmdMatrix34_t()
-    for i in range(3):
-        for j in range(3):
-            result.m[i][j] = 0.0
-            for k in range(3):
-                result.m[i][j] += a.m[i][k] * b.m[k][j]
-    result[0][3] = b[0][3]
-    result[1][3] = b[1][3]
-    result[2][3] = b[2][3]
-    return result
-
-def set_transform(tf, mat):
-    for i in range(0, 3):
-        for j in range(0, 4):
-            tf[i][j] = mat[i][j]
 
 class HShifterImage:
     def __init__(self, wheel, x=0.25, y=-0.57, z=-0.15, degree=6, scale=100, alpha=100):
@@ -270,13 +185,16 @@ class HShifterImage:
         self.rescale(scale1)
 
     def rescale(self, scale):
+
+        # Stick width is always 2cm
         stick_width = 0.02
         self.stick_width = stick_width
 
-        # Hardcoded image(texture) dimension
-        txw, txh = 40, 633
+        # Get width and height of texture
+        txw, txh = IMAGE_DATA[self._stick_img][1:3]
+
         stick_height = txh / (txw / stick_width)
-        stick_scale = scale # 1.0 => 31.65cm
+        stick_scale = scale # 1.0 => 31.65cm for default 40x633 dimension
         stick_height *= stick_scale
 
         self.stick_height = stick_height

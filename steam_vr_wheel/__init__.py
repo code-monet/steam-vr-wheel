@@ -11,38 +11,6 @@ from collections import OrderedDict
 import time
 import numpy as np
 
-class Point:
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
-
-def check_result(result):
-    if result:
-        error_name = openvr.VROverlay().getOverlayErrorNameFromEnum(result)
-        raise Exception("OpenVR Error:", error_name)
-
-def rotation_matrix(theta1, theta2, theta3):
-    #https://programming-surgeon.com/en/euler-angle-python-en/
-    c1 = np.cos(theta1 * np.pi / 180)
-    s1 = np.sin(theta1 * np.pi / 180)
-    c2 = np.cos(theta2 * np.pi / 180)
-    s2 = np.sin(theta2 * np.pi / 180)
-    c3 = np.cos(theta3 * np.pi / 180)
-    s3 = np.sin(theta3 * np.pi / 180)
-
-    return np.array([[c2*c3, -c2*s3, s2],
-                         [c1*s3+c3*s1*s2, c1*c3-s1*s2*s3, -c2*s1],
-                         [s1*s3-c1*c3*s2, c3*s1+c1*s2*s3, c1*c2]])
-                         
-def deep_get(dictionary, keys, default=None):
-    """Safely get a nested value from a dictionary."""
-    for key in keys:
-        if isinstance(dictionary, dict):
-            dictionary = dictionary.get(key, default)
-        else:
-            return default
-    return dictionary
 
 class ImageDataDict(dict):
     def __missing__(self, media_path):
@@ -140,18 +108,17 @@ def playsound(sound, block=True, volume=1.0, stop_alias=None):
     else:
         return alias
 
-def bezier_curve(t, P0, P1, P2, P3):
-    return (1-t)**3 * P0 + 3*(1-t)**2 * t * P1 + 3*(1-t) * t**2 * P2 + t**3 * P3
 
-# Directory
 script_dir = os.path.abspath(os.path.dirname(__file__))
 os.chdir(script_dir)
 print("Current working directory:", os.getcwd())
 DEFAULT_CONFIG_NAME = 'config.json'
-#CONFIG_DIR = os.path.expanduser(os.path.join('~', '.steam-vr-wheel'))
 CONFIG_DIR = os.path.join(os.getcwd(), "../../configs")
+print("Current config directory:", os.path.normpath(CONFIG_DIR))
 CONFIG_PATH = os.path.join(CONFIG_DIR, DEFAULT_CONFIG_NAME)
 MEDIA_DIR = "media"
+
+# Directory
 DEFAULT_CONFIG = OrderedDict([
     ('config_name', DEFAULT_CONFIG_NAME),
     ('trigger_pre_press_button', False),
